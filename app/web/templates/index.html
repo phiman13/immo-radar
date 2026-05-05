@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="filters">
+  <form method="get">
+    <label>Status
+      <select name="status_filter">
+        <option value="">alle</option>
+        {% for s in ["new","seen","contacted","viewing","bid","rejected","sold"] %}
+          <option value="{{s}}" {% if status_filter==s %}selected{% endif %}>{{s}}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Min Score
+      <input type="number" name="min_score" min="0" max="100" value="{{min_score}}">
+    </label>
+    <button type="submit">Filtern</button>
+  </form>
+</section>
+
+<section class="runs">
+  <h2>Letzte Crawls</h2>
+  <table>
+    <thead><tr><th>Quelle</th><th>Start</th><th>Gefunden</th><th>Neu</th><th>Fehler</th></tr></thead>
+    <tbody>
+      {% for r in runs %}
+      <tr>
+        <td>{{r.source}}</td>
+        <td>{{r.started_at.strftime("%d.%m. %H:%M") if r.started_at else "-"}}</td>
+        <td>{{r.listings_found}}</td>
+        <td><strong>{{r.listings_new}}</strong></td>
+        <td class="err">{{ (r.error[:60] + "…") if r.error else "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="listings">
+  <h2>Aktive Objekte ({{listings|length}})</h2>
+  <div class="grid">
+    {% for l in listings %}
+    <a class="card" href="/listing/{{l.id}}">
+      {% if l.images and l.images|length > 0 %}
+        <img src="{{l.images[0]}}" alt="" loading="lazy">
+      {% else %}
+        <div class="no-img">kein Bild</div>
+      {% endif %}
+      <div class="body">
+        <div class="title">{{l.title}}</div>
+        <div class="meta">
+          {% if l.price_eur %}<span class="price">{{ "{:,.0f}".format(l.price_eur).replace(",", ".") }} €</span>{% endif %}
+          {% if l.qm %}<span>{{ "%.0f"|format(l.qm) }} m²</span>{% endif %}
+          {% if l.rooms %}<span>{{l.rooms}} Zi</span>{% endif %}
+          {% if l.price_eur and l.qm %}<span class="ppm">{{ "{:,.0f}".format(l.price_eur/l.qm).replace(",", ".") }} €/m²</span>{% endif %}
+        </div>
+        <div class="addr">{{l.address or l.ortsteil or l.city or "—"}}</div>
+        <div class="tags">
+          <span class="tag source">{{l.source}}</span>
+          <span class="tag status status-{{l.status}}">{{l.status}}</span>
+          {% if l.ai_score is not none %}
+            <span class="tag score score-{{ 'hi' if l.ai_score>=75 else 'mid' if l.ai_score>=50 else 'lo' }}">{{l.ai_score}}</span>
+          {% endif %}
+          {% for f in l.risk_flags %}<span class="tag risk">{{f}}</span>{% endfor %}
+        </div>
+      </div>
+    </a>
+    {% else %}
+    <p class="empty">Noch keine Listings. Der Crawler läuft alle paar Minuten.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,24 @@
+services:
+  worker:
+    build: .
+    image: immo-radar:latest
+    container_name: immo-radar-worker
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    command: ["python", "-m", "app.main"]
+
+  web:
+    image: immo-radar:latest
+    container_name: immo-radar-web
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    ports:
+      # Bind only on Tailscale IP — dashboard is private
+      - "100.115.184.3:8001:8000"
+    command: ["python", "-m", "scripts.run_web"]
+    depends_on:
+      - worker

@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+data/*.db
+data/*.db-journal
+data/cache/
+.pytest_cache/
+.ruff_cache/
+*.log
+.DS_Store
+.claude/
