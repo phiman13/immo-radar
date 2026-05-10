@@ -1,6 +1,6 @@
 # immo-radar Dashboard — Design Spec
 **Datum:** 2026-05-10  
-**Status:** Approved  
+**Status:** Approved — v2 (überarbeitet 2026-05-10)  
 **Autor:** Philipp Herrlich + Claude
 
 ---
@@ -113,18 +113,25 @@ Alle drei via Google Fonts. Kein Inter, Space Grotesk, DM Sans.
 - Sortierung: Erst gesehen ↓, Preis ↑↓, Score ↓, Preis/m² ↑↓
 
 **Listing-Karte** (asymmetrisches 2-Spalten-Layout):
-- Links: Bild (16:9, lazy loaded)
+- Links: Bild (16:9, lazy loaded) — "Neu"-Dot wenn seit letztem Besuch neu
 - Rechts oben: Titel (Bricolage Grotesque), Lage-Pill (Tutzing / Feldafing etc.), Quelle-Badge
 - Rechts Mitte: `2.450 €/m²` (Azeret Mono, prominent), `890.000 €`, `145 m²`, `4 Zi.`
-- Rechts unten: AI-Score-Badge (Kreis mit Zahl + Farbe), Status-Chip, Datum "vor 2 Tagen"
+- Rechts unten: AI-Score-Badge (Kreis mit Zahl + Farbe), Status-Chip, **"seit 12 Tagen"** (Time on Market)
 - Hover: Quick-Actions erscheinen (Interessant / Abgelehnt / Exposé öffnen)
 - Click: Detailpanel öffnet sich
 
+**Karten-Ansicht** (Toggle zwischen Grid und Karte, oben rechts):
+- Leaflet-Karte mit Pins für alle gefilterten Listings
+- Pin-Farbe = Status (grün/amber/rot/grau)
+- Pin-Klick → Detailpanel öffnet sich (gleiche Interaktion wie Grid)
+- Listings ohne Koordinaten werden in einer Sidebar-Liste neben der Karte aufgelistet
+
 **Detailpanel** (slide-in von rechts, 420px):
-- Header: Titel + Preis + Preis/m²
+- Header: Titel + Preis + Preis/m² + **"seit X Tagen online"**
 - Bild-Galerie (horizontal scroll)
-- Adresse mit Karten-Minimap (Leaflet, nicht klickbar)
+- Adresse mit Karten-Minimap (Leaflet, nicht klickbar) — nur wenn Koordinaten vorhanden
 - Alle Felder: Baujahr, Hausgeld, Energie-Klasse, Zimmer, m², Objekttyp
+- **Duplikat-Hinweis** (falls gleiches Objekt auf anderen Portalen): "Auch bei ImmobilienScout24 und Riedel gesehen" (verlinkt)
 - AI-Reasoning-Box (Text, nicht editierbar)
 - Risiko-Flags (rote Pills) + Positiv-Flags (grüne Pills)
 - Preishistorie (Recharts LineChart, nur wenn Änderungen vorhanden)
@@ -222,30 +229,41 @@ Zweigeteilt:
 
 ## Feature-Backlog (priorisiert)
 
-### Phase 1 — Core Dashboard (Pflicht, sofort)
+### Pre-Phase 1 — Bugfixes (sofort, vor Dashboard-Bau)
+| # | Bug | Aufwand | Auswirkung |
+|---|---|---|---|
+| B1 | `enrich_pending` Endlosschleife: Listings mit `ai_score=NULL` werden stündlich re-enriched weil API-Call scheitert ohne Retry-Limit — `enriched_attempts`-Zähler oder `enriched_at`-Timestamp einführen | S | API-Kosten-Verschwendung |
+| B2 | `deploy.sh` nutzt `docker-compose` (V1, auf VPS kaputt) → auf `docker compose` (V2) umstellen | XS | Deploy-Prozess |
+| B3 | AI-Enrichment-Ursache debuggen: Warum schlägt `score_listing` trotz gesetztem API-Key fehl? (Vermutlich Model-Name oder API-Quota) | S | AI-Scoring inaktiv |
+
+### Phase 1 — Core Dashboard (Pflicht)
 | # | Feature | Aufwand | Wert |
 |---|---|---|---|
 | 1.1 | React/Vite-Setup + FastAPI JSON-Endpoints | M | Basis |
 | 1.2 | Listings-Ansicht mit Filterleiste | L | Hoch |
 | 1.3 | Listing-Detailpanel (Slide-in) | M | Hoch |
 | 1.4 | Preis/m² Berechnung überall | S | Hoch |
-| 1.5 | Status-Management (5 Stufen) | S | Hoch |
-| 1.6 | Settings: Suchprofil-Editor | M | Hoch |
-| 1.7 | Settings: Telegram-Konfiguration + Test | S | Mittel |
-| 1.8 | Settings: Quellen-Toggle (aktiv/inaktiv) | S | Mittel |
-| 1.9 | System-Status-Seite | S | Mittel |
-| 1.10 | Auth: bestehende HTTP-Basic-Auth erhalten | S | Pflicht |
+| 1.5 | **"Time on Market"** — `first_seen_at` als "seit X Tagen" auf Karte + Detail | S | Hoch |
+| 1.6 | **"Neu seit letztem Besuch"-Badge** — localStorage-Timestamp, Dot auf neuen Listings | S | Hoch |
+| 1.7 | Status-Management (5 Stufen) | S | Hoch |
+| 1.8 | Settings: Suchprofil-Editor | M | Hoch |
+| 1.9 | Settings: **Score-Threshold für Telegram** (hier, nicht Phase 2 — Spam-Risiko ohne!) | S | Kritisch |
+| 1.10 | Settings: Telegram-Konfiguration + Test | S | Mittel |
+| 1.11 | Settings: Quellen-Toggle (aktiv/inaktiv) | S | Mittel |
+| 1.12 | System-Status-Seite | S | Mittel |
+| 1.13 | Auth: bestehende HTTP-Basic-Auth erhalten | S | Pflicht |
 
 ### Phase 2 — Intelligenz (nach Phase 1)
 | # | Feature | Aufwand | Wert |
 |---|---|---|---|
-| 2.1 | Leaflet-Karte im Detailpanel | S | Hoch |
-| 2.2 | Ort/Radius-Picker mit Karte in Settings | M | Hoch |
-| 2.3 | Preishistorie-Chart (Recharts) | S | Mittel |
-| 2.4 | Score-Threshold für Telegram | S | Hoch |
-| 2.5 | Junk-Keyword-Editor | S | Mittel |
-| 2.6 | AI-Enrichment-Fix (Anthropic API-Fehler debuggen) | S | Hoch |
-| 2.7 | Manuelle Quelle hinzufügen (URL-Analyse via Claude) | L | Hoch |
+| 2.1 | **Karten-Toggle in Listings** — Leaflet-Karte mit allen aktiven Listings als Pins (neben/statt Grid-Ansicht) | M | Hoch |
+| 2.2 | Leaflet-Minimap im Detailpanel | S | Hoch |
+| 2.3 | Ort/Radius-Picker mit Karte in Settings (Nominatim, mit 1s Debounce wegen Rate-Limit) | M | Hoch |
+| 2.4 | Preishistorie-Chart (Recharts LineChart) | S | Mittel |
+| 2.5 | **Cross-Portal-Duplikate** — semantisches Dedup (gleicher Titel + Preis ±5% = gleiche Immobilie), Hinweis im Detail-Panel: "Auch auf ImmobilienScout24 gesehen" | M | Mittel |
+| 2.6 | Junk-Keyword-Editor | S | Mittel |
+| 2.7 | **Keyboard-Navigation** — `j`/`k` Listings, `e` Exposé, `1`–`5` Status, `Esc` Panel schließen | S | Hoch |
+| 2.8 | Manuelle Quelle hinzufügen (URL-Analyse via Claude) | L | Hoch |
 
 ### Phase 3 — Innovation (ambitioniert)
 | # | Feature | Aufwand | Wert |
@@ -254,9 +272,22 @@ Zweigeteilt:
 | 3.2 | Markt-Trendanalyse (Preis/m² über Zeit in Region) | M | Mittel |
 | 3.3 | S-Bahn-Pendeldauer nach München (ÖPNV API) | S | Mittel |
 | 3.4 | Bodenrichtwert auto-fetch (BORIS-Schnittstelle) | M | Mittel |
-| 3.5 | Tägliche Digest-E-Mail / Telegram-Zusammenfassung | S | Mittel |
+| 3.5 | Tägliche Digest-Telegram-Zusammenfassung | S | Mittel |
 | 3.6 | Vergleichsansicht (2–3 Listings nebeneinander) | M | Mittel |
 | 3.7 | Export als PDF-Report (für Bankgespräch) | M | Niedrig |
+
+---
+
+## Keyboard-Shortcuts (Phase 2)
+
+| Taste | Aktion |
+|---|---|
+| `j` / `k` | Nächstes / vorheriges Listing |
+| `e` | Exposé im neuen Tab öffnen |
+| `1` – `5` | Status setzen (Neu / Interessant / Vielleicht / Gesehen / Abgelehnt) |
+| `Esc` | Detailpanel schließen |
+| `/` | Fokus auf Suchfeld / Filter |
+| `m` | Zwischen Grid- und Kartenansicht wechseln |
 
 ---
 
@@ -278,6 +309,10 @@ POST /api/v1/sources/analyze   — URL analysieren (Claude-Agent)
 POST /api/v1/sources/discover  — Quellen für Region entdecken (Claude-Agent)
 
 POST /api/v1/telegram/test     — Test-Nachricht senden
+
+GET  /api/v1/listings/:id/duplicates  — Semantisch ähnliche Listings (cross-portal)
+GET  /api/v1/stats                    — Aggregierte Statistiken für System-Status
+WS   /api/v1/ws/events                — WebSocket für Live-Updates (neue Listings, Crawl-Ende)
 ```
 
 ---
@@ -294,14 +329,27 @@ class AppSetting(Base):
 class Source(Base):
     __tablename__ = "sources"
     id: int
-    name: str          # "Makler XYZ"
-    url: str           # "https://makler-xyz.de/immobilien"
-    adapter_code: str  # generierter Python-Code (für KI-Quellen)
-    adapter_type: str  # "builtin" | "generated"
+    name: str           # "Makler XYZ"
+    url: str            # "https://makler-xyz.de/immobilien"
+    adapter_code: str   # generierter Python-Code (für KI-Quellen)
+    adapter_type: str   # "builtin" | "generated"
     is_active: bool
     last_crawl_at: datetime
     last_error: str | None
     created_at: datetime
+    # Sicherheit: generierter Code wird vor Aktivierung dem User zur Bestätigung gezeigt
+    # und im UI als "ungeprüft" markiert bis manuell freigegeben
+
+# Listings-Tabelle: neues Feld
+# enrich_attempts: int = 0  — verhindert Endlosschleife bei API-Fehlern (max. 3 Versuche)
+# Duplikat-Verknüpfung via neue Join-Tabelle:
+
+class ListingDuplicate(Base):
+    __tablename__ = "listing_duplicates"
+    listing_id_a: int   # FK → listings.id
+    listing_id_b: int   # FK → listings.id
+    similarity: float   # 0.0–1.0
+    detected_at: datetime
 ```
 
 ---
@@ -327,5 +375,9 @@ class Source(Base):
 - ✅ Auth: bestehende HTTP-Basic bleibt
 - ✅ Deployment: Static Files aus FastAPI, kein extra Container
 - ✅ Settings: DB statt .env, live ohne Restart
-- ✅ Quellen-Discovery: Claude-Agent-Ansatz
-- ✅ Ort: Leaflet-Picker mit Nominatim Geocoding (kein Google API-Key)
+- ✅ Quellen-Discovery: Claude-Agent-Ansatz (generierter Code wird vor Aktivierung angezeigt)
+- ✅ Ort: Leaflet-Picker mit Nominatim Geocoding (kein Google API-Key, 1s Debounce)
+- ✅ Score-Threshold: Phase 1 (nicht 2) — kritisch gegen Telegram-Spam
+- ✅ Karten-Toggle: Phase 2a — Leaflet-Karte mit allen Listings als Pins
+- ✅ Duplikat-Detection: Phase 2 — semantisch, cross-portal
+- ✅ Keyboard-Navigation: Phase 2 — j/k/e/1-5/Esc/m
