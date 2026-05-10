@@ -34,7 +34,7 @@ async def poll_and_notify() -> None:
     from app.db import Listing, SessionLocal
 
     with SessionLocal() as session:
-        ids = [l.id for l in new_listings]
+        ids = [listing.id for listing in new_listings]
         fresh = session.query(Listing).filter(Listing.id.in_(ids)).all()
         for listing in fresh:
             try:
@@ -51,7 +51,6 @@ def build_scheduler() -> AsyncIOScheduler:
         id="poll_and_notify",
         max_instances=1,
         coalesce=True,
-        next_run_time=None,
     )
     scheduler.add_job(
         enrich_pending,
