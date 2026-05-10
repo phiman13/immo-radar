@@ -60,6 +60,7 @@ class Listing(Base):
 
     ai_score: Mapped[int | None] = mapped_column(Integer, default=None, index=True)
     ai_reasoning: Mapped[str | None] = mapped_column(Text, default=None)
+    enrich_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     risk_flags: Mapped[list] = mapped_column(JSON, default=list)
     lage_score: Mapped[int | None] = mapped_column(Integer, default=None)
@@ -71,7 +72,7 @@ class Listing(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
 
-    history: Mapped[list["ListingHistory"]] = relationship(
+    history: Mapped[list[ListingHistory]] = relationship(
         back_populates="listing", cascade="all, delete-orphan"
     )
 

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from app.db import Listing, SessionLocal
 from app.logging_setup import log
 from app.scoring.ai_match import score_listing
-from app.scoring.lage import classify_ortsteil, distance_to_sbahn_km
+from app.scoring.lage import classify_ortsteil
 from app.scoring.risk import extract_flags
 
 
@@ -15,6 +15,9 @@ async def enrich_listing(listing_id: int) -> None:
         listing = session.get(Listing, listing_id)
         if listing is None:
             return
+
+        listing.enrich_attempts = (listing.enrich_attempts or 0) + 1
+        session.commit()
 
         text = " ".join(filter(None, [listing.title, listing.description]))
         risks, positives = extract_flags(text)
@@ -42,7 +45,7 @@ async def enrich_pending(limit: int = 20) -> int:
     count = 0
     with SessionLocal() as session:
         ids = session.scalars(
-            select(Listing.id).where(Listing.ai_score.is_(None)).limit(limit)
+            select(Listing.id).where(Listing.ai_score.is_(None), Listing.enrich_attempts < 3).limit(limit)
         ).all()
 
     for lid in ids:
