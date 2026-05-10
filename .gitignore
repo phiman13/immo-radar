@@ -11,3 +11,4 @@ data/cache/
 .DS_Store
 .claude/
 .worktrees/
+app/web/static/dist/
