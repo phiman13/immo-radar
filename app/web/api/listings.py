@@ -19,15 +19,28 @@ class ListingOut(BaseModel):
     price_eur: int | None
     qm: float | None
     rooms: float | None
+    year_built: int | None
+    property_type: str | None
     address: str | None
+    city: str | None
+    ortsteil: str | None
+    plz: str | None
+    lat: float | None
+    lon: float | None
+    hausgeld_eur: int | None
+    energie_kwh: float | None
+    energie_class: str | None
+    images: list = []
     url: str
     lage_score: int | None
     ai_score: int | None
     ai_reasoning: str | None
+    risk_flags: list = []
     status: str
     notes: str | None
     first_seen_at: datetime
     last_seen_at: datetime
+    is_active: bool
     enrich_attempts: int
 
     @computed_field
