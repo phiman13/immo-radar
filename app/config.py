@@ -26,12 +26,15 @@ class Settings(BaseSettings):
 
     poll_interval_minutes: int = 10
     detail_fetch_interval_minutes: int = 60
+    score_threshold: float = 0.0
 
     dashboard_user: str = "admin"
     dashboard_password: str = "changeme"
     dashboard_port: int = 8000
 
-    db_path: str = Field(default_factory=lambda: str(Path(__file__).resolve().parent.parent / "data" / "immo.db"))
+    db_path: str = Field(
+        default_factory=lambda: str(Path(__file__).resolve().parent.parent / "data" / "immo.db")
+    )
 
     log_level: str = "INFO"
 

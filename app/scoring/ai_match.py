@@ -37,10 +37,14 @@ Antworte ausschließlich als JSON: {{"score": <int>, "reasoning": "<deutsch, max
 """
 
 
-async def score_listing(listing: Listing, risk_flags: list[str], positive_flags: list[str]) -> tuple[int, str] | None:
+async def score_listing(
+    listing: Listing, risk_flags: list[str], positive_flags: list[str]
+) -> tuple[int, str] | None:
     if not settings.anthropic_api_key:
         log.debug("ai_match.skip_no_key")
         return None
+
+    log.info("ai_match.start", listing_id=listing.id, model=settings.ai_model)
 
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
@@ -78,5 +82,12 @@ async def score_listing(listing: Listing, risk_flags: list[str], positive_flags:
         data = json.loads(text)
         return int(data["score"]), str(data["reasoning"])[:400]
     except Exception as e:
-        log.warning("ai_match.failed", error=str(e), id=listing.id)
+        log.error(
+            "ai_match.failed",
+            listing_id=listing.id,
+            error=str(e),
+            error_type=type(e).__name__,
+            model=settings.ai_model,
+            has_api_key=bool(settings.anthropic_api_key),
+        )
         return None
