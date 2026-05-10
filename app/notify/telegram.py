@@ -7,6 +7,7 @@ import httpx
 from app.config import settings
 from app.db import Listing, SessionLocal
 from app.logging_setup import log
+from app.settings_service import get_setting
 
 
 async def send_telegram(text: str, image_url: str | None = None, buttons: list[dict] | None = None) -> bool:
@@ -76,6 +77,17 @@ def _format_listing(listing: Listing) -> str:
 
 
 async def notify_new_listing(listing: Listing) -> None:
+    threshold = get_setting("score_threshold")
+    if threshold is not None and listing.lage_score is not None:
+        if listing.lage_score < threshold:
+            log.info(
+                "notify.skipped_below_threshold",
+                id=listing.id,
+                score=listing.lage_score,
+                threshold=threshold,
+            )
+            return
+
     text = _format_listing(listing)
     image = listing.images[0] if listing.images else None
     buttons = [{"text": "🔗 Exposé", "url": listing.url}]
@@ -83,7 +95,5 @@ async def notify_new_listing(listing: Listing) -> None:
     ok = await send_telegram(text, image_url=image, buttons=buttons)
     if ok:
         with SessionLocal() as session:
-            session.query(Listing).filter(Listing.id == listing.id).update(
-                {"notified_at": datetime.utcnow()}
-            )
+            session.query(Listing).filter(Listing.id == listing.id).update({"notified_at": datetime.utcnow()})
             session.commit()

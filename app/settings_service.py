@@ -17,6 +17,7 @@ _DEFAULTS: dict[str, tuple[str, type]] = {
     "rooms_min": ("rooms_min", float),
     "year_built_min": ("year_built_min", int),
     "property_types": ("property_types", str),
+    "score_threshold": ("score_threshold", float),
 }
 
 
