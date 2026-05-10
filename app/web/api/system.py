@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 
 from fastapi import APIRouter, Request
@@ -8,6 +9,8 @@ from sqlalchemy import func
 
 import app.db as db_module
 from app.db import Listing
+
+_background_tasks: set[asyncio.Task] = set()
 
 router = APIRouter()
 
@@ -78,9 +81,9 @@ def get_fetch_runs():
 @router.post("/crawl/trigger")
 async def trigger_crawl(request: Request):
     """Trigger an immediate poll_and_notify run in the background."""
-    import asyncio
-
     from app.scheduler import poll_and_notify
 
-    asyncio.create_task(poll_and_notify())
+    task = asyncio.create_task(poll_and_notify())
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
     return {"status": "triggered"}
