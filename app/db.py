@@ -102,6 +102,25 @@ class FetchRun(Base):
     error: Mapped[str | None] = mapped_column(Text, default=None)
 
 
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str] = mapped_column(String, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Source(Base):
+    __tablename__ = "sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    last_run: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    listing_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
+
 def _ensure_db_dir() -> None:
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
 
