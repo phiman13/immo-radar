@@ -15,7 +15,7 @@ rsync -avz --delete \
   ./ "$TARGET:$APP_DIR/"
 
 echo "==> docker compose down && up --build"
-ssh "$TARGET" "cd $APP_DIR && docker compose down && docker compose up -d --build"
+ssh "$TARGET" "cd $APP_DIR && docker compose down --remove-orphans && docker compose up -d --build"
 
 echo "==> status"
 ssh "$TARGET" "cd $APP_DIR && docker compose ps"
