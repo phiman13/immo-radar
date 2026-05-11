@@ -13,31 +13,23 @@ from app.models import PropertyType, RawListing
 from app.sources.base import SourceAdapter
 
 
-def _to_rss_url(url: str) -> str:
-    """Convert a regular IS24 search URL to its RSS feed counterpart."""
-    m = re.search(r"saveSearchId=(\d+)", url)
-    if m:
-        return f"https://www.immobilienscout24.de/rss/suche.rss?saveSearchId={m.group(1)}"
-    sep = "&" if "?" in url else "?"
-    return f"{url}{sep}rss=1"
-
-
 class ImmoScout24RSSSource(SourceAdapter):
     """ImmoScout24 via saved-search RSS feed — no Playwright, no captcha.
 
-    Set IMMOSCOUT24_RSS_URL in .env to your saved-search URL from IS24.
-    The adapter derives the RSS endpoint automatically.
+    Set IMMOSCOUT24_SAVE_SEARCH_ID in .env to the numeric ID from your IS24
+    saved search URL (the saveSearchId= parameter).
     """
 
     name = "immoscout24"
     base_url = "https://www.immobilienscout24.de"
 
     async def fetch(self) -> AsyncIterator[RawListing]:
-        if not settings.immoscout24_rss_url:
-            log.warning("immoscout24_rss.skip_no_url")
+        save_id = settings.immoscout24_save_search_id
+        if not save_id:
+            log.warning("immoscout24_rss.skip_no_id")
             return
 
-        rss_url = _to_rss_url(settings.immoscout24_rss_url)
+        rss_url = f"https://www.immobilienscout24.de/rss/suche.rss?saveSearchId={save_id}"
         assert self.client is not None
 
         try:
@@ -55,7 +47,7 @@ class ImmoScout24RSSSource(SourceAdapter):
             log.warning("immoscout24_rss.no_entries", url=rss_url, status=r.status_code, body_len=len(r.text))
             return
 
-        log.info("immoscout24_rss.fetched", entries=len(feed.entries), url=rss_url)
+        log.info("immoscout24_rss.fetched", entries=len(feed.entries))
 
         for entry in feed.entries:
             link = entry.get("link", "")
@@ -115,7 +107,6 @@ class ImmoScout24RSSSource(SourceAdapter):
 
     @staticmethod
     def _parse_address(text: str) -> str | None:
-        # IS24 descriptions typically contain a line like "82327 Tutzing"
         m = re.search(r"(\d{5}\s+[A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\-\s]{2,30})", text)
         return m.group(1).strip() if m else None
 

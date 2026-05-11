@@ -38,7 +38,7 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
-    immoscout24_rss_url: str = ""
+    immoscout24_save_search_id: str = ""
 
     @property
     def property_type_list(self) -> list[str]:
