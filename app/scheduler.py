@@ -6,13 +6,24 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.config import settings
-from app.enrich import enrich_pending
+from app.enrich import enrich_pending as _enrich_pending
 from app.logging_setup import log
 from app.notify.telegram import notify_new_listing
 from app.pipeline import run_all
+from app.settings_service import get_setting
+
+
+async def enrich_pending() -> None:
+    if not get_setting("enrich_enabled"):
+        log.info("scheduler.enrich_skipped", reason="enrich_enabled=false")
+        return
+    await _enrich_pending()
 
 
 async def poll_and_notify() -> None:
+    if not get_setting("poll_enabled"):
+        log.info("scheduler.poll_skipped", reason="poll_enabled=false")
+        return
     log.info("scheduler.poll_start")
     new_listings = await run_all()
     if not new_listings:
@@ -53,7 +64,7 @@ def build_scheduler() -> AsyncIOScheduler:
         coalesce=True,
     )
     scheduler.add_job(
-        enrich_pending,
+        enrich_pending,  # local wrapper that checks enrich_enabled
         trigger=IntervalTrigger(minutes=settings.detail_fetch_interval_minutes),
         id="enrich_pending",
         max_instances=1,

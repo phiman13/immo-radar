@@ -53,6 +53,8 @@ export interface SearchLocation {
 export interface AppSettings {
   poll_interval_minutes: number
   detail_fetch_interval_minutes: number
+  poll_enabled: boolean
+  enrich_enabled: boolean
   search_center_lat: number
   search_center_lon: number
   search_radius_km: number

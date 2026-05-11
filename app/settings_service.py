@@ -10,6 +10,8 @@ from app.config import settings as env_settings
 _DEFAULTS: dict[str, tuple[str, type]] = {
     "poll_interval_minutes": ("poll_interval_minutes", int),
     "detail_fetch_interval_minutes": ("detail_fetch_interval_minutes", int),
+    "poll_enabled": ("poll_enabled", bool),
+    "enrich_enabled": ("enrich_enabled", bool),
     "search_center_lat": ("search_center_lat", float),
     "search_center_lon": ("search_center_lon", float),
     "search_radius_km": ("search_radius_km", float),
@@ -25,6 +27,7 @@ _DEFAULTS: dict[str, tuple[str, type]] = {
 }
 
 _JSON_KEYS = {"search_locations"}
+_BOOL_KEYS = {"poll_enabled", "enrich_enabled"}
 
 
 def get_setting(key: str) -> Any:
@@ -34,6 +37,8 @@ def get_setting(key: str) -> Any:
         if row is not None:
             if key in _JSON_KEYS:
                 return _json.loads(row.value)
+            if key in _BOOL_KEYS:
+                return row.value.lower() in ("1", "true")
             _, cast = _DEFAULTS.get(key, (None, str))
             return cast(row.value)
     # Fallback for search_locations: derive from individual lat/lon/radius settings
@@ -46,6 +51,9 @@ def get_setting(key: str) -> Any:
                 "label": "Hauptstandort",
             }
         ]
+    # Boolean keys default to True if not in DB yet
+    if key in _BOOL_KEYS:
+        return True
     # Fall back to env
     attr, cast = _DEFAULTS.get(key, (key, str))
     val = getattr(env_settings, attr, None)
@@ -54,7 +62,12 @@ def get_setting(key: str) -> Any:
 
 def set_setting(key: str, value: Any) -> None:
     """Persist a setting to DB."""
-    str_value = _json.dumps(value, ensure_ascii=False) if key in _JSON_KEYS else str(value)
+    if key in _JSON_KEYS:
+        str_value = _json.dumps(value, ensure_ascii=False)
+    elif key in _BOOL_KEYS:
+        str_value = "true" if value else "false"
+    else:
+        str_value = str(value)
     with db_module.SessionLocal() as session:
         row = session.get(db_module.AppSetting, key)
         if row is None:

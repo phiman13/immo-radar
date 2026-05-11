@@ -1,7 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { cn } from '../../lib/cn'
 import { fetchSettings, patchSetting } from '../../api/settings'
 import { fetchCosts } from '../../api/system'
 import type { ApiCosts } from '../../types'
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={cn('relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200')}
+      style={{ background: checked ? 'var(--accent)' : 'var(--border)' }}
+    >
+      <span
+        className="pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+        style={{ transform: checked ? 'translateX(16px)' : 'translateX(0)' }}
+      />
+    </button>
+  )
+}
 
 export function MechanicsTab() {
   const { data } = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
@@ -24,16 +42,32 @@ export function MechanicsTab() {
     onSuccess: (d) => queryClient.setQueryData(['settings'], d),
   })
 
+  const pollEnabledMut = useMutation({
+    mutationFn: (v: boolean) => patchSetting('poll_enabled', v),
+    onSuccess: (d) => queryClient.setQueryData(['settings'], d),
+  })
+
+  const enrichEnabledMut = useMutation({
+    mutationFn: (v: boolean) => patchSetting('enrich_enabled', v),
+    onSuccess: (d) => queryClient.setQueryData(['settings'], d),
+  })
+
   if (!s) return <div className="py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Lade…</div>
 
   return (
     <div>
       <div className="py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-        <p className="text-sm font-medium mb-1" style={{ color: 'var(--fg)' }}>Poll-Intervall</p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm font-medium" style={{ color: 'var(--fg)' }}>Crawling (Poll)</p>
+          <Toggle
+            checked={s.poll_enabled ?? true}
+            onChange={(v) => pollEnabledMut.mutate(v)}
+          />
+        </div>
         <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
           Wie oft werden alle Quellen nach neuen Inseraten durchsucht?
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" style={{ opacity: (s.poll_enabled ?? true) ? 1 : 0.4, pointerEvents: (s.poll_enabled ?? true) ? 'auto' : 'none' }}>
           {[5, 10, 15, 30, 60].map((v) => (
             <button
               key={v}
@@ -52,11 +86,17 @@ export function MechanicsTab() {
       </div>
 
       <div className="py-4">
-        <p className="text-sm font-medium mb-1" style={{ color: 'var(--fg)' }}>Enrichment-Intervall</p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm font-medium" style={{ color: 'var(--fg)' }}>Enrichment (KI-Scoring)</p>
+          <Toggle
+            checked={s.enrich_enabled ?? true}
+            onChange={(v) => enrichEnabledMut.mutate(v)}
+          />
+        </div>
         <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
           Wie oft werden Detaildaten (KI-Scoring, Lage) nachgeladen?
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" style={{ opacity: (s.enrich_enabled ?? true) ? 1 : 0.4, pointerEvents: (s.enrich_enabled ?? true) ? 'auto' : 'none' }}>
           {[30, 60, 120].map((v) => (
             <button
               key={v}
