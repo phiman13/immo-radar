@@ -1,0 +1,10 @@
+.git
+.venv
+.worktrees
+.ruff_cache
+.pytest_cache
+__pycache__
+*.pyc
+node_modules
+app/web/static/dist
+frontend/node_modules
