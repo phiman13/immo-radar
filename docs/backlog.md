@@ -62,9 +62,9 @@ Zuletzt aktualisiert: 2026-05-11
 | Radius-Slider (km) | ✅ |
 | Budget-Inputs (Min/Max) | ✅ |
 | Zimmer-Min Select | ✅ |
-| Leaflet-Karte mit draggablem Pin + Radius-Kreis | ☐ |
-| Nominatim-Geocoding (Adresssuche) | ☐ |
-| Baujahr-Slider | ☐ |
+| Leaflet-Karte mit draggablem Pin + Radius-Kreis | ✅ |
+| Nominatim-Geocoding (Adresssuche) | ✅ |
+| Baujahr-Slider ab 1850 | ✅ |
 | Objekttypen-Checkboxen (Wohnung, Haus, DHH, …) | ☐ |
 
 ---
@@ -92,6 +92,8 @@ Zuletzt aktualisiert: 2026-05-11
 | 2.6 | Junk-Keyword-Editor in MechanicsTab | ☐ | S |
 | 2.7 | Keyboard-Navigation (j/k/e/1–5/Esc/m) | ☐ | S |
 | 2.8 | Manuelle Quelle per URL-Analyse (Claude-Agent) | ✅ | L |
+| 2.9 | API-Kosten-Tracking (Token-Logging + Anzeige in MechanicsTab) | ✅ | M |
+| 2.10 | Multi-Ortsauswahl im Suchprofil (mehrere Zentren + Radien) | ✅ | L |
 
 ---
 
