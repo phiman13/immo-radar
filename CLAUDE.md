@@ -12,13 +12,16 @@ Auth: Caddy basicauth (kein Tailscale-Direktzugriff mehr). Docker-Container bind
 
 ```
 app/
-  sources/        Scraper: immoscout24.py, immowelt.py, kleinanzeigen.py, makler_*.py
+  sources/        Scraper: kleinanzeigen.py, bs_immo.py, riedel.py, starnberg_bader.py, tutzing24.py
+                  immoscout24_rss.py  ← RSS-Adapter (IS24 blockiert ohne Auth — skippt wenn keine ID)
   scoring/        ai_match.py (Claude Haiku), lage.py (regelbasiert), risk.py
   notify/         telegram.py
   pipeline.py     Haupt-Pipeline (run_all, run_profile)
-  scheduler.py    APScheduler — Interval aus DB, ändert sich ohne Container-Restart
+  scheduler.py    APScheduler — Interval + Enrich-Toggle aus DB, ändert sich ohne Container-Restart
   db.py           SQLAlchemy + SQLite
   config.py       Pydantic Settings (aus .env)
+  usage.py        Token-Logging für API-Kostentracking
+  settings_service.py  DB-persistente Settings (Suchprofil, Intervals, Präferenzen)
   web/
     server.py     FastAPI — SPA servieren + API-Routing
     api/          listings.py, settings.py, sources.py, system.py, telegram.py
@@ -30,12 +33,27 @@ scripts/
   verify_source.py   Selektoren testen ohne DB-Schreibzugriff
   run_once.py        Einzelner Crawl-Durchlauf (schreibt in DB)
   run_web.py         Dashboard lokal starten
-  deploy.sh          rsync + docker compose up --build + Caddy-Config update
+  deploy.sh          rsync + docker compose up --build
 docs/
   backlog.md              Feature-Backlog (priorisiert)
   superpowers/specs/      Design-Specs
   superpowers/plans/      Implementierungs-Pläne
 ```
+
+## Quellen-Status
+
+| Name | `source_type` | Status |
+|---|---|---|
+| kleinanzeigen | builtin | ✅ aktiv (Playwright) |
+| bs_immo | builtin | ✅ aktiv (httpx + BS4) |
+| riedel | builtin | ✅ aktiv (httpx + BS4) |
+| starnberg_bader | builtin | ✅ aktiv (httpx + BS4) |
+| tutzing24 | builtin | ✅ aktiv (httpx + BS4) |
+| immoscout24 | blocked | ⛔ Bot-Schutz — RSS 404, HTML Bot-Detect; RSS-Adapter skippt ohne IMMOSCOUT24_SAVE_SEARCH_ID |
+| immowelt | blocked | ⛔ Bot-Schutz |
+| sparkasse_immo | blocked | ⛔ Bot-Schutz |
+
+Blocked-Quellen erscheinen im Dashboard (Sources-Tab) als „Gesperrt" ohne Toggle.
 
 ## Key Commands
 
@@ -46,8 +64,8 @@ pip install -e ".[dev]"
 playwright install chromium
 
 # Selektoren prüfen (read-only, kein DB-Write) — VOR Prod-Lauf!
-python -m scripts.verify_source immoscout24
 python -m scripts.verify_source kleinanzeigen
+python -m scripts.verify_source bs_immo
 
 # Linting
 ruff check .
@@ -70,7 +88,7 @@ ssh root@89.167.67.26 "nano /etc/caddy/Caddyfile && systemctl reload caddy"
 
 ## Stack
 
-Python 3.11 · FastAPI · Playwright (Chromium) · SQLite/SQLAlchemy · APScheduler · anthropic SDK · Telegram Bot API · Docker · Caddy (Reverse Proxy + TLS + Auth)
+Python 3.12 (noble) · FastAPI · Playwright (Chromium) · SQLite/SQLAlchemy · APScheduler · anthropic SDK · Telegram Bot API · Docker (2 Container: `web` + `worker`) · Caddy (Reverse Proxy + TLS + Auth)
 
 Frontend: React 18 · Vite 5 · TypeScript 5 · Tailwind CSS v3 · TanStack Query v5 · Zustand v4 · Framer Motion v11 · Phosphor Icons
 
@@ -84,3 +102,10 @@ Frontend: React 18 · Vite 5 · TypeScript 5 · Tailwind CSS v3 · TanStack Quer
 - `scripts/deploy.sh` nutzt rsync + SSH direkt auf 89.167.67.26
 - Auth liegt bei Caddy (basicauth), FastAPI-interne `require_auth` ist nur für Legacy-Routes aktiv
 - Frontend-Build (npm run build im Dockerfile) gibt den Build in `app/web/static/dist/` aus — FastAPI serviert ihn als Static Files
+- **Zwei Docker-Container**: `web` (FastAPI + SPA) und `worker` (APScheduler + Pipeline) — Scheduler-State nur im `worker` erreichbar
+- **DB-persistente Settings**: `settings_service.py` liest/schreibt Suchprofil (Radius, Budget, Zimmer, Objekttypen, Präferenzen, Baujahr, Orte) und Mechanic-Settings (Intervalle, Enrich-Toggle) in SQLite
+- **UTC-Timestamps**: Alle Timestamps in DB als UTC gespeichert. Im Frontend `parseUTC()` verwenden (hängt `Z` an ISO-String) — sonst interpretiert Browser als Lokalzeit
+- **`source_type`-Feld**: Discriminator für Quellen — `"builtin"` (aktiv), `"blocked"` (Bot-Schutz), `"suggested"` (user-added). Blocked-Quellen haben in DB enabled=false und Lock-Icon statt Toggle
+- **Name-Migrations**: Alte DB-Einträge (`makler_bsimmo`, `makler_riedel`, `makler_starnberg_immo`) werden in `_seed_sources()` automatisch auf neue Namen umgeschrieben
+- **`last_run` + `listing_count`**: Im Sources-Tab live aus `FetchRun`- und `Listing`-Tabellen abgeleitet (nicht im Source-Record selbst gespeichert)
+- **`IMMOSCOUT24_SAVE_SEARCH_ID`**: Nur numerische ID speichern (keine URL — `&` in env vars bricht docker compose env_file Parser). URL wird in Python zusammengesetzt.
