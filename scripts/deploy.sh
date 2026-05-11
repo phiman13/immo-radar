@@ -30,7 +30,7 @@ else
 
 immo.herrlich.dev {
     basicauth {
-        admin $2a$14$IMF1ymRSBaeOcuFDgHT6hemzQqMTr4xftogTVRY7LnkJQZcGnn6HK
+        admin $2a$14$EBt3/ApYCnFY2v7UjcWcyePLFN3qU36V5Fb90A.Pbyp4AwgsE/l2y
     }
     reverse_proxy localhost:8001
 }
