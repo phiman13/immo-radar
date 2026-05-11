@@ -169,3 +169,71 @@ Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Text drumherum):
             fields=FieldDetection(price=False, qm=False, rooms=False, address=False, images=False),
             error=f"Claude-Analyse fehlgeschlagen: {e}",
         )
+
+
+class DiscoverResult(BaseModel):
+    suggestions: list[dict]  # [{name, url, description}]
+    error: str | None
+
+
+@router.post("/discover", response_model=DiscoverResult)
+async def discover_sources() -> DiscoverResult:
+    from app.config import settings as _settings  # noqa: PLC0415
+
+    anthropic_client = Anthropic(api_key=_settings.anthropic_api_key)
+    prompt = (
+        "Schlage Immobilien-Portale und Makler-Websites für die Region"
+        " Tutzing / Starnberger See (Bayern, Deutschland) vor,"
+        " die noch NICHT in dieser Liste sind:\n"
+        "- ImmoScout24 (immoscout24.de)\n"
+        "- Immowelt (immowelt.de)\n"
+        "- Kleinanzeigen (kleinanzeigen.de)\n"
+        "- BS Immo (bsimmo.de)\n"
+        "- Riedel Immobilien\n"
+        "- Starnberg Immo\n"
+        "- Sparkasse Immobilien\n"
+        "- Tutzing24\n\n"
+        "Antworte NUR mit einem JSON-Array (kein Markdown):\n"
+        "[\n"
+        '  {"name": "<Anzeigename>", "url": "<URL>", "description": "<1 Satz warum relevant>"},\n'
+        "  ...\n"
+        "]\n"
+        "Maximal 6 Vorschläge. Nur echte, existierende Websites."
+    )
+
+    try:
+        msg = anthropic_client.messages.create(
+            model=_settings.ai_model,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        suggestions = json.loads(msg.content[0].text.strip())
+        return DiscoverResult(suggestions=suggestions, error=None)
+    except Exception as e:
+        return DiscoverResult(suggestions=[], error=str(e))
+
+
+class SourceCreate(BaseModel):
+    name: str
+    display_name: str
+    url: str | None = None
+    source_type: str = "suggested"
+
+
+@router.post("/", response_model=SourceOut, status_code=201)
+def create_source(body: SourceCreate):
+    with db_module.SessionLocal() as session:
+        existing = session.query(db_module.Source).filter(db_module.Source.name == body.name).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Quelle bereits vorhanden")
+        source = db_module.Source(
+            name=body.name,
+            display_name=body.display_name,
+            url=body.url,
+            source_type=body.source_type,
+            enabled=False,
+        )
+        session.add(source)
+        session.commit()
+        session.refresh(source)
+        return SourceOut.model_validate(source)
