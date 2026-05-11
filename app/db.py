@@ -143,5 +143,6 @@ def init_db() -> None:
             try:
                 conn.execute(text(ddl))
                 conn.commit()
-            except Exception:
-                pass  # Column already exists
+            except Exception as e:
+                if "duplicate column name" not in str(e).lower():
+                    raise

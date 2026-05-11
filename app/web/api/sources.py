@@ -38,7 +38,7 @@ class SourceOut(BaseModel):
     last_run: datetime | None
     listing_count: int
     url: str | None
-    source_type: str
+    source_type: str = "builtin"
 
     model_config = {"from_attributes": True}
 
