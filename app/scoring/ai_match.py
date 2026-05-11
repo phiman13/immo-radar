@@ -16,7 +16,7 @@ Suchprofil:
 - Mind. Zimmer: {rooms_min}
 - Gewünschte Objektarten: {types}
 - Baujahr ab: {year_built_min}
-- Lage: PLZ 82327 + {radius} km Radius (Tutzing, Bernried, Feldafing, Pöcking, Possenhofen, Berg)
+- Suchgebiete: {locations}
 - Bevorzugt: Seenähe, Bergblick, ruhige Lage, gute S6-Anbindung
 
 Listing:
@@ -48,6 +48,13 @@ async def score_listing(
 
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
+    from app.settings_service import get_setting as _get_setting  # noqa: PLC0415
+
+    search_locs = _get_setting("search_locations")
+    locs_str = "; ".join(
+        f"{loc.get('label', 'Standort')} ({loc.get('radius_km', 5):.0f} km Radius)" for loc in search_locs
+    )
+
     prompt = _PROMPT.format(
         price_min=settings.price_min,
         price_max=settings.price_max,
@@ -56,7 +63,7 @@ async def score_listing(
         rooms_min=settings.rooms_min,
         types=", ".join(settings.property_type_list),
         year_built_min=settings.year_built_min,
-        radius=settings.search_radius_km,
+        locations=locs_str,
         title=listing.title or "—",
         price=f"{listing.price_eur:,}".replace(",", ".") if listing.price_eur else "?",
         qm=listing.qm or "?",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json as _json
 from typing import Any
 
 import app.db as db_module
@@ -20,7 +21,10 @@ _DEFAULTS: dict[str, tuple[str, type]] = {
     "year_built_min": ("year_built_min", int),
     "property_types": ("property_types", str),
     "score_threshold": ("score_threshold", float),
+    "search_locations": ("search_locations", str),  # stored as JSON
 }
+
+_JSON_KEYS = {"search_locations"}
 
 
 def get_setting(key: str) -> Any:
@@ -28,8 +32,20 @@ def get_setting(key: str) -> Any:
     with db_module.SessionLocal() as session:
         row = session.get(db_module.AppSetting, key)
         if row is not None:
+            if key in _JSON_KEYS:
+                return _json.loads(row.value)
             _, cast = _DEFAULTS.get(key, (None, str))
             return cast(row.value)
+    # Fallback for search_locations: derive from individual lat/lon/radius settings
+    if key == "search_locations":
+        return [
+            {
+                "lat": get_setting("search_center_lat"),
+                "lon": get_setting("search_center_lon"),
+                "radius_km": get_setting("search_radius_km"),
+                "label": "Hauptstandort",
+            }
+        ]
     # Fall back to env
     attr, cast = _DEFAULTS.get(key, (key, str))
     val = getattr(env_settings, attr, None)
@@ -38,13 +54,14 @@ def get_setting(key: str) -> Any:
 
 def set_setting(key: str, value: Any) -> None:
     """Persist a setting to DB."""
+    str_value = _json.dumps(value, ensure_ascii=False) if key in _JSON_KEYS else str(value)
     with db_module.SessionLocal() as session:
         row = session.get(db_module.AppSetting, key)
         if row is None:
-            row = db_module.AppSetting(key=key, value=str(value))
+            row = db_module.AppSetting(key=key, value=str_value)
             session.add(row)
         else:
-            row.value = str(value)
+            row.value = str_value
         session.commit()
 
 

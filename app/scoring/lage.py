@@ -38,11 +38,18 @@ def classify_ortsteil(lat: float | None, lon: float | None) -> str | None:
     return nearest[0]
 
 
-def in_search_area(lat: float | None, lon: float | None) -> bool:
+def in_search_area(
+    lat: float | None,
+    lon: float | None,
+    locations: list[dict] | None = None,
+) -> bool:
     if lat is None or lon is None:
         return True  # don't filter unknown locations — better than dropping good leads
-    center = (settings.search_center_lat, settings.search_center_lon)
-    return haversine_km(center, (lat, lon)) <= settings.search_radius_km
+    if not locations:
+        # legacy: use single-location settings
+        center = (settings.search_center_lat, settings.search_center_lon)
+        return haversine_km(center, (lat, lon)) <= settings.search_radius_km
+    return any(haversine_km((loc["lat"], loc["lon"]), (lat, lon)) <= loc["radius_km"] for loc in locations)
 
 
 def distance_to_sbahn_km(lat: float | None, lon: float | None) -> float | None:
