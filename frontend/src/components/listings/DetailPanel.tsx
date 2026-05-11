@@ -12,6 +12,7 @@ import {
 } from '../../lib/formatters'
 import { patchListing } from '../../api/listings'
 import { STATUS_LABELS } from '../../types'
+import { ListingMiniMap } from '../map/ListingMiniMap'
 
 interface DetailPanelProps {
   listing: Listing | null
@@ -132,6 +133,11 @@ export function DetailPanel({ listing, onClose, onStatusChange }: DetailPanelPro
                   <p className="text-xs mb-1" style={{ color: 'var(--muted)' }}>Adresse</p>
                   <p className="text-sm" style={{ color: 'var(--fg)' }}>{listing.address}</p>
                 </div>
+              )}
+
+              {/* Minimap */}
+              {listing.lat && listing.lon && (
+                <ListingMiniMap lat={listing.lat} lon={listing.lon} />
               )}
 
               {/* AI Score + Reasoning */}
