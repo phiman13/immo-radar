@@ -28,14 +28,13 @@ export interface DiscoverSuggestion {
 }
 
 export async function analyzeSource(url: string): Promise<AnalyzeResult> {
-  const res = await api.post<AnalyzeResult>('/api/sources/analyze', { url })
-  return res.data
+  return api.post<AnalyzeResult>('/api/sources/analyze', { url })
 }
 
 export async function discoverSources(): Promise<DiscoverSuggestion[]> {
   const res = await api.post<{ suggestions: DiscoverSuggestion[]; error: string | null }>('/api/sources/discover')
-  if (res.data.error) throw new Error(res.data.error)
-  return res.data.suggestions
+  if (res.error) throw new Error(res.error)
+  return res.suggestions
 }
 
 export async function createSource(body: {
@@ -44,6 +43,5 @@ export async function createSource(body: {
   url?: string
   source_type?: string
 }): Promise<Source> {
-  const res = await api.post<Source>('/api/sources/', body)
-  return res.data
+  return api.post<Source>('/api/sources/', body)
 }
