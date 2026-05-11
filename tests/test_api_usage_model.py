@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.db import ApiUsage, SessionLocal, init_db
-
 
 @pytest.fixture(autouse=True)
 def setup_db(tmp_path, monkeypatch):
@@ -21,11 +19,14 @@ def setup_db(tmp_path, monkeypatch):
     importlib.reload(app.config)
     importlib.reload(app.db)
 
+    from app.db import init_db  # fresh import after reload
+
     init_db()
     yield
 
 
 def test_api_usage_insert():
+    from app.db import ApiUsage, SessionLocal  # fresh imports after fixture reload
 
     with SessionLocal() as s:
         row = ApiUsage(
@@ -41,6 +42,7 @@ def test_api_usage_insert():
 
 
 def test_api_usage_query_by_ts():
+    from app.db import ApiUsage, SessionLocal  # fresh imports after fixture reload
 
     now = datetime.utcnow()
     with SessionLocal() as s:
