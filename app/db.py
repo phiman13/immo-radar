@@ -124,6 +124,17 @@ class Source(Base):
     source_type: Mapped[str] = mapped_column(String, default="builtin", server_default="builtin")
 
 
+class ApiUsage(Base):
+    __tablename__ = "api_usage"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    model: Mapped[str] = mapped_column(String(64))
+    input_tokens: Mapped[int] = mapped_column(Integer)
+    output_tokens: Mapped[int] = mapped_column(Integer)
+    purpose: Mapped[str] = mapped_column(String(32))  # "enrichment" | "analyze" | "discover"
+
+
 def _ensure_db_dir() -> None:
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
 
@@ -139,10 +150,16 @@ def init_db() -> None:
         for ddl in [
             "ALTER TABLE sources ADD COLUMN url TEXT",
             "ALTER TABLE sources ADD COLUMN source_type TEXT DEFAULT 'builtin'",
+            (
+                "CREATE TABLE IF NOT EXISTS api_usage "
+                "(id INTEGER PRIMARY KEY, ts DATETIME, model TEXT, "
+                "input_tokens INTEGER, output_tokens INTEGER, purpose TEXT)"
+            ),
+            "CREATE INDEX IF NOT EXISTS ix_api_usage_ts ON api_usage (ts)",
         ]:
             try:
                 conn.execute(text(ddl))
                 conn.commit()
             except Exception as e:
-                if "duplicate column name" not in str(e).lower():
+                if "duplicate column name" not in str(e).lower() and "already exists" not in str(e).lower():
                     raise
