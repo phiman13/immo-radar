@@ -36,6 +36,8 @@ export interface Source {
   id: number
   name: string
   display_name: string
+  url: string | null
+  source_type: string
   enabled: boolean
   last_run: string | null
   listing_count: number
