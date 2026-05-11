@@ -17,8 +17,8 @@ services:
     volumes:
       - ./data:/app/data
     ports:
-      # Bind only on Tailscale IP — dashboard is private
-      - "100.115.184.3:8001:8000"
+      # Bind on loopback only — Caddy terminates TLS and proxies
+      - "127.0.0.1:8001:8000"
     command: ["python", "-m", "scripts.run_web"]
     depends_on:
       - worker

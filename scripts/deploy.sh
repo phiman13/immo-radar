@@ -20,7 +20,27 @@ ssh "$TARGET" "cd $APP_DIR && docker compose up -d --build"
 echo "==> status"
 ssh "$TARGET" "cd $APP_DIR && docker compose ps"
 
+echo "==> caddy vhost: immo.herrlich.dev"
+ssh "$TARGET" 'bash -s' <<'REMOTE'
+CADDYFILE=/etc/caddy/Caddyfile
+if grep -q "immo.herrlich.dev" "$CADDYFILE"; then
+    echo "  [skip] immo.herrlich.dev already in Caddyfile"
+else
+    cat >> "$CADDYFILE" <<'EOF'
+
+immo.herrlich.dev {
+    basicauth {
+        admin $2a$14$.dJIfNvGH1LbWupB02VuLeXBMHDzMA9BSRTbB0ceUn2rmcyv4j5N6
+    }
+    reverse_proxy localhost:8001
+}
+EOF
+    systemctl reload caddy
+    echo "  [done] immo.herrlich.dev vhost added and caddy reloaded"
+fi
+REMOTE
+
 echo
 echo "✓ Deployed."
-echo "  Dashboard via Tailscale: http://100.115.184.3:8001  (admin / tutzing2026!)"
+echo "  Dashboard: https://immo.herrlich.dev  (admin / tutzing2026!)"
 echo "  Logs: ssh $TARGET 'cd $APP_DIR && docker compose logs -f worker'"
