@@ -67,8 +67,10 @@ export function MechanicsTab() {
         <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
           Wie oft werden alle Quellen nach neuen Inseraten durchsucht?
         </p>
-        <div className="flex items-center gap-3" style={{ opacity: (s.poll_enabled ?? true) ? 1 : 0.4, pointerEvents: (s.poll_enabled ?? true) ? 'auto' : 'none' }}>
-          {[5, 10, 15, 30, 60].map((v) => (
+        <div className="flex items-center gap-3 flex-wrap" style={{ opacity: (s.poll_enabled ?? true) ? 1 : 0.4, pointerEvents: (s.poll_enabled ?? true) ? 'auto' : 'none' }}>
+          {([
+            [360, '6 Std.'], [720, '12 Std.'], [1440, '1 Tag'], [2880, '2 Tage'], [4320, '3 Tage'],
+          ] as [number, string][]).map(([v, label]) => (
             <button
               key={v}
               onClick={() => pollMut.mutate(v)}
@@ -79,7 +81,7 @@ export function MechanicsTab() {
                   : { color: 'var(--fg)', borderColor: 'var(--border)', background: 'white' }
               }
             >
-              {v} Min
+              {label}
             </button>
           ))}
         </div>
@@ -96,8 +98,10 @@ export function MechanicsTab() {
         <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
           Wie oft werden Detaildaten (KI-Scoring, Lage) nachgeladen?
         </p>
-        <div className="flex items-center gap-3" style={{ opacity: (s.enrich_enabled ?? true) ? 1 : 0.4, pointerEvents: (s.enrich_enabled ?? true) ? 'auto' : 'none' }}>
-          {[30, 60, 120].map((v) => (
+        <div className="flex items-center gap-3 flex-wrap" style={{ opacity: (s.enrich_enabled ?? true) ? 1 : 0.4, pointerEvents: (s.enrich_enabled ?? true) ? 'auto' : 'none' }}>
+          {([
+            [720, '12 Std.'], [1440, '1 Tag'], [2880, '2 Tage'], [10080, '1 Woche'],
+          ] as [number, string][]).map(([v, label]) => (
             <button
               key={v}
               onClick={() => enrichMut.mutate(v)}
@@ -108,7 +112,7 @@ export function MechanicsTab() {
                   : { color: 'var(--fg)', borderColor: 'var(--border)', background: 'white' }
               }
             >
-              {v} Min
+              {label}
             </button>
           ))}
         </div>
