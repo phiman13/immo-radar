@@ -43,12 +43,20 @@ export interface Source {
   listing_count: number
 }
 
+export interface SearchLocation {
+  lat: number
+  lon: number
+  radius_km: number
+  label: string
+}
+
 export interface AppSettings {
   poll_interval_minutes: number
   detail_fetch_interval_minutes: number
   search_center_lat: number
   search_center_lon: number
   search_radius_km: number
+  search_locations: SearchLocation[]
   price_min: number
   price_max: number
   qm_min: number

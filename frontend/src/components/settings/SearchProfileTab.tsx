@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchSettings, patchSetting } from '../../api/settings'
 import type { AppSettings } from '../../types'
 import { cn } from '../../lib/cn'
-import { LocationPicker } from '../map/LocationPicker'
+import { MultiLocationPicker, type SearchLocation } from '../map/MultiLocationPicker'
 
 const PROPERTY_TYPES = ['Wohnung', 'Haus', 'Doppelhaushälfte', 'Reihenhaus', 'Grundstück']
 
@@ -40,9 +40,13 @@ export function SearchProfileTab() {
   const { data } = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
   const s = data?.settings
 
-  const centerLatMut = useSetting('search_center_lat')
-  const centerLonMut = useSetting('search_center_lon')
-  const radiusMut = useSetting('search_radius_km')
+  const locationsMut = useMutation({
+    mutationFn: (locations: SearchLocation[]) =>
+      patchSetting('search_locations', locations),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['settings'], data)
+    },
+  })
   const priceMinMut = useSetting('price_min')
   const priceMaxMut = useSetting('price_max')
   const roomsMut = useSetting('rooms_min')
@@ -60,19 +64,17 @@ export function SearchProfileTab() {
   return (
     <div>
       <div className="py-4 border-b" style={{ borderColor: 'var(--border)' }}>
-        <p className="text-sm font-medium mb-1" style={{ color: 'var(--fg)' }}>Suchgebiet</p>
+        <p className="text-sm font-medium mb-1" style={{ color: 'var(--fg)' }}>Suchgebiete</p>
         <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
-          Mittelpunkt verschieben oder Ort suchen · Radius per Slider anpassen
+          Mehrere Standorte möglich · Marker verschieben oder Ort suchen · Radius per Slider
         </p>
-        <LocationPicker
-          lat={s.search_center_lat ?? 47.9095}
-          lon={s.search_center_lon ?? 11.2783}
-          radiusKm={s.search_radius_km ?? 5}
-          onChangeCenter={(lat, lon) => {
-            centerLatMut.mutate(lat)
-            centerLonMut.mutate(lon)
-          }}
-          onChangeRadius={(km) => radiusMut.mutate(km)}
+        <MultiLocationPicker
+          locations={
+            s.search_locations?.length
+              ? s.search_locations
+              : [{ lat: s.search_center_lat ?? 47.9095, lon: s.search_center_lon ?? 11.2783, radius_km: s.search_radius_km ?? 5, label: 'Hauptstandort' }]
+          }
+          onChange={(locs) => locationsMut.mutate(locs)}
         />
       </div>
 

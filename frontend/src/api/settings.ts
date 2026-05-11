@@ -1,14 +1,28 @@
 import { api } from './client'
-import type { AppSettings } from '../types'
+import type { AppSettings, SearchLocation } from '../types'
 
-type RawSettings = Omit<AppSettings, 'property_types'> & { property_types: string }
+type RawSettings = Omit<AppSettings, 'property_types' | 'search_locations'> & {
+  property_types: string
+  search_locations: SearchLocation[] | string | null
+}
 
 function parseSettings(raw: RawSettings): AppSettings {
+  let search_locations: SearchLocation[] = []
+  if (Array.isArray(raw.search_locations)) {
+    search_locations = raw.search_locations
+  } else if (typeof raw.search_locations === 'string' && raw.search_locations) {
+    try {
+      search_locations = JSON.parse(raw.search_locations)
+    } catch {
+      search_locations = []
+    }
+  }
   return {
     ...raw,
     property_types: raw.property_types
       ? raw.property_types.split(',').map((s) => s.trim()).filter(Boolean)
       : [],
+    search_locations,
   }
 }
 
