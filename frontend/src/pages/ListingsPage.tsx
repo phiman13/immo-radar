@@ -23,7 +23,7 @@ export function ListingsPage() {
       fetchListings({
         status: filter.status || undefined,
         portal: filter.portal || filter.source || undefined,
-        min_score: filter.minScore || filter.min_score ?? undefined,
+        min_score: filter.minScore || (filter.min_score ?? undefined),
         price_min: filter.priceMin,
         price_max: filter.priceMax,
         qm_min: filter.qmMin,
