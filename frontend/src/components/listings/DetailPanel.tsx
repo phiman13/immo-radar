@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, ArrowSquareOut, Warning } from '@phosphor-icons/react'
 import type { Listing } from '../../types'
-import { StatusChip } from './StatusChip'
 import { ScoreBadge } from './ScoreBadge'
 import {
   formatPrice,
