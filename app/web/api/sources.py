@@ -37,6 +37,8 @@ class SourceOut(BaseModel):
     enabled: bool
     last_run: datetime | None
     listing_count: int
+    url: str | None
+    source_type: str
 
     model_config = {"from_attributes": True}
 

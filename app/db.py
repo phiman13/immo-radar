@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     create_engine,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
 
@@ -119,6 +120,8 @@ class Source(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     last_run: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     listing_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    url: Mapped[str | None] = mapped_column(String, nullable=True)
+    source_type: Mapped[str] = mapped_column(String, default="builtin", server_default="builtin")
 
 
 def _ensure_db_dir() -> None:
@@ -132,3 +135,13 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False
 
 def init_db() -> None:
     Base.metadata.create_all(engine)
+    with engine.connect() as conn:
+        for ddl in [
+            "ALTER TABLE sources ADD COLUMN url TEXT",
+            "ALTER TABLE sources ADD COLUMN source_type TEXT DEFAULT 'builtin'",
+        ]:
+            try:
+                conn.execute(text(ddl))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
