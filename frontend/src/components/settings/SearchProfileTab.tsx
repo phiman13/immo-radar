@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchSettings, patchSetting } from '../../api/settings'
 import type { AppSettings } from '../../types'
 import { cn } from '../../lib/cn'
+import { LocationPicker } from '../map/LocationPicker'
 
 const PROPERTY_TYPES = ['Wohnung', 'Haus', 'Doppelhaushälfte', 'Reihenhaus', 'Grundstück']
 
@@ -39,6 +40,8 @@ export function SearchProfileTab() {
   const { data } = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
   const s = data?.settings
 
+  const centerLatMut = useSetting('search_center_lat')
+  const centerLonMut = useSetting('search_center_lon')
   const radiusMut = useSetting('search_radius_km')
   const priceMinMut = useSetting('price_min')
   const priceMaxMut = useSetting('price_max')
@@ -56,19 +59,22 @@ export function SearchProfileTab() {
 
   return (
     <div>
-      <Row label="Suchradius" hint={`${s.search_radius_km} km um Tutzing`}>
-        <div className="flex items-center gap-3">
-          <input
-            type="range" min={1} max={20} step={1}
-            defaultValue={s.search_radius_km}
-            onMouseUp={(e) => radiusMut.mutate(Number((e.target as HTMLInputElement).value))}
-            className="w-32 accent-[var(--accent)]"
-          />
-          <span className="font-mono text-sm w-12 text-right" style={{ color: 'var(--fg)' }}>
-            {s.search_radius_km} km
-          </span>
-        </div>
-      </Row>
+      <div className="py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <p className="text-sm font-medium mb-1" style={{ color: 'var(--fg)' }}>Suchgebiet</p>
+        <p className="text-xs mb-3" style={{ color: 'var(--muted)' }}>
+          Mittelpunkt verschieben oder Ort suchen · Radius per Slider anpassen
+        </p>
+        <LocationPicker
+          lat={s.search_center_lat ?? 47.9095}
+          lon={s.search_center_lon ?? 11.2783}
+          radiusKm={s.search_radius_km ?? 5}
+          onChangeCenter={(lat, lon) => {
+            centerLatMut.mutate(lat)
+            centerLonMut.mutate(lon)
+          }}
+          onChangeRadius={(km) => radiusMut.mutate(km)}
+        />
+      </div>
 
       <Row label="Preisuntergrenze" hint="Minimum-Kaufpreis">
         <div className="flex items-center gap-2">

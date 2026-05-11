@@ -44,6 +44,8 @@ export interface Source {
 export interface AppSettings {
   poll_interval_minutes: number
   detail_fetch_interval_minutes: number
+  search_center_lat: number
+  search_center_lon: number
   search_radius_km: number
   price_min: number
   price_max: number
