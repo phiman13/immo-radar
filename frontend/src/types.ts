@@ -44,14 +44,16 @@ export interface Source {
 export interface AppSettings {
   poll_interval_minutes: number
   detail_fetch_interval_minutes: number
+  search_center_lat: number
+  search_center_lon: number
   search_radius_km: number
   price_min: number
   price_max: number
   qm_min: number
   qm_max: number
   rooms_min: number
-  year_built_min: number
-  property_types: string
+  year_built_min: number | null
+  property_types: string[]
   score_threshold: number
 }
 
@@ -80,6 +82,14 @@ export interface ListingsFilter {
   status: string
   source: string
   min_score: number | null
+  portal: string
+  minScore: number
+  priceMin: number | null
+  priceMax: number | null
+  qmMin: number | null
+  qmMax: number | null
+  roomsMin: number | null
+  sort: 'date_desc' | 'price_asc' | 'price_desc' | 'score_desc' | 'ppm_asc' | 'ppm_desc'
 }
 
 export type ViewMode = 'grid'

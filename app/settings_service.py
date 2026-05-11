@@ -9,6 +9,8 @@ from app.config import settings as env_settings
 _DEFAULTS: dict[str, tuple[str, type]] = {
     "poll_interval_minutes": ("poll_interval_minutes", int),
     "detail_fetch_interval_minutes": ("detail_fetch_interval_minutes", int),
+    "search_center_lat": ("search_center_lat", float),
+    "search_center_lon": ("search_center_lon", float),
     "search_radius_km": ("search_radius_km", float),
     "price_min": ("price_min", int),
     "price_max": ("price_max", int),

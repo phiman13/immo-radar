@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, computed_field
+from sqlalchemy import asc
+from sqlalchemy import desc as sqla_desc
 
 import app.db as db_module
 from app.db import Listing
@@ -58,11 +61,20 @@ class ListingPatch(BaseModel):
     notes: str | None = None
 
 
+SortOption = Literal["date_desc", "price_asc", "price_desc", "score_desc", "ppm_asc", "ppm_desc"]
+
+
 @router.get("/", response_model=list[ListingOut])
 def get_listings(
     status: str | None = None,
     portal: str | None = None,
     min_score: float | None = None,
+    price_min: int | None = None,
+    price_max: int | None = None,
+    qm_min: float | None = None,
+    qm_max: float | None = None,
+    rooms_min: float | None = None,
+    sort: SortOption = "date_desc",
 ):
     with db_module.SessionLocal() as session:
         q = session.query(Listing)
@@ -72,8 +84,36 @@ def get_listings(
             q = q.filter(Listing.source == portal)
         if min_score is not None:
             q = q.filter(Listing.lage_score >= min_score)
-        results = q.order_by(Listing.last_seen_at.desc()).all()
-        return [ListingOut.model_validate(listing) for listing in results]
+        if price_min is not None:
+            q = q.filter(Listing.price_eur >= price_min)
+        if price_max is not None:
+            q = q.filter(Listing.price_eur <= price_max)
+        if qm_min is not None:
+            q = q.filter(Listing.qm >= qm_min)
+        if qm_max is not None:
+            q = q.filter(Listing.qm <= qm_max)
+        if rooms_min is not None:
+            q = q.filter(Listing.rooms >= rooms_min)
+
+        # DB-level sort (except ppm which is computed)
+        if sort == "date_desc":
+            q = q.order_by(sqla_desc(Listing.last_seen_at))
+        elif sort == "price_asc":
+            q = q.order_by(asc(Listing.price_eur))
+        elif sort == "price_desc":
+            q = q.order_by(sqla_desc(Listing.price_eur))
+        elif sort == "score_desc":
+            q = q.order_by(sqla_desc(Listing.ai_score))
+        # ppm_asc / ppm_desc: no DB sort, handle in Python below
+
+        results = [ListingOut.model_validate(listing) for listing in q.all()]
+
+        if sort == "ppm_asc":
+            results.sort(key=lambda x: x.price_per_sqm or float("inf"))
+        elif sort == "ppm_desc":
+            results.sort(key=lambda x: x.price_per_sqm or float("-inf"), reverse=True)
+
+        return results
 
 
 @router.get("/{listing_id}", response_model=ListingOut)
