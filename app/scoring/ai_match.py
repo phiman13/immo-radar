@@ -77,6 +77,14 @@ async def score_listing(
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
         )
+        from app.usage import log_usage  # noqa: PLC0415
+
+        log_usage(
+            model=settings.ai_model,
+            input_tokens=msg.usage.input_tokens,
+            output_tokens=msg.usage.output_tokens,
+            purpose="enrichment",
+        )
         text = msg.content[0].text.strip() if msg.content else ""
         text = text.strip("`").lstrip("json").strip()
         data = json.loads(text)

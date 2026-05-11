@@ -151,6 +151,14 @@ Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Text drumherum):
             max_tokens=512,
             messages=[{"role": "user", "content": prompt}],
         )
+        from app.usage import log_usage  # noqa: PLC0415
+
+        log_usage(
+            model=_settings.ai_model,
+            input_tokens=msg.usage.input_tokens,
+            output_tokens=msg.usage.output_tokens,
+            purpose="analyze",
+        )
         data = json.loads(msg.content[0].text.strip())
         return AnalyzeResult(
             url=body.url,
@@ -206,6 +214,14 @@ async def discover_sources() -> DiscoverResult:
             model=_settings.ai_model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
+        )
+        from app.usage import log_usage  # noqa: PLC0415
+
+        log_usage(
+            model=_settings.ai_model,
+            input_tokens=msg.usage.input_tokens,
+            output_tokens=msg.usage.output_tokens,
+            purpose="discover",
         )
         suggestions = json.loads(msg.content[0].text.strip())
         return DiscoverResult(suggestions=suggestions, error=None)
