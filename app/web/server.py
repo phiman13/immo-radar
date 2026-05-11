@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
@@ -35,19 +34,27 @@ app.include_router(telegram_api.router, prefix="/api/telegram", tags=["telegram"
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
+_dist_dir = BASE_DIR / "static" / "dist"
+if _dist_dir.exists():
+    app.mount("/assets", StaticFiles(directory=str(_dist_dir / "assets")), name="spa-assets")
+
 
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
 
 
-@app.get("/", response_class=HTMLResponse)
-def index(
+@app.get("/", include_in_schema=False)
+async def index(
     request: Request,
     status_filter: str = "",
     min_score: int = 0,
-    _: str = Depends(require_auth),
 ):
+    # Serve SPA if built
+    spa_index = BASE_DIR / "static" / "dist" / "index.html"
+    if spa_index.exists():
+        return FileResponse(str(spa_index))
+    # Fallback: legacy Jinja2 dashboard
     with SessionLocal() as session:
         q = select(Listing).where(Listing.is_active.is_(True))
         if status_filter:
@@ -55,13 +62,13 @@ def index(
         if min_score > 0:
             q = q.where(Listing.ai_score >= min_score)
         q = q.order_by(desc(Listing.first_seen_at)).limit(200)
-        listings = session.scalars(q).all()
+        listings_data = session.scalars(q).all()
         runs = session.scalars(select(FetchRun).order_by(desc(FetchRun.started_at)).limit(10)).all()
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
-            "listings": listings,
+            "listings": listings_data,
             "runs": runs,
             "status_filter": status_filter,
             "min_score": min_score,
@@ -110,10 +117,9 @@ def set_notes(
 
 @app.get("/{full_path:path}", include_in_schema=False)
 async def spa_fallback(full_path: str):
-    if full_path.startswith("api/"):
+    if full_path.startswith("api/") or full_path.startswith("static/"):
         raise HTTPException(status_code=404)
-    static_dir = os.path.join(os.path.dirname(__file__), "static")
-    index = os.path.join(static_dir, "index.html")
-    if os.path.exists(index):
-        return FileResponse(index)
+    spa_index = BASE_DIR / "static" / "dist" / "index.html"
+    if spa_index.exists():
+        return FileResponse(str(spa_index))
     return JSONResponse({"status": "API running, SPA not built yet"}, status_code=200)

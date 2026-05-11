@@ -1,0 +1,102 @@
+import { type ReactNode } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchSettings, patchSetting } from '../../api/settings'
+import type { AppSettings } from '../../types'
+
+function useSetting<K extends keyof AppSettings>(key: K) {
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: (value: AppSettings[K]) => patchSetting(key, value),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['settings'], data)
+    },
+  })
+  return mutation
+}
+
+interface RowProps {
+  label: string
+  hint?: string
+  children: ReactNode
+}
+
+function Row({ label, hint, children }: RowProps) {
+  return (
+    <div className="flex items-center justify-between py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+      <div>
+        <p className="text-sm font-medium" style={{ color: 'var(--fg)' }}>{label}</p>
+        {hint && <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{hint}</p>}
+      </div>
+      <div className="ml-6 shrink-0">{children}</div>
+    </div>
+  )
+}
+
+export function SearchProfileTab() {
+  const { data } = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
+  const s = data?.settings
+
+  const radiusMut = useSetting('search_radius_km')
+  const priceMinMut = useSetting('price_min')
+  const priceMaxMut = useSetting('price_max')
+  const roomsMut = useSetting('rooms_min')
+
+  if (!s) return <div className="py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Lade…</div>
+
+  return (
+    <div>
+      <Row label="Suchradius" hint={`${s.search_radius_km} km um Tutzing`}>
+        <div className="flex items-center gap-3">
+          <input
+            type="range" min={1} max={20} step={1}
+            defaultValue={s.search_radius_km}
+            onMouseUp={(e) => radiusMut.mutate(Number((e.target as HTMLInputElement).value))}
+            className="w-32 accent-[var(--accent)]"
+          />
+          <span className="font-mono text-sm w-12 text-right" style={{ color: 'var(--fg)' }}>
+            {s.search_radius_km} km
+          </span>
+        </div>
+      </Row>
+
+      <Row label="Preisuntergrenze" hint="Minimum-Kaufpreis">
+        <div className="flex items-center gap-2">
+          <input
+            type="number" step={10000} min={0} max={s.price_max}
+            defaultValue={s.price_min}
+            onBlur={(e) => priceMinMut.mutate(Number(e.target.value))}
+            className="w-32 text-sm font-mono px-2 py-1 rounded-lg border text-right"
+            style={{ borderColor: 'var(--border)', color: 'var(--fg)' }}
+          />
+          <span className="text-xs" style={{ color: 'var(--muted)' }}>€</span>
+        </div>
+      </Row>
+
+      <Row label="Preisobergrenze" hint="Maximum-Kaufpreis">
+        <div className="flex items-center gap-2">
+          <input
+            type="number" step={10000} min={s.price_min} max={5000000}
+            defaultValue={s.price_max}
+            onBlur={(e) => priceMaxMut.mutate(Number(e.target.value))}
+            className="w-32 text-sm font-mono px-2 py-1 rounded-lg border text-right"
+            style={{ borderColor: 'var(--border)', color: 'var(--fg)' }}
+          />
+          <span className="text-xs" style={{ color: 'var(--muted)' }}>€</span>
+        </div>
+      </Row>
+
+      <Row label="Mindest-Zimmer" hint="Minimum Zimmeranzahl">
+        <select
+          defaultValue={s.rooms_min}
+          onChange={(e) => roomsMut.mutate(Number(e.target.value))}
+          className="text-sm px-2 py-1 rounded-lg border"
+          style={{ borderColor: 'var(--border)', color: 'var(--fg)' }}
+        >
+          {[0, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5].map((r) => (
+            <option key={r} value={r}>{r === 0 ? 'Egal' : `≥ ${r} Zi.`}</option>
+          ))}
+        </select>
+      </Row>
+    </div>
+  )
+}
