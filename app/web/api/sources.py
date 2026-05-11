@@ -223,7 +223,12 @@ async def discover_sources() -> DiscoverResult:
             output_tokens=msg.usage.output_tokens,
             purpose="discover",
         )
-        suggestions = json.loads(msg.content[0].text.strip())
+        text = msg.content[0].text.strip()
+        # Claude sometimes wraps JSON in ```-blocks — extract the array
+        import re as _re  # noqa: PLC0415
+
+        m = _re.search(r"\[.*\]", text, _re.DOTALL)
+        suggestions = json.loads(m.group() if m else text)
         return DiscoverResult(suggestions=suggestions, error=None)
     except Exception as e:
         return DiscoverResult(suggestions=[], error=str(e))

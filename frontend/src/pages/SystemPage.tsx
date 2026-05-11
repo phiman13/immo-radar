@@ -99,8 +99,8 @@ export function SystemPage() {
             <tr style={{ color: 'var(--muted)' }}>
               <th className="text-left px-4 py-2.5 text-xs font-medium">Quelle</th>
               <th className="text-left px-4 py-2.5 text-xs font-medium">Start</th>
-              <th className="text-right px-4 py-2.5 text-xs font-medium">Gefunden</th>
-              <th className="text-right px-4 py-2.5 text-xs font-medium">Neu</th>
+              <th className="text-right px-4 py-2.5 text-xs font-medium" title="Alle gescrapten Inserate vor Profil-Filter">Gescrapt</th>
+              <th className="text-right px-4 py-2.5 text-xs font-medium" title="Neu in DB (nach Filter)">Neu</th>
               <th className="text-right px-4 py-2.5 text-xs font-medium">Status</th>
             </tr>
           </thead>
