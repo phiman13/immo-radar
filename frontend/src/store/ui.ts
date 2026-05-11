@@ -5,6 +5,9 @@ interface UIState {
   selectedListingId: number | null
   setSelectedListingId: (id: number | null) => void
 
+  viewMode: 'grid' | 'map'
+  setViewMode: (mode: 'grid' | 'map') => void
+
   filter: ListingsFilter
   setFilter: (patch: Partial<ListingsFilter>) => void
   resetFilter: () => void
@@ -27,6 +30,9 @@ const DEFAULT_FILTER: ListingsFilter = {
 export const useUIStore = create<UIState>((set) => ({
   selectedListingId: null,
   setSelectedListingId: (id) => set({ selectedListingId: id }),
+
+  viewMode: 'grid',
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   filter: DEFAULT_FILTER,
   setFilter: (patch) =>
