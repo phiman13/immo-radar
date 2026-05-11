@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle, MagnifyingGlass, CircleNotch } from '@phosphor-icons/react'
+import { CheckCircle, MagnifyingGlass, CircleNotch, Lock } from '@phosphor-icons/react'
 import {
   fetchSources,
   patchSource,
@@ -259,33 +259,50 @@ export function SourcesTab() {
         </thead>
         <tbody>
           {sources.map((source) => (
-            <tr key={source.id} className="border-t" style={{ borderColor: 'var(--border)' }}>
+            <tr
+              key={source.id}
+              className="border-t"
+              style={{
+                borderColor: 'var(--border)',
+                opacity: source.source_type === 'blocked' ? 0.55 : 1,
+              }}
+            >
               <td className="py-3 font-medium" style={{ color: 'var(--fg)' }}>
                 {source.display_name}
+                {source.source_type === 'blocked' && (
+                  <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    Gesperrt
+                  </span>
+                )}
                 {source.source_type === 'suggested' && (
                   <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-[--border] text-[--muted]">Vorschlag</span>
                 )}
               </td>
               <td className="py-3" style={{ color: 'var(--muted)' }}>
-                {source.last_run ? formatTimeAgo(source.last_run) : '–'}
+                {source.source_type === 'blocked'
+                  ? <span className="text-xs" title="Bot-Schutz — scraping nicht möglich">–</span>
+                  : source.last_run ? formatTimeAgo(source.last_run) : '–'
+                }
               </td>
               <td className="py-3 text-right font-mono text-xs" style={{ color: 'var(--fg)' }}>
-                {source.listing_count}
+                {source.source_type === 'blocked' ? '–' : source.listing_count}
               </td>
               <td className="py-3 text-right">
-                <button
-                  onClick={() => toggleMut.mutate({ id: source.id, enabled: !source.enabled })}
-                  className="relative inline-flex h-5 w-9 rounded-full transition-colors"
-                  style={{
-                    background: source.enabled ? 'var(--accent)' : 'var(--border)',
-                  }}
-                  aria-label={source.enabled ? 'Deaktivieren' : 'Aktivieren'}
-                >
-                  <span
-                    className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform my-0.5"
-                    style={{ transform: source.enabled ? 'translateX(20px)' : 'translateX(2px)' }}
-                  />
-                </button>
+                {source.source_type === 'blocked' ? (
+                  <Lock size={16} style={{ color: 'var(--muted)' }} className="ml-auto" />
+                ) : (
+                  <button
+                    onClick={() => toggleMut.mutate({ id: source.id, enabled: !source.enabled })}
+                    className="relative inline-flex h-5 w-9 rounded-full transition-colors"
+                    style={{ background: source.enabled ? 'var(--accent)' : 'var(--border)' }}
+                    aria-label={source.enabled ? 'Deaktivieren' : 'Aktivieren'}
+                  >
+                    <span
+                      className="inline-block h-4 w-4 rounded-full bg-white shadow transition-transform my-0.5"
+                      style={{ transform: source.enabled ? 'translateX(20px)' : 'translateX(2px)' }}
+                    />
+                  </button>
+                )}
               </td>
             </tr>
           ))}

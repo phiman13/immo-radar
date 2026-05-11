@@ -13,24 +13,41 @@ import app.db as db_module
 router = APIRouter()
 
 DEFAULT_SOURCES = [
-    {"name": "immoscout24", "display_name": "ImmoScout24"},
-    {"name": "immowelt", "display_name": "Immowelt"},
+    # blocked: bot-protected on all endpoints incl. RSS (401/404)
+    {"name": "immoscout24", "display_name": "ImmoScout24", "source_type": "blocked"},
+    {"name": "immowelt", "display_name": "Immowelt", "source_type": "blocked"},
+    {"name": "sparkasse_immo", "display_name": "Sparkasse Immobilien", "source_type": "blocked"},
+    # active scrapers
     {"name": "kleinanzeigen", "display_name": "Kleinanzeigen"},
-    {"name": "makler_bsimmo", "display_name": "BS Immo"},
-    {"name": "makler_riedel", "display_name": "Riedel Immobilien"},
-    {"name": "makler_starnberg_immo", "display_name": "Starnberg Immo"},
-    {"name": "sparkasse_immo", "display_name": "Sparkasse Immobilien"},
+    {"name": "bs_immo", "display_name": "BS Immo"},
+    {"name": "riedel", "display_name": "Riedel Immobilien"},
+    {"name": "starnberg_bader", "display_name": "Starnberg Immo"},
     {"name": "tutzing24", "display_name": "Tutzing24"},
 ]
 
+# Registry names changed — migrate existing DB rows so last_run lookup works.
+_NAME_MIGRATIONS = {
+    "makler_bsimmo": "bs_immo",
+    "makler_riedel": "riedel",
+    "makler_starnberg_immo": "starnberg_bader",
+}
+
 
 def _seed_sources(session) -> None:
-    """Seed default sources if table is empty."""
-    count = session.query(db_module.Source).count()
-    if count == 0:
-        for src in DEFAULT_SOURCES:
+    """Upsert default sources; handles name migrations and blocked-status updates."""
+    for old, new in _NAME_MIGRATIONS.items():
+        row = session.query(db_module.Source).filter(db_module.Source.name == old).first()
+        if row:
+            row.name = new
+    session.flush()
+
+    for src in DEFAULT_SOURCES:
+        existing = session.query(db_module.Source).filter(db_module.Source.name == src["name"]).first()
+        if existing is None:
             session.add(db_module.Source(**src))
-        session.commit()
+        elif "source_type" in src:
+            existing.source_type = src["source_type"]
+    session.commit()
 
 
 class SourceOut(BaseModel):
@@ -53,10 +70,41 @@ class SourcePatch(BaseModel):
 
 @router.get("/", response_model=list[SourceOut])
 def get_sources():
+    from sqlalchemy import func  # noqa: PLC0415
+    from sqlalchemy import select as sa_select
+
     with db_module.SessionLocal() as session:
         _seed_sources(session)
         sources = session.query(db_module.Source).order_by(db_module.Source.name).all()
-        return [SourceOut.model_validate(s) for s in sources]
+
+        last_runs = dict(
+            session.execute(
+                sa_select(db_module.FetchRun.source, func.max(db_module.FetchRun.finished_at)).group_by(
+                    db_module.FetchRun.source
+                )
+            ).fetchall()
+        )
+        listing_counts = dict(
+            session.execute(
+                sa_select(db_module.Listing.source, func.count())
+                .where(db_module.Listing.is_active.is_(True))
+                .group_by(db_module.Listing.source)
+            ).fetchall()
+        )
+
+        return [
+            SourceOut(
+                id=s.id,
+                name=s.name,
+                display_name=s.display_name,
+                enabled=s.enabled,
+                last_run=last_runs.get(s.name),
+                listing_count=listing_counts.get(s.name, 0),
+                url=s.url,
+                source_type=s.source_type or "builtin",
+            )
+            for s in sources
+        ]
 
 
 @router.patch("/{source_id}", response_model=SourceOut)
