@@ -105,3 +105,16 @@ export const STATUS_LABELS: Record<string, string> = {
   gesehen: 'Gesehen',
   abgelehnt: 'Abgelehnt',
 }
+
+export interface CostPeriod {
+  usd: number
+  calls: number
+  input_tokens: number
+  output_tokens: number
+}
+
+export interface ApiCosts {
+  last_24h: CostPeriod
+  last_7d: CostPeriod
+  breakdown_24h: Record<string, number>
+}
