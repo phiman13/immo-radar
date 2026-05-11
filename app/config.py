@@ -38,6 +38,8 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
+    immoscout24_rss_url: str = ""
+
     @property
     def property_type_list(self) -> list[str]:
         return [p.strip().lower() for p in self.property_types.split(",") if p.strip()]
