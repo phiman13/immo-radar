@@ -6,6 +6,7 @@ import { cn } from '../../lib/cn'
 import { MultiLocationPicker, type SearchLocation } from '../map/MultiLocationPicker'
 
 const PROPERTY_TYPES = ['Wohnung', 'Haus', 'Doppelhaushälfte', 'Reihenhaus', 'Grundstück']
+const PREFERENCE_CHIPS = ['Balkon', 'Terrasse', 'Garten', 'Garage/Stellplatz', 'Keller', 'Aufzug', 'Einbauküche', 'Barrierefrei']
 
 function useSetting<K extends keyof AppSettings>(key: K) {
   const queryClient = useQueryClient()
@@ -54,6 +55,12 @@ export function SearchProfileTab() {
   const queryClient = useQueryClient()
   const propertyTypesMut = useMutation({
     mutationFn: (types: string[]) => patchSetting('property_types', types.join(',')),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['settings'], data)
+    },
+  })
+  const preferencesMut = useMutation({
+    mutationFn: (prefs: string[]) => patchSetting('preferences', prefs),
     onSuccess: (data) => {
       queryClient.setQueryData(['settings'], data)
     },
@@ -155,6 +162,36 @@ export function SearchProfileTab() {
                 style={active ? {} : { color: 'var(--muted)' }}
               >
                 {pt}
+              </button>
+            )
+          })}
+        </div>
+      </Row>
+
+      <Row label="KI-Ausstattungs-Präferenzen" hint="Fließt in KI-Score ein — kein harter Filter">
+        <div className="flex flex-wrap gap-2 max-w-xs justify-end">
+          {PREFERENCE_CHIPS.map((pref) => {
+            const active = (s.preferences ?? []).includes(pref)
+            return (
+              <button
+                key={pref}
+                type="button"
+                onClick={() => {
+                  const current = s.preferences ?? []
+                  const next = active
+                    ? current.filter((p) => p !== pref)
+                    : [...current, pref]
+                  preferencesMut.mutate(next)
+                }}
+                className={cn(
+                  'px-3 py-1 rounded-full text-xs border transition-colors',
+                  active
+                    ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+                    : 'border-[var(--border)] hover:border-[var(--accent)]'
+                )}
+                style={active ? {} : { color: 'var(--muted)' }}
+              >
+                {pref}
               </button>
             )
           })}

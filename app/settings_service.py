@@ -24,9 +24,10 @@ _DEFAULTS: dict[str, tuple[str, type]] = {
     "property_types": ("property_types", str),
     "score_threshold": ("score_threshold", float),
     "search_locations": ("search_locations", str),  # stored as JSON
+    "preferences": ("preferences", str),  # stored as JSON list of strings
 }
 
-_JSON_KEYS = {"search_locations"}
+_JSON_KEYS = {"search_locations", "preferences"}
 _BOOL_KEYS = {"poll_enabled", "enrich_enabled"}
 
 
@@ -41,6 +42,9 @@ def get_setting(key: str) -> Any:
                 return row.value.lower() in ("1", "true")
             _, cast = _DEFAULTS.get(key, (None, str))
             return cast(row.value)
+    # Fallback for preferences: empty list
+    if key == "preferences":
+        return []
     # Fallback for search_locations: derive from individual lat/lon/radius settings
     if key == "search_locations":
         return [

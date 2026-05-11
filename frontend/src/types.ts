@@ -67,6 +67,7 @@ export interface AppSettings {
   year_built_min: number | null
   property_types: string[]
   score_threshold: number
+  preferences: string[]
 }
 
 export interface JobInfo {

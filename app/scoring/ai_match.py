@@ -18,6 +18,7 @@ Suchprofil:
 - Baujahr ab: {year_built_min}
 - Suchgebiete: {locations}
 - Bevorzugt: Seenähe, Bergblick, ruhige Lage, gute S6-Anbindung
+- Gewünschte Ausstattung (kein hartes Muss, aber wichtig für Score): {preferences}
 
 Listing:
 - Titel: {title}
@@ -54,6 +55,8 @@ async def score_listing(
     locs_str = "; ".join(
         f"{loc.get('label', 'Standort')} ({loc.get('radius_km', 5):.0f} km Radius)" for loc in search_locs
     )
+    prefs = _get_setting("preferences") or []
+    prefs_str = ", ".join(prefs) if prefs else "keine angegeben"
 
     prompt = _PROMPT.format(
         price_min=settings.price_min,
@@ -64,6 +67,7 @@ async def score_listing(
         types=", ".join(settings.property_type_list),
         year_built_min=settings.year_built_min,
         locations=locs_str,
+        preferences=prefs_str,
         title=listing.title or "—",
         price=f"{listing.price_eur:,}".replace(",", ".") if listing.price_eur else "?",
         qm=listing.qm or "?",
