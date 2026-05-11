@@ -1,16 +1,20 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
+import { useState, useRef } from 'react'
 import { Play } from '@phosphor-icons/react'
 import { fetchSystemStatus, fetchFetchRuns, triggerCrawl } from '../api/system'
 import { formatTimeAgo } from '../lib/formatters'
 
 export function SystemPage() {
+  const [isCrawling, setIsCrawling] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const { data: status, refetch: refetchStatus } = useQuery({
     queryKey: ['system-status'],
     queryFn: fetchSystemStatus,
     refetchInterval: 30_000,
   })
 
-  const { data: runs = [] } = useQuery({
+  const { data: runs = [], refetch: refetchRuns } = useQuery({
     queryKey: ['fetch-runs'],
     queryFn: fetchFetchRuns,
     refetchInterval: 30_000,
@@ -19,7 +23,17 @@ export function SystemPage() {
   const triggerMut = useMutation({
     mutationFn: triggerCrawl,
     onSuccess: () => {
-      setTimeout(() => refetchStatus(), 2_000)
+      setIsCrawling(true)
+      if (pollRef.current) clearInterval(pollRef.current)
+      let count = 0
+      pollRef.current = setInterval(() => {
+        refetchRuns()
+        refetchStatus()
+        if (++count >= 12) {
+          clearInterval(pollRef.current!)
+          setIsCrawling(false)
+        }
+      }, 2_500)
     },
   })
 
@@ -33,12 +47,12 @@ export function SystemPage() {
         </h1>
         <button
           onClick={() => triggerMut.mutate()}
-          disabled={triggerMut.isPending}
+          disabled={triggerMut.isPending || isCrawling}
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white disabled:opacity-50 transition-opacity hover:opacity-90"
           style={{ background: 'var(--accent)' }}
         >
           <Play size={14} />
-          {triggerMut.isPending ? 'Läuft…' : 'Jetzt crawlen'}
+          {isCrawling ? 'Läuft…' : 'Jetzt crawlen'}
         </button>
       </div>
 

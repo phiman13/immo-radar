@@ -39,6 +39,15 @@ def get_status(request: Request) -> SystemStatus:
         running = scheduler.running
         for job in scheduler.get_jobs():
             jobs.append(JobInfo(id=job.id, next_run=job.next_run_time))
+    else:
+        # Web container has no scheduler — infer liveness from last FetchRun
+        from sqlalchemy import desc
+
+        with db_module.SessionLocal() as _s:
+            last_run = _s.query(db_module.FetchRun).order_by(desc(db_module.FetchRun.started_at)).first()
+        if last_run is not None:
+            age_s = (datetime.now(UTC) - last_run.started_at.replace(tzinfo=UTC)).total_seconds()
+            running = age_s < 1800  # worker alive if ran within last 30 min
 
     # Count listings by status
     with db_module.SessionLocal() as session:
