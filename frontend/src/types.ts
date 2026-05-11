@@ -50,8 +50,8 @@ export interface AppSettings {
   qm_min: number
   qm_max: number
   rooms_min: number
-  year_built_min: number
-  property_types: string
+  year_built_min: number | null
+  property_types: string[]
   score_threshold: number
 }
 

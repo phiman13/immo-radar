@@ -2,6 +2,9 @@ import { type ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchSettings, patchSetting } from '../../api/settings'
 import type { AppSettings } from '../../types'
+import { cn } from '../../lib/cn'
+
+const PROPERTY_TYPES = ['Wohnung', 'Haus', 'Doppelhaushälfte', 'Reihenhaus', 'Grundstück']
 
 function useSetting<K extends keyof AppSettings>(key: K) {
   const queryClient = useQueryClient()
@@ -40,6 +43,14 @@ export function SearchProfileTab() {
   const priceMinMut = useSetting('price_min')
   const priceMaxMut = useSetting('price_max')
   const roomsMut = useSetting('rooms_min')
+  const yearBuiltMut = useSetting('year_built_min')
+  const queryClient = useQueryClient()
+  const propertyTypesMut = useMutation({
+    mutationFn: (types: string[]) => patchSetting('property_types', types.join(',')),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['settings'], data)
+    },
+  })
 
   if (!s) return <div className="py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>Lade…</div>
 
@@ -96,6 +107,50 @@ export function SearchProfileTab() {
             <option key={r} value={r}>{r === 0 ? 'Egal' : `≥ ${r} Zi.`}</option>
           ))}
         </select>
+      </Row>
+
+      <Row label="Baujahr ab" hint="Mindest-Baujahr des Objekts">
+        <div className="flex items-center gap-3">
+          <input
+            type="range" min={1900} max={2030} step={5}
+            defaultValue={s.year_built_min ?? 1980}
+            onMouseUp={(e) => yearBuiltMut.mutate(Number((e.target as HTMLInputElement).value))}
+            className="w-32 accent-[var(--accent)]"
+          />
+          <span className="font-mono text-sm w-12 text-right" style={{ color: 'var(--fg)' }}>
+            {s.year_built_min ?? 1980}
+          </span>
+        </div>
+      </Row>
+
+      <Row label="Objekttypen" hint="Nur diese Typen berücksichtigen">
+        <div className="flex flex-wrap gap-2 max-w-xs justify-end">
+          {PROPERTY_TYPES.map((pt) => {
+            const active = (s.property_types ?? []).includes(pt)
+            return (
+              <button
+                key={pt}
+                type="button"
+                onClick={() => {
+                  const current = s.property_types ?? []
+                  const next = active
+                    ? current.filter((t) => t !== pt)
+                    : [...current, pt]
+                  propertyTypesMut.mutate(next)
+                }}
+                className={cn(
+                  'px-3 py-1 rounded-full text-xs border transition-colors',
+                  active
+                    ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+                    : 'border-[var(--border)] hover:border-[var(--accent)]'
+                )}
+                style={active ? {} : { color: 'var(--muted)' }}
+              >
+                {pt}
+              </button>
+            )
+          })}
+        </div>
       </Row>
     </div>
   )
