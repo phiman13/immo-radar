@@ -118,7 +118,7 @@ export function SearchProfileTab() {
       <Row label="Baujahr ab" hint="Mindest-Baujahr des Objekts">
         <div className="flex items-center gap-3">
           <input
-            type="range" min={1900} max={2030} step={5}
+            type="range" min={1850} max={2030} step={5}
             defaultValue={s.year_built_min ?? 1980}
             onMouseUp={(e) => yearBuiltMut.mutate(Number((e.target as HTMLInputElement).value))}
             className="w-32 accent-[var(--accent)]"
