@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import app.db as db_module
 
@@ -22,7 +22,7 @@ def log_usage(model: str, input_tokens: int, output_tokens: int, purpose: str) -
     try:
         with db_module.SessionLocal() as session:
             row = db_module.ApiUsage(
-                ts=datetime.utcnow(),
+                ts=datetime.now(UTC),
                 model=model,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,

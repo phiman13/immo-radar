@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import select
 
@@ -10,6 +9,8 @@ from app.config import settings
 from app.db import FetchRun, Listing, ListingHistory, SessionLocal
 from app.logging_setup import log
 from app.models import RawListing
+from app.scoring.lage import in_search_area
+from app.settings_service import get_setting
 from app.sources import get_all_adapters
 
 # Tutzing + 10km — explicit allowlist of cities/PLZs that count as "in scope".
@@ -60,6 +61,9 @@ def _matches_profile(raw: RawListing) -> bool:
         return False
     if not _location_ok(raw):
         return False
+    # Coordinate-based filter: reject if coordinates are known but outside all search areas
+    if not in_search_area(raw.lat, raw.lon, get_setting("search_locations")):
+        return False
     if raw.price_eur is not None:
         if raw.price_eur < settings.price_min or raw.price_eur > settings.price_max:
             return False
@@ -78,7 +82,7 @@ def _matches_profile(raw: RawListing) -> bool:
 def _upsert(session, raw: RawListing) -> tuple[Listing, bool]:
     """Insert if new, otherwise update + record changes. Returns (listing, is_new)."""
     h = raw.dedup_hash()
-    existing: Optional[Listing] = session.scalar(select(Listing).where(Listing.dedup_hash == h))
+    existing: Listing | None = session.scalar(select(Listing).where(Listing.dedup_hash == h))
     now = datetime.utcnow()
 
     if existing is None:

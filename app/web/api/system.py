@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -108,7 +108,7 @@ def _aggregate(rows: list) -> CostPeriod:
 
 @router.get("/costs", response_model=CostsOut)
 def get_costs() -> CostsOut:
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     cutoff_24h = now - timedelta(hours=24)
     cutoff_7d = now - timedelta(days=7)
 
