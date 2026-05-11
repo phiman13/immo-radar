@@ -14,8 +14,8 @@ rsync -avz --delete \
   --exclude='.pytest_cache' --exclude='.worktrees' --exclude='node_modules' \
   ./ "$TARGET:$APP_DIR/"
 
-echo "==> docker compose up -d --build"
-ssh "$TARGET" "cd $APP_DIR && docker compose up -d --build"
+echo "==> docker compose down && up --build"
+ssh "$TARGET" "cd $APP_DIR && docker compose down && docker compose up -d --build"
 
 echo "==> status"
 ssh "$TARGET" "cd $APP_DIR && docker compose ps"
