@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
+import httpx
+from anthropic import Anthropic
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -69,3 +72,100 @@ def patch_source(source_id: int, body: SourcePatch):
         session.commit()
         session.refresh(source)
         return SourceOut.model_validate(source)
+
+
+class AnalyzeRequest(BaseModel):
+    url: str
+
+
+class FieldDetection(BaseModel):
+    price: bool
+    qm: bool
+    rooms: bool
+    address: bool
+    images: bool
+
+
+class AnalyzeResult(BaseModel):
+    url: str
+    listing_count: int
+    example_title: str | None
+    example_price: str | None
+    fields: FieldDetection
+    error: str | None
+
+
+@router.post("/analyze", response_model=AnalyzeResult)
+async def analyze_source(body: AnalyzeRequest) -> AnalyzeResult:
+    # 1. Fetch the URL
+    try:
+        async with httpx.AsyncClient(
+            timeout=15.0,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; immo-radar/1.0)"},
+            follow_redirects=True,
+        ) as client:
+            resp = await client.get(body.url)
+            resp.raise_for_status()
+            html = resp.text
+    except Exception as e:
+        return AnalyzeResult(
+            url=body.url,
+            listing_count=0,
+            example_title=None,
+            example_price=None,
+            fields=FieldDetection(price=False, qm=False, rooms=False, address=False, images=False),
+            error=f"Seite nicht erreichbar: {e}",
+        )
+
+    # 2. Truncate HTML to avoid token overflow
+    html_excerpt = html[:12_000]
+
+    # 3. Ask Claude
+    from app.config import settings as _settings  # noqa: PLC0415
+
+    anthropic_client = Anthropic(api_key=_settings.anthropic_api_key)
+    prompt = f"""Du analysierst eine deutsche Immobilien-Website.
+
+HTML-Ausschnitt:
+<html>
+{html_excerpt}
+</html>
+
+Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Text drumherum):
+{{
+  "listing_count": <Schätzung wie viele Inserate auf der Seite zu sehen sind, 0 wenn keine>,
+  "example_title": <Titel des ersten Inserats oder null>,
+  "example_price": <Preis des ersten Inserats als String z.B. "450.000 €" oder null>,
+  "fields": {{
+    "price": <true wenn Preise erkennbar>,
+    "qm": <true wenn m² erkennbar>,
+    "rooms": <true wenn Zimmeranzahl erkennbar>,
+    "address": <true wenn Adresse/Ort erkennbar>,
+    "images": <true wenn Bilder vorhanden>
+  }}
+}}"""
+
+    try:
+        msg = anthropic_client.messages.create(
+            model=_settings.ai_model,
+            max_tokens=512,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        data = json.loads(msg.content[0].text.strip())
+        return AnalyzeResult(
+            url=body.url,
+            listing_count=data.get("listing_count", 0),
+            example_title=data.get("example_title"),
+            example_price=data.get("example_price"),
+            fields=FieldDetection(**data.get("fields", {})),
+            error=None,
+        )
+    except Exception as e:
+        return AnalyzeResult(
+            url=body.url,
+            listing_count=0,
+            example_title=None,
+            example_price=None,
+            fields=FieldDetection(price=False, qm=False, rooms=False, address=False, images=False),
+            error=f"Claude-Analyse fehlgeschlagen: {e}",
+        )
