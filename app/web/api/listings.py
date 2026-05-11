@@ -111,7 +111,7 @@ def get_listings(
         if sort == "ppm_asc":
             results.sort(key=lambda x: x.price_per_sqm or float("inf"))
         elif sort == "ppm_desc":
-            results.sort(key=lambda x: x.price_per_sqm or 0, reverse=True)
+            results.sort(key=lambda x: x.price_per_sqm or float("-inf"), reverse=True)
 
         return results
 

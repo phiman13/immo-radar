@@ -86,3 +86,19 @@ def test_sort_price_desc():
     assert r.status_code == 200
     prices = [item["price_eur"] for item in r.json()]
     assert prices == sorted(prices, reverse=True)
+
+
+def test_sort_ppm_asc():
+    r = client.get("/api/listings/?sort=ppm_asc")
+    assert r.status_code == 200
+    data = r.json()
+    ppms = [item["price_per_sqm"] for item in data if item["price_per_sqm"] is not None]
+    assert ppms == sorted(ppms)
+
+
+def test_sort_ppm_desc():
+    r = client.get("/api/listings/?sort=ppm_desc")
+    assert r.status_code == 200
+    data = r.json()
+    ppms = [item["price_per_sqm"] for item in data if item["price_per_sqm"] is not None]
+    assert ppms == sorted(ppms, reverse=True)
