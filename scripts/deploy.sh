@@ -11,7 +11,7 @@ ssh "$TARGET" "mkdir -p $APP_DIR"
 rsync -avz --delete \
   --exclude='.venv' --exclude='data' --exclude='__pycache__' \
   --exclude='.git' --exclude='*.pyc' --exclude='.ruff_cache' \
-  --exclude='.pytest_cache' \
+  --exclude='.pytest_cache' --exclude='.worktrees' --exclude='node_modules' \
   ./ "$TARGET:$APP_DIR/"
 
 echo "==> docker compose up -d --build"
