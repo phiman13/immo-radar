@@ -1,110 +1,166 @@
-import { X } from '@phosphor-icons/react'
+import { ArrowsDownUp, Funnel } from '@phosphor-icons/react'
 import { useUIStore } from '../../store/ui'
-import { STATUS_LABELS } from '../../types'
+import { Source } from '../../types'
 import { cn } from '../../lib/cn'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Alle' },
-  { value: 'new', label: STATUS_LABELS.new },
-  { value: 'interessant', label: STATUS_LABELS.interessant },
-  { value: 'vielleicht', label: STATUS_LABELS.vielleicht },
-  { value: 'gesehen', label: STATUS_LABELS.gesehen },
-  { value: 'abgelehnt', label: STATUS_LABELS.abgelehnt },
+  { value: 'neu', label: 'Neu' },
+  { value: 'interessant', label: 'Interessant' },
+  { value: 'vielleicht', label: 'Vielleicht' },
+  { value: 'gesehen', label: 'Gesehen' },
+  { value: 'abgelehnt', label: 'Abgelehnt' },
+]
+
+const SORT_OPTIONS = [
+  { value: 'date_desc', label: 'Neueste zuerst' },
+  { value: 'price_asc', label: 'Preis ↑' },
+  { value: 'price_desc', label: 'Preis ↓' },
+  { value: 'score_desc', label: 'Score ↓' },
+  { value: 'ppm_asc', label: '€/m² ↑' },
+  { value: 'ppm_desc', label: '€/m² ↓' },
 ]
 
 const SCORE_OPTIONS = [
-  { value: null, label: 'Alle Scores' },
+  { value: 0, label: 'Alle Scores' },
   { value: 50, label: 'Score ≥ 50' },
   { value: 70, label: 'Score ≥ 70' },
   { value: 80, label: 'Score ≥ 80' },
 ]
 
-interface FilterBarProps {
-  sources: string[]
-  totalCount: number
-}
+const ROOMS_OPTIONS = [
+  { value: '', label: 'Zi. egal' },
+  { value: '2', label: '2+' },
+  { value: '3', label: '3+' },
+  { value: '4', label: '4+' },
+  { value: '5', label: '5+' },
+]
 
-export function FilterBar({ sources, totalCount }: FilterBarProps) {
-  const { filter, setFilter, resetFilter } = useUIStore()
-  const hasActiveFilter = filter.status !== '' || filter.source !== '' || filter.min_score != null
+interface Props { sources: Source[] }
+
+export function FilterBar({ sources }: Props) {
+  const { filter, setFilter } = useUIStore()
+
+  const hasActiveFilters = !!(
+    filter.priceMin || filter.priceMax || filter.qmMin || filter.qmMax ||
+    filter.roomsMin || filter.status || filter.portal || filter.minScore
+  )
 
   return (
-    <div
-      className="sticky top-0 z-10 border-b px-6 py-3 flex items-center gap-3 flex-wrap"
-      style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}
-    >
-      {/* Status chips */}
-      <div className="flex items-center gap-1">
-        {STATUS_OPTIONS.map((opt) => (
+    <div className="sticky top-0 z-20 bg-[--bg] border-b border-[--border] px-6 py-3 space-y-2">
+      {/* Row 1: Status chips + Sort */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {STATUS_OPTIONS.map(opt => (
           <button
             key={opt.value}
             onClick={() => setFilter({ status: opt.value })}
             className={cn(
-              'px-3 py-1 rounded-full text-xs font-medium transition-colors',
+              'px-3 py-1 rounded-full text-sm font-medium border transition-colors',
               filter.status === opt.value
-                ? 'text-white'
-                : 'hover:bg-[var(--accent-muted)]',
+                ? 'bg-[--accent] text-white border-[--accent]'
+                : 'border-[--border] text-[--muted] hover:border-[--accent] hover:text-[--accent]'
             )}
-            style={
-              filter.status === opt.value
-                ? { background: 'var(--accent)', color: 'white' }
-                : { color: 'var(--fg)' }
-            }
           >
             {opt.label}
           </button>
         ))}
+        <div className="ml-auto flex items-center gap-1.5 text-[--muted]">
+          <ArrowsDownUp size={14} weight="bold" />
+          <select
+            value={filter.sort}
+            onChange={e => setFilter({ sort: e.target.value as typeof filter.sort })}
+            className="text-sm bg-transparent border-none outline-none text-[--fg] cursor-pointer"
+          >
+            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
       </div>
 
-      <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
+      {/* Row 2: Numeric filters */}
+      <div className="flex items-center gap-3 flex-wrap text-sm">
+        {/* Price range */}
+        <div className="flex items-center gap-1">
+          <span className="text-[--muted] text-xs">€</span>
+          <input
+            type="number" placeholder="Min" step={50000}
+            value={filter.priceMin ?? ''}
+            onChange={e => setFilter({ priceMin: e.target.value ? Number(e.target.value) : null })}
+            className="w-24 px-2 py-1 rounded border border-[--border] bg-white font-mono text-xs focus:outline-none focus:border-[--accent]"
+          />
+          <span className="text-[--muted]">–</span>
+          <input
+            type="number" placeholder="Max" step={50000}
+            value={filter.priceMax ?? ''}
+            onChange={e => setFilter({ priceMax: e.target.value ? Number(e.target.value) : null })}
+            className="w-24 px-2 py-1 rounded border border-[--border] bg-white font-mono text-xs focus:outline-none focus:border-[--accent]"
+          />
+        </div>
 
-      {/* Score filter */}
-      <select
-        value={filter.min_score ?? ''}
-        onChange={(e) =>
-          setFilter({ min_score: e.target.value === '' ? null : Number(e.target.value) })
-        }
-        className="text-xs px-2 py-1 rounded-lg border bg-white"
-        style={{ borderColor: 'var(--border)', color: 'var(--fg)' }}
-      >
-        {SCORE_OPTIONS.map((opt) => (
-          <option key={String(opt.value)} value={opt.value ?? ''}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+        <div className="w-px h-4 bg-[--border]" />
 
-      {/* Source filter */}
-      {sources.length > 1 && (
+        {/* m² range */}
+        <div className="flex items-center gap-1">
+          <span className="text-[--muted] text-xs">m²</span>
+          <input
+            type="number" placeholder="Min"
+            value={filter.qmMin ?? ''}
+            onChange={e => setFilter({ qmMin: e.target.value ? Number(e.target.value) : null })}
+            className="w-16 px-2 py-1 rounded border border-[--border] bg-white font-mono text-xs focus:outline-none focus:border-[--accent]"
+          />
+          <span className="text-[--muted]">–</span>
+          <input
+            type="number" placeholder="Max"
+            value={filter.qmMax ?? ''}
+            onChange={e => setFilter({ qmMax: e.target.value ? Number(e.target.value) : null })}
+            className="w-16 px-2 py-1 rounded border border-[--border] bg-white font-mono text-xs focus:outline-none focus:border-[--accent]"
+          />
+        </div>
+
+        <div className="w-px h-4 bg-[--border]" />
+
+        {/* Rooms */}
         <select
-          value={filter.source}
-          onChange={(e) => setFilter({ source: e.target.value })}
-          className="text-xs px-2 py-1 rounded-lg border bg-white"
-          style={{ borderColor: 'var(--border)', color: 'var(--fg)' }}
+          value={filter.roomsMin ?? ''}
+          onChange={e => setFilter({ roomsMin: e.target.value ? Number(e.target.value) : null })}
+          className="px-2 py-1 rounded border border-[--border] bg-white text-xs focus:outline-none focus:border-[--accent] text-[--fg]"
         >
-          <option value="">Alle Quellen</option>
-          {sources.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
+          {ROOMS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-      )}
 
-      {/* Reset */}
-      {hasActiveFilter && (
-        <button
-          onClick={resetFilter}
-          className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors hover:bg-[var(--accent-muted)]"
-          style={{ color: 'var(--muted)' }}
+        {/* Score */}
+        <select
+          value={filter.minScore}
+          onChange={e => setFilter({ minScore: Number(e.target.value) })}
+          className="px-2 py-1 rounded border border-[--border] bg-white text-xs focus:outline-none focus:border-[--accent] text-[--fg]"
         >
-          <X size={12} />
-          Filter zurücksetzen
-        </button>
-      )}
+          {SCORE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
 
-      {/* Count */}
-      <span className="ml-auto text-xs" style={{ color: 'var(--muted)' }}>
-        {totalCount} {totalCount === 1 ? 'Objekt' : 'Objekte'}
-      </span>
+        {/* Portal */}
+        {sources.length > 0 && (
+          <select
+            value={filter.portal}
+            onChange={e => setFilter({ portal: e.target.value })}
+            className="px-2 py-1 rounded border border-[--border] bg-white text-xs focus:outline-none focus:border-[--accent] text-[--fg]"
+          >
+            <option value="">Alle Portale</option>
+            {sources.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+          </select>
+        )}
+
+        {/* Reset */}
+        {hasActiveFilters && (
+          <button
+            onClick={() => setFilter({
+              priceMin: null, priceMax: null, qmMin: null, qmMax: null,
+              roomsMin: null, status: '', portal: '', minScore: 0
+            })}
+            className="ml-auto text-xs text-[--muted] hover:text-[--accent] flex items-center gap-1"
+          >
+            <Funnel size={12} /> Filter löschen
+          </button>
+        )}
+      </div>
     </div>
   )
 }

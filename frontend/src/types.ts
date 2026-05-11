@@ -80,6 +80,14 @@ export interface ListingsFilter {
   status: string
   source: string
   min_score: number | null
+  portal: string
+  minScore: number
+  priceMin: number | null
+  priceMax: number | null
+  qmMin: number | null
+  qmMax: number | null
+  roomsMin: number | null
+  sort: 'date_desc' | 'price_asc' | 'price_desc' | 'score_desc' | 'ppm_asc' | 'ppm_desc'
 }
 
 export type ViewMode = 'grid'

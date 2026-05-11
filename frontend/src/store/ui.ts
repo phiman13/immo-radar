@@ -14,6 +14,14 @@ const DEFAULT_FILTER: ListingsFilter = {
   status: '',
   source: '',
   min_score: null,
+  portal: '',
+  minScore: 0,
+  priceMin: null,
+  priceMax: null,
+  qmMin: null,
+  qmMax: null,
+  roomsMin: null,
+  sort: 'date_desc' as const,
 }
 
 export const useUIStore = create<UIState>((set) => ({

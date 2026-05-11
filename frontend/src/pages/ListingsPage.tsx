@@ -19,8 +19,14 @@ export function ListingsPage() {
     queryFn: () =>
       fetchListings({
         status: filter.status || undefined,
-        portal: filter.source || undefined,
-        min_score: filter.min_score ?? undefined,
+        portal: filter.portal || filter.source || undefined,
+        min_score: filter.minScore || filter.min_score ?? undefined,
+        price_min: filter.priceMin,
+        price_max: filter.priceMax,
+        qm_min: filter.qmMin,
+        qm_max: filter.qmMax,
+        rooms_min: filter.roomsMin,
+        sort: filter.sort,
       }),
   })
 
@@ -40,7 +46,6 @@ export function ListingsPage() {
   const selectedListing: Listing | null =
     listings.find((l) => l.id === selectedListingId) ?? null
 
-  const sourceNames = [...new Set(sources.map((s) => s.name))]
 
   function handleStatusChange(id: number, status: string) {
     patchMutation.mutate({ id, status })
@@ -60,7 +65,7 @@ export function ListingsPage() {
 
   return (
     <div className="flex flex-col min-h-[100dvh]">
-      <FilterBar sources={sourceNames} totalCount={listings.length} />
+      <FilterBar sources={sources} />
 
       <div className="flex-1 px-6 py-4">
         {listings.length === 0 ? (
