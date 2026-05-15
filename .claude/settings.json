@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/*)",
+      "Bash(python -m scripts.verify_source *)",
+      "Bash(python -m pytest *)",
+      "Bash(python3 -m pytest *)",
+      "Bash(.venv/bin/pytest *)",
+      "Bash(.venv/bin/python -m pytest *)",
+      "Bash(ruff check *)",
+      "Bash(ssh root@89.167.67.26 *)",
+      "Bash(bash scripts/deploy.sh)",
+      "Bash(npx tsc --noEmit *)",
+      "Bash(./node_modules/.bin/tsc --noEmit *)",
+      "Bash(npm info *)",
+      "Bash(npm list *)"
+    ]
+  },
+  "worktree": {
+    "symlinkDirectories": [".venv"]
+  }
+}

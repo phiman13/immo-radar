@@ -9,6 +9,6 @@ data/cache/
 .ruff_cache/
 *.log
 .DS_Store
-.claude/
+.claude/settings.local.json
 .worktrees/
 app/web/static/dist/
