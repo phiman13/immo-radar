@@ -11,3 +11,4 @@ data/cache/
 .DS_Store
 .claude/
 .worktrees/
+*.egg-info/
