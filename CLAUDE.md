@@ -109,3 +109,9 @@ Frontend: React 18 · Vite 5 · TypeScript 5 · Tailwind CSS v3 · TanStack Quer
 - **Name-Migrations**: Alte DB-Einträge (`makler_bsimmo`, `makler_riedel`, `makler_starnberg_immo`) werden in `_seed_sources()` automatisch auf neue Namen umgeschrieben
 - **`last_run` + `listing_count`**: Im Sources-Tab live aus `FetchRun`- und `Listing`-Tabellen abgeleitet (nicht im Source-Record selbst gespeichert)
 - **`IMMOSCOUT24_SAVE_SEARCH_ID`**: Nur numerische ID speichern (keine URL — `&` in env vars bricht docker compose env_file Parser). URL wird in Python zusammengesetzt.
+
+---
+
+@.claude/CONVENTIONS.md
+@.claude/SKILLS.md
+@.claude/DESIGN.md
