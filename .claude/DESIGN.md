@@ -1,38 +1,7 @@
-<!-- Kanon: personal-stack/core/DESIGN.md · Projekt-Brand: immo-radar · Stand: 2026-05-22
-     Universelle Disziplin (core) inline; Brand-Tokens aus Code extrahiert. -->
+<!-- Brand-Tokens immo-radar. Universelle Design-Disziplin: .claude/CONVENTIONS.md.
+     Kein Kanon — projekt-eigen, hand-gepflegt. -->
 
-# Design — Pflichtregeln + Brand
-
-> Kombiniert universelle Design-Disziplin mit Projekt-spezifischen Brand-Tokens.
-> Kanon Disziplin: `personal-stack/core/DESIGN.md` · Brand-Quelle: `frontend/src/index.css` + `frontend/tailwind.config.ts`
-
-## Aesthetic-Prinzipien (kein AI-Slop)
-
-- Typografie: charakterstarke, unerwartete Fonts. Nicht Inter, Arial, Roboto, system-ui, Space Grotesk.
-- Farbe: dominante Farbe + scharfer Akzent, CSS-Variablen für Konsistenz. Keine timiden Paletten, keine lila Gradienten auf Weiß.
-- Hintergründe: Atmosphäre schaffen — CSS-Gradienten, geometrische Patterns. Kein Solid-Color-Default.
-- Motion: CSS-Keyframes bevorzugen, Motion-Library für React. Ein orchestrierter Page-Load mit staggered reveals schlägt verstreute Micro-Interactions.
-- Abwechslung: zwischen Light/Dark wechseln, überraschende Kombinationen.
-
-## Animation-Regeln
-
-- `whileInView` immer mit `once: true` — kein Re-Trigger beim Rückscrollen.
-- CSS-only bevorzugen; JS-Animationen nur wenn CSS nicht ausreicht.
-- `prefers-reduced-motion` respektieren.
-
-## Accessibility-Baseline (WCAG AA)
-
-- Kontrastverhältnis ≥ 4.5:1 für Text.
-- Keyboard-Navigation + sichtbare Focus-States auf allen interaktiven Elementen.
-- Semantisches HTML, ARIA-Labels wo nötig.
-
-## Mobile-first
-
-Breakpoints immer von klein nach groß definieren.
-
----
-
-## Brand — immo-radar
+# Design — Brand immo-radar
 
 ### Übersicht
 
