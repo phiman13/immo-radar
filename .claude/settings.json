@@ -1,41 +1,77 @@
 {
   "permissions": {
     "allow": [
-      "Read(/Users/philippherrlich/Code/immo-radar/*)",
-      "Bash(python -m scripts.verify_source *)",
-      "Bash(python -m pytest *)",
-      "Bash(python3 -m pytest *)",
+      "Bash(./node_modules/.bin/tsc --noEmit *)",
       "Bash(.venv/bin/pytest *)",
       "Bash(.venv/bin/python -m pytest *)",
-      "Bash(ruff check *)",
-      "Bash(ssh root@89.167.67.26 *)",
       "Bash(bash scripts/deploy.sh)",
-      "Bash(npx tsc --noEmit *)",
-      "Bash(./node_modules/.bin/tsc --noEmit *)",
-      "Bash(npm info *)",
-      "Bash(npm list *)",
-      "Bash(git status*)",
+      "Bash(cat *)",
+      "Bash(cat*)",
+      "Bash(find *)",
+      "Bash(find*)",
+      "Bash(git --no-pager diff*)",
+      "Bash(git --no-pager log*)",
+      "Bash(git --no-pager show*)",
+      "Bash(git branch --list*)",
+      "Bash(git branch -v*)",
+      "Bash(git branch)",
+      "Bash(git branch*)",
+      "Bash(git check-ignore *)",
+      "Bash(git check-ignore*)",
       "Bash(git diff*)",
       "Bash(git log*)",
+      "Bash(git ls-files*)",
+      "Bash(git rev-parse*)",
       "Bash(git show*)",
-      "Bash(git branch)",
-      "Bash(git branch -v*)",
-      "Bash(git branch --list*)",
+      "Bash(git status*)",
       "Bash(git worktree list*)",
-      "Bash(git check-ignore *)",
-      "Bash(ls *)",
-      "Bash(find *)",
-      "Bash(cat *)",
-      "Bash(head *)",
-      "Bash(tail *)",
-      "Bash(wc *)",
       "Bash(grep *)",
+      "Bash(grep*)",
+      "Bash(head *)",
+      "Bash(head*)",
+      "Bash(linear issues *)",
+      "Bash(linear projects *)",
+      "Bash(ls *)",
+      "Bash(ls*)",
+      "Bash(npm info *)",
+      "Bash(npm list *)",
+      "Bash(npx tsc --noEmit *)",
+      "Bash(npx tsc --noEmit*)",
+      "Bash(pwd)",
+      "Bash(pwd*)",
+      "Bash(python -m pytest *)",
+      "Bash(python -m scripts.verify_source *)",
+      "Bash(python3 -m pytest *)",
       "Bash(rg *)",
+      "Bash(rg*)",
+      "Bash(ruff check *)",
+      "Bash(ssh root@89.167.67.26 *)",
+      "Bash(tail *)",
+      "Bash(tail*)",
+      "Bash(wc *)",
+      "Bash(wc*)",
       "Bash(which *)",
-      "Bash(pwd)"
+      "Bash(which*)",
+      "Read(/Users/philippherrlich/Code/immo-radar/*)"
     ]
   },
   "worktree": {
-    "symlinkDirectories": [".venv"]
-  }
+    "symlinkDirectories": [
+      ".venv"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); case \"$cmd\" in *\"git commit\"*) if [ -f tsconfig.json ] && ! npx tsc --noEmit; then echo \"DoD: tsc --noEmit rot - Commit blockiert. Erst TypeCheck gruen machen.\" >&2; exit 2; fi ;; esac"
+          }
+        ]
+      }
+    ]
+  },
+  "_canonHash": "2ad890a1cc45"
 }
