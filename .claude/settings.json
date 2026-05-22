@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Read(/Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/*)",
+      "Read(/Users/philippherrlich/Code/immo-radar/*)",
       "Bash(python -m scripts.verify_source *)",
       "Bash(python -m pytest *)",
       "Bash(python3 -m pytest *)",
@@ -13,7 +13,26 @@
       "Bash(npx tsc --noEmit *)",
       "Bash(./node_modules/.bin/tsc --noEmit *)",
       "Bash(npm info *)",
-      "Bash(npm list *)"
+      "Bash(npm list *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch)",
+      "Bash(git branch -v*)",
+      "Bash(git branch --list*)",
+      "Bash(git worktree list*)",
+      "Bash(git check-ignore *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(wc *)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(which *)",
+      "Bash(pwd)"
     ]
   },
   "worktree": {
