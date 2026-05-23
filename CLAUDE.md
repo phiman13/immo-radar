@@ -86,6 +86,8 @@ ssh root@89.167.67.26 "cd /opt/immo-radar && docker compose logs -f worker"
 ssh root@89.167.67.26 "nano /etc/caddy/Caddyfile && systemctl reload caddy"
 ```
 
+Workflow-Disziplin (Pflicht-Reihenfolge, Monorepo-DoD-Caveat, belegte Anti-Patterns): `DEVELOPMENT.md`.
+
 ## Stack
 
 Python 3.12 (noble) · FastAPI · Playwright (Chromium) · SQLite/SQLAlchemy · APScheduler · anthropic SDK · Telegram Bot API · Docker (2 Container: `web` + `worker`) · Caddy (Reverse Proxy + TLS + Auth)
