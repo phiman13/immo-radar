@@ -208,6 +208,10 @@ function DiscoverFlow({ onAdded }: { onAdded: () => void }) {
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
+      {state === 'result' && suggestions.length === 0 && (
+        <p className="text-xs text-[--muted] text-center py-2">Keine neuen Quellen gefunden.</p>
+      )}
+
       {state === 'result' && suggestions.length > 0 && (
         <div className="rounded-lg border border-[--border] divide-y divide-[--border] bg-white">
           {suggestions.map(s => (
