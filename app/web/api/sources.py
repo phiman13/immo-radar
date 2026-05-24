@@ -10,6 +10,25 @@ from pydantic import BaseModel
 
 import app.db as db_module
 
+
+async def _url_reachable(url: str) -> bool:
+    """Prüft per HTTP HEAD (Fallback GET) ob eine URL erreichbar ist."""
+    try:
+        async with httpx.AsyncClient(
+            timeout=5.0,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; immo-radar/1.0)"},
+            follow_redirects=True,
+        ) as client:
+            resp = await client.head(url)
+            if resp.status_code < 400:
+                return True
+            # Manche Server lehnen HEAD ab (405) — mit GET nochmal versuchen
+            resp = await client.get(url)
+            return resp.status_code < 400
+    except Exception:
+        return False
+
+
 router = APIRouter()
 
 DEFAULT_SOURCES = [
