@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: 5f5d8fe7d140 · propagiert: 2026-05-24 -->
+     Kanon-Hash: b593cdfa6471 · propagiert: 2026-05-24 -->
 
 # Konventionen — kanonischer Kern
 
@@ -49,13 +49,11 @@
 - Tests vor Implementation, wo möglich (TDD).
 - *(Tailwind-Projekte)* `cn()` für conditional Klassen — nie raw string
   concatenation.
-- **Asset-Reuse vor Asset-Nachbau:** Wenn Original-Assets, Tokens, Primitives
-  oder Mockups existieren: reusen statt manuell nachbauen. SVGs, Font-Offsets,
-  Shadow-Stacks gehen beim Nachbau reproduzierbar schief.
-- **Mockups mit echter App-UI** *(Repos mit Sandbox/Token-Schicht)*: UI-Mockups
-  müssen die echte App-UI (Tokens, Primitives, Sandbox) verwenden — keine
-  generischen HTML-Snippets. Refinement der Asset-Reuse-Klausel für den
-  Mockup-Fall.
+- **Asset-Reuse vor Asset-Nachbau:** Wenn Original-Assets, Tokens, Primitives,
+  Sandbox-Komponenten oder Mockups existieren: reusen statt manuell nachbauen
+  — gilt auch für UI-Mockups, die echte App-Tokens/Primitives verwenden müssen
+  statt generischer HTML-Snippets. SVGs, Font-Offsets, Shadow-Stacks gehen
+  beim Nachbau reproduzierbar schief.
 - **Stack-weite Rollouts:** Allowlist-, Propagation-, Skill-Install- und
   Doku-Rollouts laufen default auf **alle** Repos aus `core/targets.txt`.
   Einzelne Repos nur mit explizitem User-Hinweis ausschließen.
@@ -96,10 +94,6 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
   shared State, kein Edit der gleichen Datei.
 - **Selbstverbessernde Mechanismen:** Müssen automatisch triggern (cron/launchd/
   SessionStart-Hook) — nie auf User-Erinnerung setzen.
-- **Session-Kickoff-Permissions:** Bei Aufgaben mit absehbarer Bash-Vielfalt
-  (Worktree-Sessions, Mega-Refactors): Permissions vorab in
-  `.claude/settings.json` allowlisten statt im Flow Prompt für Prompt zu
-  beantworten.
 
 ## Design-Disziplin *(Frontend-Repos)*
 
