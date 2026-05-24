@@ -222,7 +222,7 @@ function DiscoverFlow({ onAdded }: { onAdded: () => void }) {
                   className="text-xs text-[--accent] hover:underline truncate block mt-0.5"
                   onClick={e => e.stopPropagation()}
                 >
-                  {s.url.replace(/^https?:\/\/(www\.)?/, '')}
+                  {s.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
                 </a>
               </div>
               {saved.has(s.name) ? (
