@@ -33,10 +33,12 @@
       "Bash(linear projects *)",
       "Bash(ls *)",
       "Bash(ls*)",
+      "Bash(mkdir -p*)",
       "Bash(npm info *)",
       "Bash(npm list *)",
       "Bash(npx tsc --noEmit *)",
       "Bash(npx tsc --noEmit*)",
+      "Bash(npx vitest*)",
       "Bash(pwd)",
       "Bash(pwd*)",
       "Bash(python -m pytest *)",
@@ -52,7 +54,8 @@
       "Bash(wc*)",
       "Bash(which *)",
       "Bash(which*)",
-      "Read(/Users/philippherrlich/Code/immo-radar/*)"
+      "Read(/Users/philippherrlich/Code/immo-radar/*)",
+      "Write(/Users/philippherrlich/Code/*/.claude/**)"
     ]
   },
   "worktree": {
@@ -73,5 +76,5 @@
       }
     ]
   },
-  "_canonHash": "2ad890a1cc45"
+  "_canonHash": "5f5d8fe7d140"
 }
