@@ -12,7 +12,7 @@ import app.db as db_module
 from app.web.api.sources import _url_reachable
 
 
-async def main() -> None:
+async def main(yes: bool = False) -> None:
     with db_module.SessionLocal() as session:
         suggested = session.query(db_module.Source).filter(db_module.Source.source_type == "suggested").all()
 
@@ -45,10 +45,11 @@ async def main() -> None:
         for s in to_delete:
             print(f"  - {s.display_name!r:30s}  {s.url or '(keine URL)'}")
 
-        answer = input("\nLöschen? [j/N] ").strip().lower()
-        if answer != "j":
-            print("Abgebrochen.")
-            return
+        if not yes:
+            answer = input("\nLöschen? [j/N] ").strip().lower()
+            if answer != "j":
+                print("Abgebrochen.")
+                return
 
         for s in to_delete:
             session.delete(s)
@@ -57,4 +58,9 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--yes", "-y", action="store_true", help="Nicht interaktiv fragen — direkt löschen")
+    args = parser.parse_args()
+    asyncio.run(main(yes=args.yes))
