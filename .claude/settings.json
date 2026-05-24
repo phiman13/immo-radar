@@ -82,10 +82,18 @@
           {
             "type": "command",
             "command": "bash /Users/philippherrlich/Code/personal-stack/scripts/reflection-pending-repo-hook.sh 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "bash /Users/philippherrlich/Code/personal-stack/scripts/canon-staleness-hook.sh 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "bash /Users/philippherrlich/Code/personal-stack/scripts/session-kickoff-hook.sh 2>/dev/null || true"
           }
         ]
       }
     ]
   },
-  "_canonHash": "e2e63293bb36"
+  "_canonHash": "a6dd26c35618"
 }
