@@ -215,6 +215,15 @@ function DiscoverFlow({ onAdded }: { onAdded: () => void }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-[--fg]">{s.name}</p>
                 <p className="text-xs text-[--muted] truncate">{s.description}</p>
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-[--accent] hover:underline truncate block mt-0.5"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {s.url.replace(/^https?:\/\/(www\.)?/, '')}
+                </a>
               </div>
               {saved.has(s.name) ? (
                 <span className="text-xs text-[--accent] flex items-center gap-1">
