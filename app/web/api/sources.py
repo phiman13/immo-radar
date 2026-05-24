@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import datetime
 
@@ -296,6 +297,10 @@ async def discover_sources() -> DiscoverResult:
 
         m = _re.search(r"\[.*\]", text, _re.DOTALL)
         suggestions = json.loads(m.group() if m else text)
+        # Nur Vorschläge mit URL behalten, dann Erreichbarkeit prüfen
+        with_url = [s for s in suggestions if s.get("url")]
+        flags = await asyncio.gather(*[_url_reachable(s["url"]) for s in with_url])
+        suggestions = [s for s, ok in zip(with_url, flags, strict=True) if ok]
         return DiscoverResult(suggestions=suggestions, error=None)
     except Exception as e:
         return DiscoverResult(suggestions=[], error=str(e))
