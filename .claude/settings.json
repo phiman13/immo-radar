@@ -74,7 +74,18 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/philippherrlich/Code/personal-stack/scripts/reflection-pending-repo-hook.sh 2>/dev/null || true"
+          }
+        ]
+      }
     ]
   },
-  "_canonHash": "b593cdfa6471"
+  "_canonHash": "e2e63293bb36"
 }
