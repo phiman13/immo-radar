@@ -49,10 +49,10 @@
       "Bash(npx tsc --noEmit*)",
       "Bash(npx vitest*)",
       "Bash(pip install *)",
-      "Bash(pytest *)",
-      "Bash(pytest)",
       "Bash(pwd)",
       "Bash(pwd*)",
+      "Bash(pytest *)",
+      "Bash(pytest)",
       "Bash(python -m pytest *)",
       "Bash(python -m scripts.run_web*)",
       "Bash(python -m scripts.verify_source *)",
@@ -110,5 +110,5 @@
       }
     ]
   },
-  "_canonHash": "a6dd26c35618"
+  "_canonHash": "36341ddf47fc"
 }

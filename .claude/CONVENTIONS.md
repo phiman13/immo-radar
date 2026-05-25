@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: a6dd26c35618 · propagiert: 2026-05-24 -->
+     Kanon-Hash: 36341ddf47fc · propagiert: 2026-05-25 -->
 
 # Konventionen — kanonischer Kern
 
@@ -82,10 +82,13 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
   ändert und die nicht aus dem Repo verifizierbar sind, dem User vorlegen — nicht
   raten. Sonst konventionelle Defaults wählen und weitermachen.
 - **Session-Kickoff:** Bei nicht-trivialen Aufgaben: Scope + Approach kurz
-  skizzieren, alle bekannten Entscheidungs-Forks gebündelt vorlegen, riskante
-  Aktionen (push, deploy, destructive ops) vorab nennen. Danach autonom bis zum
-  nächsten echten Blocker — nicht zwischendrin nach Bestätigung fragen, wenn die
-  Antwort schon im Kickoff geklärt war.
+  skizzieren (bei impliziter Breite — Cross-Repo-Cleanup, mehrere
+  zusammenhängende Flows/Features — bewusst weit scopen und Scope-Grenzen
+  explizit nennen, statt eng zu defaulten und auf User-Korrektur zu warten),
+  alle bekannten Entscheidungs-Forks gebündelt vorlegen, riskante Aktionen
+  (push, deploy, destructive ops) vorab nennen. Danach autonom bis zum nächsten
+  echten Blocker — nicht zwischendrin nach Bestätigung fragen, wenn die Antwort
+  schon im Kickoff geklärt war.
 - **Plugin-/Skill-Discovery:** Nach Plugin-Install oder Skill-Änderung erst
   `/reload-plugins` (oder neue Session) + Verfügbarkeitsprüfung, bevor der
   nachfolgende Command-Flow startet.
