@@ -171,7 +171,7 @@ async def trigger_crawl(request: Request):
 - [ ] **Step 4: Run existing tests**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa
 source .venv/bin/activate
 python -m pytest tests/ -v
 ```
@@ -458,7 +458,7 @@ export default function App() {
 - [ ] **Step 10: Install dependencies**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm install
 ```
 
@@ -729,7 +729,7 @@ export function testTelegram(): Promise<{ success: boolean; message: string }> {
 - [ ] **Step 8: Typecheck**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 ```
 
@@ -876,7 +876,7 @@ export const useUIStore = create<UIState>((set) => ({
 - [ ] **Step 5: Typecheck**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 ```
 
@@ -1021,7 +1021,7 @@ export function SystemPage() {
 - [ ] **Step 5: Typecheck + build**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 npm run build
 ```
@@ -1269,7 +1269,7 @@ export function ListingCard({
 - [ ] **Step 4: Typecheck**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 ```
 
@@ -1408,7 +1408,7 @@ export function FilterBar({ sources, totalCount }: FilterBarProps) {
 - [ ] **Step 2: Typecheck**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 ```
 
@@ -1661,7 +1661,7 @@ export function DetailPanel({ listing, onClose, onStatusChange }: DetailPanelPro
 - [ ] **Step 2: Typecheck**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 ```
 
@@ -1793,7 +1793,7 @@ export function ListingsPage() {
 - [ ] **Step 2: Typecheck + build**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 npm run build
 ```
@@ -1804,7 +1804,7 @@ Expected: no errors. Verify dist/ is created.
 
 Start the FastAPI backend locally:
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa
 source .venv/bin/activate
 python -m scripts.run_web
 ```
@@ -2220,7 +2220,7 @@ export function SettingsPage() {
 - [ ] **Step 6: Typecheck**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 ```
 
@@ -2376,7 +2376,7 @@ export function SystemPage() {
 - [ ] **Step 2: Typecheck**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run typecheck
 ```
 
@@ -2511,7 +2511,7 @@ if dist_dir.exists():
 - [ ] **Step 3: Run a local build test**
 
 ```bash
-cd /Users/philippherrlich/Documents/04_Sonstiges/01_Coding/immo-radar/.worktrees/frontend-spa/frontend
+cd /Users/philippherrlich/Code/immo-radar/.worktrees/frontend-spa/frontend
 npm run build
 ```
 
