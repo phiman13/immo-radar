@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: f4332cf7b3de · propagiert: 2026-05-25 -->
+     Kanon-Hash: b71fb7d3a5da · propagiert: 2026-05-27 -->
 
 # Konventionen — kanonischer Kern
 
@@ -65,6 +65,19 @@
 - Abgelöste Docs → `docs/archive/`.
 - Projekt-Backlog & -Status → Linear (nicht als lokale Datei).
 - Verzeichnisse lazy anlegen — sie entstehen mit der ersten Datei.
+- **File-Move/Decommission — Rückzeiger-Pflicht:** Beim Verschieben, Umbenennen
+  oder Stilllegen einer Datei immer alle Rückzeiger prüfen:
+  `grep -r 'DATEINAME' . --include='*.md'` auf CLAUDE.md, STATUS.md,
+  DEVELOPMENT.md, README.md und Memory-Files. Alle Treffer im selben Commit
+  updaten — nie als separater Nachfolge-Commit.
+- **Docs-Aktualität:** Dokumentation muss die aktuelle Realität abbilden.
+  Trigger: Feature deployed → Doku im selben Commit anpassen; Workflow abgelöst
+  → alten Doc archivieren; Roadmap-Item abgeschlossen → zeitnah aus aktivem
+  Status entfernen. Eine veraltete Doku ist schlechter als keine Doku — sie
+  führt aktiv in die Irre.
+- **Kritische Workflow-Docs** (Pflicht-Lesung jede Session): per `@`-Include in
+  `CLAUDE.md` einbinden — nicht nur per Prosa-Referenz. Nur dann ist die
+  Pflicht-Lesung zuverlässig garantiert.
 
 ## Telegram-Notifications *(Projekte mit Telegram-Anbindung)*
 
