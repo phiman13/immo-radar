@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: b71fb7d3a5da · propagiert: 2026-05-27 -->
+     Kanon-Hash: bd60e3c0e886 · propagiert: 2026-05-29 -->
 
 # Konventionen — kanonischer Kern
 
@@ -38,6 +38,14 @@
    User-Bestätigung auf Test-Profil — nicht aus TypeCheck/Simulator ableiten.
    *(Skill-Bezug — A.2 schärft diese Klausel.)*
 6. Committed und gepusht.
+7. *(bei substanziellen Änderungen)* Vor dem Merge `/codex:review` als
+   Vier-Augen-Prinzip — Code-Review + Optimierung durch eine zweite Engine.
+   Echter Widerspruch → klären; ergänzende Perspektive → Synthesis.
+   *(Routing + weitere Codex-Auslöser: SKILLS §8.)*
+8. *(bei kritischen Änderungen — Auth, Datenmigration, RLS-Policies, Payment)*
+   Vor dem Merge `/ultrareview` gegen Branch/PR (Cloud-Bug-Hunt-Flotte) — user-
+   getriggert und kostenpflichtig, kann nicht automatisch gestartet werden.
+   *(Research preview, Stand 2026-05 — Command kann sich ändern.)*
 
 ## Globale Konventionen
 
@@ -108,6 +116,17 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
 - **`subagent-driven-development`-Schwelle:** Erst ab ≥ 4 wirklich unabhängigen
   Tasks verwenden — bei weniger Tasks direkt ausführen. Unabhängig = kein
   shared State, kein Edit der gleichen Datei.
+- **Subagent-Kontext = frisch (Default):** Subagents starten ohne Session-
+  Kontext — Instruktion gezielt konstruieren (schützt Kontext-Hygiene).
+  `CLAUDE_CODE_FORK_SUBAGENT=1` (voller Kontext-Erbe) nur bewusst case-by-case,
+  nie global aktivieren.
+- **Autonome Zielverfolgung (`/goal`):** Für substanzielle Arbeit mit
+  *maschinen-verifizierbarem* End-State (`tsc --noEmit` clean, Build exit 0,
+  Lint/Tests grün) eine `/goal`-Bedingung + Turn-/Zeit-Limit setzen, statt jeden
+  Turn manuell anzustoßen. Bedingung nur, was aus dem Transcript beweisbar ist
+  — der Evaluator führt selbst nichts aus. **Nie** als Done-Gate für Mobile-
+  Performance/Animation (dort gilt die User-Bestätigung aus DoD §5).
+  *(Research preview, Stand 2026-05 — Command kann sich ändern.)*
 - **Selbstverbessernde Mechanismen:** Müssen automatisch triggern (cron/launchd/
   SessionStart-Hook) — nie auf User-Erinnerung setzen.
 
