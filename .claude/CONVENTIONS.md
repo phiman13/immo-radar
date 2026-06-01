@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: bd60e3c0e886 · propagiert: 2026-05-29 -->
+     Kanon-Hash: 16f1f81e3b8a · propagiert: 2026-06-01 -->
 
 # Konventionen — kanonischer Kern
 
@@ -124,7 +124,10 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
   *maschinen-verifizierbarem* End-State (`tsc --noEmit` clean, Build exit 0,
   Lint/Tests grün) eine `/goal`-Bedingung + Turn-/Zeit-Limit setzen, statt jeden
   Turn manuell anzustoßen. Bedingung nur, was aus dem Transcript beweisbar ist
-  — der Evaluator führt selbst nichts aus. **Nie** als Done-Gate für Mobile-
+  — der Evaluator führt selbst nichts aus —, und ein **einzelnes, erreichbares**
+  Prädikat: nie ein hartes Metrik-Gate mit unverifizierbarer Qualitäts-Auflage
+  bündeln (sonst unerfüllbar → Stop-Hook loopt bis Block-Cap; hängendes Gate löst
+  `/goal clear`). **Nie** als Done-Gate für Mobile-
   Performance/Animation (dort gilt die User-Bestätigung aus DoD §5).
   *(Research preview, Stand 2026-05 — Command kann sich ändern.)*
 - **Selbstverbessernde Mechanismen:** Müssen automatisch triggern (cron/launchd/
