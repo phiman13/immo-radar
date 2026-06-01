@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
-     Kanon-Hash: 16f1f81e3b8a · propagiert: 2026-06-01 -->
+     Kanon-Hash: a30fae54be7a · propagiert: 2026-06-01 -->
 
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
      Änderung am Kanon, dann propagieren (scripts/propagate-canon.sh). -->
@@ -69,7 +69,8 @@ Unsicher, welcher Skill existiert oder passt → `/find-skills`.
 |---|---|
 | Vor jeder „fertig"-Behauptung — Verifikation mit Belegen | `/superpowers:verification-before-completion` |
 | Technischer Qualitäts-Check / a11y / Performance-Report | `/audit` |
-| Browser-Testing bei UI-Änderungen | `/playwright-skill` |
+| Browser-Testing bei UI-Änderungen — eigener ephemerer Browser (App validieren, Screenshots, Responsive, Login-Flows testen) | `/playwright-skill` |
+| Aktion in deinem echten, eingeloggten Chrome — authentifizierte Real-World-Tasks auf Fremdseiten (Coursera, Gmail, …), Scraping hinter Login. **Nur bei explizitem User-Intent** (handelt als du), lokal-only | `browser-harness` (global @-Import + CLI, kein Slash-Command) |
 | Code-Änderung für Review vorbereiten | `/superpowers:requesting-code-review` |
 | Auf Code-Review-Feedback reagieren | `/superpowers:receiving-code-review` |
 | Branch abschließen — Merge / PR / Cleanup | `/superpowers:finishing-a-development-branch` |
