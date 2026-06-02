@@ -227,7 +227,12 @@ Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Text drumherum):
             output_tokens=msg.usage.output_tokens,
             purpose="analyze",
         )
-        data = json.loads(msg.content[0].text.strip())
+        text = msg.content[0].text.strip() if msg.content else ""
+        # Claude wraps JSON sometimes in ```-blocks — extract the object
+        import re as _re  # noqa: PLC0415
+
+        m = _re.search(r"\{.*\}", text, _re.DOTALL)
+        data = json.loads(m.group() if m else text)
         return AnalyzeResult(
             url=body.url,
             listing_count=data.get("listing_count", 0),
