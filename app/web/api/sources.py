@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from datetime import datetime
 
 import httpx
@@ -10,6 +11,19 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 import app.db as db_module
+
+
+def _content_excerpt(html: str, limit: int = 30_000) -> str:
+    """Strippt <head>/Script/Style/Kommentare und liefert die ersten `limit`
+    Zeichen des reinen Body-Markups. Inserate stehen oft erst nach mehreren
+    KB Nav-/Filter-Chrome — ein roher html[:12k]-Schnitt trifft nur den <head>."""
+    m = re.search(r"<body[^>]*>", html, re.IGNORECASE)
+    body = html[m.end() :] if m else html
+    body = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
+    body = re.sub(r"<(script|style|noscript|svg)\b.*?</\1>", "", body, flags=re.DOTALL | re.IGNORECASE)
+    body = re.sub(r"[ \t\r\f\v]+", " ", body)
+    body = re.sub(r"\n\s*\n+", "\n", body)
+    return body.strip()[:limit]
 
 
 async def _url_reachable(url: str) -> bool:
@@ -185,8 +199,8 @@ async def analyze_source(body: AnalyzeRequest) -> AnalyzeResult:
             error=f"Seite nicht erreichbar: {e}",
         )
 
-    # 2. Truncate HTML to avoid token overflow
-    html_excerpt = html[:12_000]
+    # 2. Body-Content extrahieren + kürzen (Inserate liegen oft jenseits 12k roh)
+    html_excerpt = _content_excerpt(html)
 
     # 3. Ask Claude
     from app.config import settings as _settings  # noqa: PLC0415
@@ -229,9 +243,7 @@ Antworte NUR mit einem JSON-Objekt (kein Markdown, kein Text drumherum):
         )
         text = msg.content[0].text.strip() if msg.content else ""
         # Claude wraps JSON sometimes in ```-blocks — extract the object
-        import re as _re  # noqa: PLC0415
-
-        m = _re.search(r"\{.*\}", text, _re.DOTALL)
+        m = re.search(r"\{.*\}", text, re.DOTALL)
         data = json.loads(m.group() if m else text)
         return AnalyzeResult(
             url=body.url,
@@ -296,11 +308,9 @@ async def discover_sources() -> DiscoverResult:
             output_tokens=msg.usage.output_tokens,
             purpose="discover",
         )
-        text = msg.content[0].text.strip()
+        text = msg.content[0].text.strip() if msg.content else ""
         # Claude sometimes wraps JSON in ```-blocks — extract the array
-        import re as _re  # noqa: PLC0415
-
-        m = _re.search(r"\[.*\]", text, _re.DOTALL)
+        m = re.search(r"\[.*\]", text, re.DOTALL)
         suggestions = json.loads(m.group() if m else text)
         # Nur Vorschläge mit URL behalten, dann Erreichbarkeit prüfen
         with_url = [s for s in suggestions if s.get("url")]
