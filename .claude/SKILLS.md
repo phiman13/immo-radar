@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
-     Kanon-Hash: a30fae54be7a · propagiert: 2026-06-01 -->
+     Kanon-Hash: 75d52f604dd5 · propagiert: 2026-06-12 -->
 
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
      Änderung am Kanon, dann propagieren (scripts/propagate-canon.sh). -->
@@ -112,6 +112,11 @@ entscheidet, ob er ihn annimmt.
 
 **Trigger-Heuristik:** Nach 2 erfolglosen Fix-Iterationen mit User-Negativ-Feedback
 aktiv `/codex:rescue` vorschlagen — nicht warten, bis der User es einfordert.
+
+**Codebase an externe Engine geben:** Muss eine ganze Codebase an eine externe
+LLM (Codex, Web-Claude, Paste) — kein Install, ad-hoc:
+`npx repomix --style markdown --compress --copy` (secretlint default an, respektiert
+`.gitignore`). Für *interne* Recherche bleibt context-mode das Werkzeug.
 
 **Konfliktauflösung:** Echter Widerspruch → Stopp, zuerst klären. Ergänzende
 Perspektive → Synthesis beider Positionen vorschlagen.

@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: a30fae54be7a · propagiert: 2026-06-01 -->
+     Kanon-Hash: 75d52f604dd5 · propagiert: 2026-06-12 -->
 
 # Konventionen — kanonischer Kern
 
@@ -17,6 +17,17 @@
 - `.env` nie committen — immer `.env.example` mit Platzhaltern pflegen.
 - Supabase: RLS auf allen Tabellen; `service_role`-Key nie im Client-Code.
 - Claude API: Key nur serverseitig, nie in Browser-Code oder Git.
+- **Mechanische Gates (global, maschinenweit in `~/.claude/settings.json`):** Die
+  obigen Regeln sind durch erzwingbare Wände gedeckt, nicht nur Prosa:
+  `block-secrets-hook.sh` (PreToolUse Write|Edit, blockt Secret-Pattern +
+  Sensitiv-Dateinamen, exit 2); Deny-Set destruktive Ops (`rm -rf /`, `chmod 777`,
+  `curl|bash`); `disableSkillShellExecution: true` (Drittanbieter-Skills routen
+  über das allowlist-gegatete Bash-Tool statt Inline-Shell — Supply-Chain-Schutz,
+  v.a. da Plugins `autoUpdate: true` fahren).
+- **`.claudeignore` pro Repo:** Was Claude `Read`-en kann, kann Prompt-Injection
+  tragen — untrusted Fixtures, `vendor/`, `*.har`, große Dumps eintragen.
+- **Plugin-Supply-Chain:** Neue Skills/Plugins über `/tooling-gate` (SHA-Pin statt
+  `main`, Upgrade = Re-Review). *(Details: SKILLS / tooling-gate-Skill.)*
 
 ## Commit-Konvention
 
@@ -99,6 +110,11 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
   in Code springen.
 - **Kontext-Hygiene:** Kontext zwischen Features verdichten, zwischen
   unzusammenhängenden Aufgaben frisch starten; die Kontext-Last beobachten.
+- **Modell-Routing:** Das günstigste Modell wählen, das die Aufgabe trägt — nicht
+  default Opus für alles. Opus für Architektur, subtile Bugs, Multi-File-Reasoning;
+  Sonnet für den Normalfall; Haiku für Trivia (Renames, Boilerplate) und Headless-
+  Jobs (Reflection, Cron). Subagents bewusst per `model`-Param routen; mid-session
+  `/model` wechseln, wenn die Aufgabenkomplexität kippt.
 - **User-Decision-Pattern:** Entscheidungen, deren Antwort den weiteren Weg
   ändert und die nicht aus dem Repo verifizierbar sind, dem User vorlegen — nicht
   raten. Sonst konventionelle Defaults wählen und weitermachen.
@@ -115,7 +131,14 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
   nachfolgende Command-Flow startet.
 - **`subagent-driven-development`-Schwelle:** Erst ab ≥ 4 wirklich unabhängigen
   Tasks verwenden — bei weniger Tasks direkt ausführen. Unabhängig = kein
-  shared State, kein Edit der gleichen Datei.
+  shared State, kein Edit der gleichen Datei. **Geteilte Dateien nie parallel:**
+  Barrel-Exports / Router / `index`-Dateien einem einzigen Integrations-Agent
+  zuweisen, der am Ende verdrahtet — die übrigen schreiben self-contained Module.
+- **Migration/Refactor-Constraints:** Bei Migrationen/größeren Refactors zuerst
+  den Bestand analysieren + Plan schreiben (audit-first), dann harte Invarianten
+  im Prompt: „bestehendes Verhalten nicht ändern" / „types-only pass"; alte
+  Dateien bis zur Verifikation behalten (kein half-broken state), phasenweise mit
+  Verifikation zwischen den Phasen.
 - **Subagent-Kontext = frisch (Default):** Subagents starten ohne Session-
   Kontext — Instruktion gezielt konstruieren (schützt Kontext-Hygiene).
   `CLAUDE_CODE_FORK_SUBAGENT=1` (voller Kontext-Erbe) nur bewusst case-by-case,
