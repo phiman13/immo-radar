@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: 75d52f604dd5 · propagiert: 2026-06-12 -->
+     Kanon-Hash: f5ed23fab7c8 · propagiert: 2026-06-12 -->
 
 # Konventionen — kanonischer Kern
 
@@ -22,12 +22,13 @@
   `block-secrets-hook.sh` (PreToolUse Write|Edit, blockt Secret-Pattern +
   Sensitiv-Dateinamen, exit 2); Deny-Set destruktive Ops (`rm -rf /`, `chmod 777`,
   `curl|bash`); `disableSkillShellExecution: true` (Drittanbieter-Skills routen
-  über das allowlist-gegatete Bash-Tool statt Inline-Shell — Supply-Chain-Schutz,
-  v.a. da Plugins `autoUpdate: true` fahren).
+  über das allowlist-gegatete Bash-Tool statt Inline-Shell — Supply-Chain-Schutz).
 - **`.claudeignore` pro Repo:** Was Claude `Read`-en kann, kann Prompt-Injection
   tragen — untrusted Fixtures, `vendor/`, `*.har`, große Dumps eintragen.
-- **Plugin-Supply-Chain:** Neue Skills/Plugins über `/tooling-gate` (SHA-Pin statt
-  `main`, Upgrade = Re-Review). *(Details: SKILLS / tooling-gate-Skill.)*
+- **Plugin-Supply-Chain:** Plugins fahren bewusst `autoUpdate: true` (Aktualität
+  vor manuellem Pinning). Kompensierende Kontrolle ist runtime, nicht install-time:
+  `disableSkillShellExecution` + `block-secrets-hook` entschärfen den Update-Vektor.
+  Neue Plugins beim Erst-Install über `/tooling-gate`. *(Details: tooling-gate-Skill.)*
 
 ## Commit-Konvention
 
