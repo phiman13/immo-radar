@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: f5ed23fab7c8 · propagiert: 2026-06-12 -->
+     Kanon-Hash: b1e45bac9c5c · propagiert: 2026-06-12 -->
 
 # Konventionen — kanonischer Kern
 
@@ -20,15 +20,15 @@
 - **Mechanische Gates (global, maschinenweit in `~/.claude/settings.json`):** Die
   obigen Regeln sind durch erzwingbare Wände gedeckt, nicht nur Prosa:
   `block-secrets-hook.sh` (PreToolUse Write|Edit, blockt Secret-Pattern +
-  Sensitiv-Dateinamen, exit 2); Deny-Set destruktive Ops (`rm -rf /`, `chmod 777`,
-  `curl|bash`); `disableSkillShellExecution: true` (Drittanbieter-Skills routen
-  über das allowlist-gegatete Bash-Tool statt Inline-Shell — Supply-Chain-Schutz).
+  Sensitiv-Dateinamen, exit 2; Doku/Test/Fixtures ausgenommen); Deny-Set
+  destruktive Ops (`rm -rf /`, `chmod 777`, force-push).
 - **`.claudeignore` pro Repo:** Was Claude `Read`-en kann, kann Prompt-Injection
   tragen — untrusted Fixtures, `vendor/`, `*.har`, große Dumps eintragen.
 - **Plugin-Supply-Chain:** Plugins fahren bewusst `autoUpdate: true` (Aktualität
-  vor manuellem Pinning). Kompensierende Kontrolle ist runtime, nicht install-time:
-  `disableSkillShellExecution` + `block-secrets-hook` entschärfen den Update-Vektor.
-  Neue Plugins beim Erst-Install über `/tooling-gate`. *(Details: tooling-gate-Skill.)*
+  vor manuellem Pinning). `disableSkillShellExecution` wäre die härteste Bremse,
+  bricht aber legitime Inline-Shell-Commands vertrauenswürdiger Plugins (codex) —
+  daher bewusst **nicht** aktiv; Residualrisiko akzeptiert (Quellen reputabel).
+  Getragen von `block-secrets-hook` + Deny-Set + `/tooling-gate` beim Erst-Install.
 
 ## Commit-Konvention
 
@@ -111,11 +111,11 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
   in Code springen.
 - **Kontext-Hygiene:** Kontext zwischen Features verdichten, zwischen
   unzusammenhängenden Aufgaben frisch starten; die Kontext-Last beobachten.
-- **Modell-Routing:** Das günstigste Modell wählen, das die Aufgabe trägt — nicht
-  default Opus für alles. Opus für Architektur, subtile Bugs, Multi-File-Reasoning;
-  Sonnet für den Normalfall; Haiku für Trivia (Renames, Boilerplate) und Headless-
-  Jobs (Reflection, Cron). Subagents bewusst per `model`-Param routen; mid-session
-  `/model` wechseln, wenn die Aufgabenkomplexität kippt.
+- **Modell-Routing:** Interaktiver Default ist Opus (bewusste Präferenz, hart in
+  `~/.claude/settings.json`). Wo Kosten/Latenz zählen, gezielt downshiften statt
+  alles auf Opus: Subagents per `model`-Param (Explore/Mechanik → Haiku/Sonnet),
+  Headless-Jobs (Reflection, Cron) auf Haiku, mid-session `/model` für Trivia
+  (Renames, Boilerplate). Opus bleibt für Architektur, subtile Bugs, Multi-File.
 - **User-Decision-Pattern:** Entscheidungen, deren Antwort den weiteren Weg
   ändert und die nicht aus dem Repo verifizierbar sind, dem User vorlegen — nicht
   raten. Sonst konventionelle Defaults wählen und weitermachen.
