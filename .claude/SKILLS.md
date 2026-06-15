@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
-     Kanon-Hash: b1e45bac9c5c · propagiert: 2026-06-12 -->
+     Kanon-Hash: ebbae3880ca6 · propagiert: 2026-06-15 -->
 
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
      Änderung am Kanon, dann propagieren (scripts/propagate-canon.sh). -->

@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: b1e45bac9c5c · propagiert: 2026-06-12 -->
+     Kanon-Hash: ebbae3880ca6 · propagiert: 2026-06-15 -->
 
 # Konventionen — kanonischer Kern
 
@@ -29,6 +29,19 @@
   bricht aber legitime Inline-Shell-Commands vertrauenswürdiger Plugins (codex) —
   daher bewusst **nicht** aktiv; Residualrisiko akzeptiert (Quellen reputabel).
   Getragen von `block-secrets-hook` + Deny-Set + `/tooling-gate` beim Erst-Install.
+- **Auto-Mode-Classifier vs. dokumentierte Ops:** Bei `defaultMode: "auto"` legt
+  der Permission-Classifier über pauschal erlaubte Tools (`Bash`) ein eigenes
+  Risiko-Urteil und blockt als riskant eingestufte Aufrufe (Prod-Zugriff,
+  destruktiv) — by design. Wiederkehrende False-Positives auf **klar legitime,
+  in Repo-Docs belegte read-only-Ops** werden als **explizite, eng gefasste
+  Allow-Regel** im checked-in `.claude/settings.json` des Repos verankert (der
+  vom Classifier selbst genannte Weg), nicht durch Abschalten des Classifiers
+  oder Aufweichen des Deny-Sets. Disziplin: (1) nur **read-only** (Lesen, Diff,
+  Dump von Schema — **kein** Bulk-Prod-Datenexport, keine Mutation); (2) Regel so
+  **eng** wie der dokumentierte Aufruf; (3) Beleg in einer Repo-Doc
+  (`TESTING.md`, Plan) muss existieren. Mutationen, destruktive und unbelegte
+  Prod-Ops bleiben Classifier-gated. Deny-Set + `block-secrets-hook` bleiben die
+  eigentlichen Leitplanken — unangetastet.
 
 ## Commit-Konvention
 
