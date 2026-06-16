@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: ebbae3880ca6 · propagiert: 2026-06-15 -->
+     Kanon-Hash: 83d294d5b188 · propagiert: 2026-06-16 -->
 
 # Konventionen — kanonischer Kern
 
@@ -17,31 +17,18 @@
 - `.env` nie committen — immer `.env.example` mit Platzhaltern pflegen.
 - Supabase: RLS auf allen Tabellen; `service_role`-Key nie im Client-Code.
 - Claude API: Key nur serverseitig, nie in Browser-Code oder Git.
-- **Mechanische Gates (global, maschinenweit in `~/.claude/settings.json`):** Die
-  obigen Regeln sind durch erzwingbare Wände gedeckt, nicht nur Prosa:
-  `block-secrets-hook.sh` (PreToolUse Write|Edit, blockt Secret-Pattern +
-  Sensitiv-Dateinamen, exit 2; Doku/Test/Fixtures ausgenommen); Deny-Set
-  destruktive Ops (`rm -rf /`, `chmod 777`, force-push).
-- **`.claudeignore` pro Repo:** Was Claude `Read`-en kann, kann Prompt-Injection
-  tragen — untrusted Fixtures, `vendor/`, `*.har`, große Dumps eintragen.
-- **Plugin-Supply-Chain:** Plugins fahren bewusst `autoUpdate: true` (Aktualität
-  vor manuellem Pinning). `disableSkillShellExecution` wäre die härteste Bremse,
-  bricht aber legitime Inline-Shell-Commands vertrauenswürdiger Plugins (codex) —
-  daher bewusst **nicht** aktiv; Residualrisiko akzeptiert (Quellen reputabel).
-  Getragen von `block-secrets-hook` + Deny-Set + `/tooling-gate` beim Erst-Install.
-- **Auto-Mode-Classifier vs. dokumentierte Ops:** Bei `defaultMode: "auto"` legt
-  der Permission-Classifier über pauschal erlaubte Tools (`Bash`) ein eigenes
-  Risiko-Urteil und blockt als riskant eingestufte Aufrufe (Prod-Zugriff,
-  destruktiv) — by design. Wiederkehrende False-Positives auf **klar legitime,
-  in Repo-Docs belegte read-only-Ops** werden als **explizite, eng gefasste
-  Allow-Regel** im checked-in `.claude/settings.json` des Repos verankert (der
-  vom Classifier selbst genannte Weg), nicht durch Abschalten des Classifiers
-  oder Aufweichen des Deny-Sets. Disziplin: (1) nur **read-only** (Lesen, Diff,
-  Dump von Schema — **kein** Bulk-Prod-Datenexport, keine Mutation); (2) Regel so
-  **eng** wie der dokumentierte Aufruf; (3) Beleg in einer Repo-Doc
-  (`TESTING.md`, Plan) muss existieren. Mutationen, destruktive und unbelegte
-  Prod-Ops bleiben Classifier-gated. Deny-Set + `block-secrets-hook` bleiben die
-  eigentlichen Leitplanken — unangetastet.
+- **Mechanische Gates:** Prosa-Regeln sind durch `block-secrets-hook.sh` (PreToolUse
+  Write|Edit, exit 2) + Deny-Set (destruktive Ops) in `~/.claude/settings.json` gedeckt.
+- **`.claudeignore` pro Repo:** Untrusted Fixtures, `vendor/`, `*.har`, große Dumps
+  eintragen — was Claude lesen kann, kann Prompt-Injection tragen.
+- **Plugin-Supply-Chain:** `autoUpdate: true` bewusst — Aktualität vor SHA-Pinning.
+  Laufzeit-Schutz via `block-secrets-hook` + Deny-Set + `/tooling-gate` beim Erst-Install.
+  `disableSkillShellExecution` bewusst NICHT aktiv (bricht codex). Detail: Memory
+  `project_plugin_autoupdate_on`.
+- **Auto-Mode-Classifier:** `defaultMode: "auto"` bleibt. Legitime, belegte read-only-Ops
+  bei wiederkehrendem False-Positive als enge Allow-Regel in `.claude/settings.json`
+  verankern — nie Classifier abschalten oder Deny-Set aufweichen. Detail: Memory
+  `project_automode_deploy_allowlist`.
 
 ## Commit-Konvention
 

@@ -108,7 +108,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/philippherrlich/Code/personal-stack/scripts/frontend-verify-hook.sh"
+          }
+        ]
+      }
     ]
   },
-  "_canonHash": "ebbae3880ca6"
+  "_canonHash": "83d294d5b188"
 }
