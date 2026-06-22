@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: 83d294d5b188 · propagiert: 2026-06-16 -->
+     Kanon-Hash: b6573d38b520 · propagiert: 2026-06-22 -->
 
 # Konventionen — kanonischer Kern
 
@@ -111,11 +111,17 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
   in Code springen.
 - **Kontext-Hygiene:** Kontext zwischen Features verdichten, zwischen
   unzusammenhängenden Aufgaben frisch starten; die Kontext-Last beobachten.
-- **Modell-Routing:** Interaktiver Default ist Opus (bewusste Präferenz, hart in
-  `~/.claude/settings.json`). Wo Kosten/Latenz zählen, gezielt downshiften statt
-  alles auf Opus: Subagents per `model`-Param (Explore/Mechanik → Haiku/Sonnet),
-  Headless-Jobs (Reflection, Cron) auf Haiku, mid-session `/model` für Trivia
-  (Renames, Boilerplate). Opus bleibt für Architektur, subtile Bugs, Multi-File.
+- **Modell-Routing:** Interaktiver Default ist **Sonnet** (hart in
+  `~/.claude/settings.json`), mit **Opus als `advisorModel`** — Opus wird
+  server-seitig an Entscheidungspunkten konsultiert (Approach-Wahl,
+  wiederkehrende Fehler, Completion-Check), statt durchgehend zu laufen.
+  `/model opus` bewusst für Tasks, die durchgehend Opus brauchen (subtile
+  Multi-File-Architektur); Subagents/Headless per `model`-Param auf
+  Haiku/Sonnet. **Kritische Arbeit** (Auth, Datenmigration, RLS-Policies,
+  Payment, irreversible Datenänderungen) wird **nicht ohne Opus-Plan oder
+  Opus-Review finalisiert** — Plan-Mode auf `/model opus` oder belegter
+  Advisor-Completion-Check vor dem Merge. `effortLevel` (Default `high`) ist
+  optionaler Feinregler für triviale Bulk-Arbeit.
 - **User-Decision-Pattern:** Entscheidungen, deren Antwort den weiteren Weg
   ändert und die nicht aus dem Repo verifizierbar sind, dem User vorlegen — nicht
   raten. Sonst konventionelle Defaults wählen und weitermachen.
