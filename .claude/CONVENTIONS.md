@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: b6573d38b520 · propagiert: 2026-06-22 -->
+     Kanon-Hash: 04af42f2eb4c · propagiert: 2026-06-24 -->
 
 # Konventionen — kanonischer Kern
 
@@ -83,7 +83,6 @@
 - Design-Specs → `docs/specs/`.
 - Implementierungspläne → `docs/plans/`.
 - Abgelöste Docs → `docs/archive/`.
-- Projekt-Backlog & -Status → Linear (nicht als lokale Datei).
 - Verzeichnisse lazy anlegen — sie entstehen mit der ersten Datei.
 - **File-Move/Decommission — Rückzeiger-Pflicht:** Beim Verschieben, Umbenennen
   oder Stilllegen einer Datei immer alle Rückzeiger prüfen:
@@ -98,6 +97,41 @@
 - **Kritische Workflow-Docs** (Pflicht-Lesung jede Session): per `@`-Include in
   `CLAUDE.md` einbinden — nicht nur per Prosa-Referenz. Nur dann ist die
   Pflicht-Lesung zuverlässig garantiert.
+
+## Doku-Rollen — single fact, single place
+
+> Ein Fakt lebt an **genau einem Ort**; überall sonst steht nur ein Verweis.
+> Das verhindert das inhaltliche Wegdriften lokaler Doku vom Backlog und macht
+> jeden frischen Chat schnell orientiert. Drei Rollen, je genau eine pro Repo:
+
+- **Linear = SSoT für alle offenen Items.** Kein offenes To-do/Backlog-Item wird
+  in lokalen `.md`-Dateien getrackt. Lokale Backlog-Dateien sind als Arbeitsfläche
+  verboten; vorhandene Legacy-Dateien (`BACKLOG.md`) werden auf bloßen Pointer +
+  ID-Map eingefroren oder gelöscht. *Repo ohne Linear-Projekt:* entweder Projekt
+  anlegen ODER Repo als „ruht" markieren — nie lokaler Backlog-Wildwuchs als Ersatz.
+- **`docs/STATUS.md` = der EINE lokale Stand-Snapshot.** Kuratierter aktueller
+  Stand + nächster Schritt + Branch-Map + Linear-Pointer; narrativ, **kein**
+  Item-Tracking. Detailhistorie → `STATUS-ARCHIVE.md`. Kleine Repos: eine
+  20-Zeilen-Datei genügt. Kanonischer Pfad (keine Wahlfreiheit) — damit Tooling
+  und Onboarding einen festen Anker haben.
+- **`CLAUDE.md` = der EINE Onboarding-Eingangspunkt.** Bindet `@docs/STATUS.md`
+  per Include ein (s. „Kritische Workflow-Docs") und enthält mindestens:
+  (1) 1-Absatz-Pitch (was/für wen), (2) Tech-Stack + Verzeichnis-Tour je 1 Zeile,
+  (3) Start-/Test-/Deploy-Befehle, (4) Pointer aufs Linear-Projekt. Selbst **keine**
+  Backlog-Items. *Monorepo:* root-`CLAUDE.md` = Orientierung, package-level =
+  nur lokale Konventionen.
+- **Onboarding-Reality-Check:** Zu Sessionbeginn `git log --oneline -10` lesen.
+  Doku verkleinert den Suchraum, ersetzt aber nie die Code-Exploration.
+- **Konflikt-Auflösung:** Widersprechen sich git / Linear / `docs/STATUS.md`, gilt
+  git für Fakten, Linear für gewollte Arbeit — im Zweifel User fragen, nicht raten.
+- **Anti-Drift-Trigger:** Feature fertig → „nächster Schritt" in `docs/STATUS.md`
+  im selben Commit aktualisieren; offene Items ausschließlich in Linear.
+- **Anti-Überfrachtung:** Orientierung gehört in die vorhandenen Pflichtdateien
+  (`CLAUDE.md` + `docs/STATUS.md`). Keine neuen Pflicht-Dokumente (kein
+  `ONBOARDING.md`/`GLOSSARY.md`/`SETUP-DEV.md` als Stack-Vorgabe) — netto wächst
+  die Doku-Fläche nicht. Mechanisches Gate: `scripts/check-doc-roles.sh` warnt
+  (blockt nicht) bei fehlendem `@docs/STATUS.md`-Include oder offenen Items in
+  `BACKLOG.md`.
 
 ## Telegram-Notifications *(Projekte mit Telegram-Anbindung)*
 
