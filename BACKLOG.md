@@ -1,6 +1,13 @@
 # immo-radar — Backlog
 
-## Reflection-Backlog (aus reflection-triage)
+> ⚠️ **Migriert nach Linear (2026-06-24).** Das Backlog lebt jetzt vollständig in
+> Linear (Team HER, Projekt `immo-radar`) — `linear i list -P immo-radar`. Diese
+> Datei ist nur noch Pointer + Migrations-Map; offene Items werden hier **nicht**
+> mehr getrackt (Kanon: *single fact, single place*).
 
-- [ ] [reflection/2026-05-25] `/fewer-permission-prompts` ausführen → pytest, ruff, npm, ssh, curl, deploy.sh dauerhaft in der Allowlist verankern (slug: immo-radar-dev-allowlist)
-- [ ] [reflection/2026-05-25] `docker compose exec -T` für non-interactive Script-Ausführung via SSH dokumentieren (ohne `-T` schlägt der Call wegen fehlendem TTY fehl) — Ziel: CLAUDE.md oder Repo-Memory (slug: immo-radar-docker-tty)
+## Migrations-Map (lokale Items → Linear)
+
+| Lokales Item (slug) | Linear |
+|---|---|
+| immo-radar-dev-allowlist | HER-577 |
+| immo-radar-docker-tty | HER-578 |
