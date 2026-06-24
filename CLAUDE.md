@@ -114,6 +114,7 @@ Frontend: React 18 · Vite 5 · TypeScript 5 · Tailwind CSS v3 · TanStack Quer
 
 ---
 
+@docs/STATUS.md
 @.claude/CONVENTIONS.md
 @.claude/SKILLS.md
 @.claude/DESIGN.md
