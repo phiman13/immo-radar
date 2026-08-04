@@ -184,9 +184,14 @@ sich langsam) und ist manuell im Dashboard auslösbar.
 - **Bruch-Erkennung:** Lieferte ein Makler zuvor Objekte und jetzt an **zwei
   aufeinanderfolgenden Läufen** null, gilt das Rezept als gebrochen → Kaskade
   läuft erneut. Bleibt sie erfolglos → `needs-manual-watch` mit Grund.
-- **Selbsttest vor Aktivierung:** Ein Rezept wird nur aktiv, wenn es
-  (a) ≥ 1 Objekt mit Titel **und** Detail-Link liefert, (b) bei ≥ 60 % der Objekte
-  einen Preis extrahiert, (c) keine absurde Duplikatquote produziert.
+- **Selbsttest vor Aktivierung:** Ein Rezept wird aktiv, wenn es ≥ 1 Objekt mit
+  Titel **und** Detail-Link **und** mindestens einem Sachattribut (Preis *oder*
+  Fläche) liefert, ohne absurde Duplikatquote.
+  **Fehlende Preise sind kein Fehlschlag.** Viele Makler schreiben bei Seeobjekten
+  grundsätzlich „Preis auf Anfrage" — der Live-Lauf gegen `bs_immo` lieferte zwei
+  echte Objekte mit 0 % Preisabdeckung. Ein Preis-Schwellwert würde funktionierende
+  Adapter aussortieren. Die Preisquote wird stattdessen als `field_completeness`
+  am Makler festgehalten und im Dashboard angezeigt.
 - **Kein stiller Verlust:** Jede Abbruchursache landet im Coverage-Register und
   ist im Dashboard sichtbar.
 
@@ -242,6 +247,16 @@ unter 5 $/Monat.** Das Crawling ist damit nicht der Kostentreiber.
 ## 10. Umsetzungsphasen
 
 ### Phase 0 — Vermessung (Voraussetzung für alles Weitere)
+
+**Woher die Stichprobe kommt:** Die Domain-Auflösung (Phase 3) existiert noch
+nicht, und Verzeichnisse geben keine Homepages heraus — die Stichprobe wird
+deshalb durch einen **manuellen Websuche-Durchgang** gewonnen (eine Handvoll
+Abfragen der Form „Immobilienmakler <Ort>" über die Orte des Suchgebiets). Der
+Probelauf dieser Session hat das bereits bestätigt: eine einzelne Suche lieferte
+direkt verwertbare Makler-Domains (u. a. `loeger-immobilien.de`, `graef-immo.de`,
+`aigner-immobilien.de`, `locate-immobilien.com`, `kpcimmobilien.de`,
+`see-residenz.de`, `torres-immobilien.de`). Websuche **ist** der Domain-Resolver —
+Phase 3 automatisiert nur, was hier von Hand geschieht.
 
 Stichprobe von 25-30 echten Makler-Sites der Region. Gemessen wird pro Site:
 Vendor-Fingerprint, JSON-LD/Microdata vorhanden, OpenImmo-/RSS-Feed erreichbar,
