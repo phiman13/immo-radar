@@ -14,17 +14,20 @@ zünden — bevor sie gebaut werden.
 
 | Messgröße | Ergebnis |
 |---|---|
-| Sites geprüft | 28 |
-| erreichbar | 24 |
+| Sites geprüft | 29 |
+| erreichbar | 25 |
 | aktiv geblockt (HTTP 403) | 3 |
 | tot / DNS-Fehler | 1 |
-| **Vendor-Fingerprint erkannt** | **12 von 24 (50 %)** |
-| Angebotsseite automatisch gefunden | 23 von 24 (96 %) |
-| Objekt-Detailseiten im statischen HTML verlinkt | 12 von 24, davon 7 mit ≥ 3 Links |
-| eindeutiges `RealEstateListing` (JSON-LD) | 3 von 24 |
-| echter Objekt-Feed | 1 von 24 |
-| **öffentlich abrufbare OpenImmo-XML** | **0 von 24** |
-| WordPress als CMS | 15 von 24 (63 %) |
+| **Vendor-Fingerprint erkannt** | **13 von 25 (52 %)** |
+| Angebotsseite automatisch gefunden | 24 von 25 (96 %) |
+| **Sites mit ≥ 3 auffindbaren Objekt-URLs** | **17 von 25 (68 %)** |
+| Objekt-URLs insgesamt gefunden | **4.225** |
+| davon über typisierte Sitemaps | 9 Sites |
+| Sites ohne jede auffindbare Objekt-URL | 7 von 25 |
+| eindeutiges `RealEstateListing` (JSON-LD) | 3 von 25 |
+| echter Objekt-Feed | 1 von 25 |
+| **öffentlich abrufbare OpenImmo-XML** | **0 von 25** |
+| WordPress als CMS | 15 von 25 |
 
 ---
 
@@ -108,7 +111,43 @@ Zwei Folgerungen:
 
 `zillerimmobilien.de` ist per DNS nicht auflösbar — vermutlich aufgegeben.
 
-## Befund 6 — Die Angebotsseite lässt sich zuverlässig finden
+## Befund 6 — Typisierte Sitemaps sind der unterschätzte Kanal
+
+Der erste Messdurchgang meldete für `loeger-immobilien.de` **null** Objekte. Die
+Site hat tatsächlich **201** — sie liegen unter `/listing/…` und stehen
+vollständig in einer Sitemap namens `listing-sitemap1.xml`.
+
+Das ist ein verallgemeinerbares Muster: WordPress-SEO-Plugins erzeugen pro
+Custom Post Type eine eigene Sitemap und **benennen sie nach dem Typ**. Der
+Sitemap-Name verrät damit, wo die Objekte liegen — zuverlässiger, als
+URL-Muster zu raten. Der Prober wertet jetzt Unter-Sitemaps aus, deren Name auf
+`listing|immobilie|objekt|property|estate|expose` passt.
+
+Ergebnis: 9 Sites liefern ihre Objekte vollständig über typisierte Sitemaps,
+insgesamt wurden **4.225 Objekt-URLs** auffindbar.
+
+## Befund 7 — Drei Messfehler, die das Bild verzerrt hatten
+
+Alle drei fielen nur auf, weil Zwischenergebnisse gegen die Realität geprüft
+wurden statt geglaubt. Sie sind hier dokumentiert, weil derselbe Fehler in der
+Produktions-Kaskade jeweils stille Lücken erzeugt hätte:
+
+1. **Feed-Test zu lasch.** Prüfung auf „Preis oder m² irgendwo im Feed" meldete
+   5 Objekt-Feeds; alle waren SEO-Ratgeberfeeds. Korrektur: einzelne Einträge
+   auf Objekt-URL-Muster prüfen. → 5 auf 1.
+2. **JSON-LD zu großzügig.** `WebPage`, `Product` und `Place` wurden als
+   Immobiliendaten gezählt. Korrektur: nur echte Immobilientypen. → 7 auf 3.
+3. **Objekt-Link-Regex zu eng.** Das Muster verlangte direkt nach `objekt` einen
+   Trenner und scheiterte am deutschen Plural (`/objekte/`) sowie am englischen
+   Slug `/listing/`. Dadurch meldete der Prober für `riedel-immobilien.de` null
+   Objekte, obwohl die Angebotsseite **260** verlinkt. Korrektur: Wortendungen
+   zulassen, ein weiteres Pfadsegment verlangen, `listing` ergänzen.
+   → von 12 auf 17 Sites mit auffindbaren Objekten, insgesamt 4.225 URLs.
+
+Die dritte Korrektur war die folgenreichste: Sie hat die gemessene
+Erfassbarkeit von „gut ein Drittel" auf „gut zwei Drittel" gehoben.
+
+## Befund 8 — Die Angebotsseite lässt sich zuverlässig finden
 
 **23 von 24** Angebotsübersichten wurden allein aus den Startseiten-Links per
 Pfad- und Linktext-Heuristik lokalisiert. Der Schritt, den ich als fehleranfällig
@@ -126,7 +165,8 @@ deutlich:
 | 1 — Feed / OpenImmo | tragend erhofft | **4 %** (1 Site), OpenImmo 0 % | **Behalten als billiger Vorabtest**, nicht als tragende Stufe. Ein `/feed/`-Abruf kostet nichts. |
 | 2 — Vendor-Fingerprint | mittel erwartet | **50 %** | **Zur Hauptstufe machen.** Fünf Adapter: immonex, onOffice, OpenImmo2WP, Propstack, WP-ImmoMakler. |
 | 3 — JSON-LD | mittel erwartet | 12 % | Mitnehmen, billig. Nur echte Immobilientypen zählen. |
-| 4 — Sitemap / Detail-Links | mittel | ~30 % als Fallback | Behalten. |
+| 4 — **typisierte Sitemap** | Fallback | **36 %** (9 Sites, vollständige Objektlisten) | **Aufwerten.** Sitemap-Name verrät den Objekt-Post-Type; liefert die Objektliste vollständig statt paginiert. |
+| 4b — Detail-Links der Angebotsseite | mittel | ergänzend | Behalten als Fallback, wenn keine typisierte Sitemap existiert. |
 | 5 — LLM-Rezept | letzte Stufe | Rest, ~25 % | Bleibt nötig, aber für deutlich weniger Sites als befürchtet — die Kostenschätzung sinkt entsprechend. |
 | **neu** — Browser-Rendering | nicht geplant | 3 Sites blockiert + 2 JS-Shells | **Als Querschnittsfunktion ergänzen**, nicht als eigene Stufe: jede Stufe kann Playwright statt httpx nutzen. |
 
@@ -136,6 +176,20 @@ Makler erfasst — mit Code, der pro Anbieter einmal geschrieben und selten
 gebrochen wird.
 
 ---
+
+## Die fünf Referenz-Makler (vom Nutzer benannt)
+
+| Site | Stufe | Objekte auffindbar | Bewertung |
+|---|---|---:|---|
+| `riedel-immobilien.de` | typisierte Sitemap | 3.483 | vollständig erfassbar (Zahl enthält Archiv/verkaufte Objekte — Filterung nötig) |
+| `loeger-immobilien.de` | immonex + `listing`-Sitemap | 200 | vollständig erfassbar |
+| `ubi-immobilien.de` | onOffice | 3 | erfassbar, kleiner Bestand |
+| `locate-immobilien.com` | Propstack | 0 | **offen** — Objekte werden per Propstack-JS nachgeladen; auch Playwright-Rendering brachte sie nicht zum Vorschein. Braucht Analyse des Propstack-Endpunkts. |
+| `starnbergersee-immobilien.de` | keine | 0 | **tot** — nur Bewertungs-Badges, keine Objektliste. Deckt sich mit dem Live-Test der Altquelle `starnberg_bader` (0 Treffer nach Domainwechsel). |
+
+Drei von fünf sind mit der gemessenen Kaskade sofort erfassbar. Der
+Propstack-Fall ist der interessanteste offene Punkt, weil Propstack zweimal in
+der Stichprobe vorkommt und ein gelöster Propstack-Adapter beide Sites abdeckt.
 
 ## Belastbarkeit dieses Ergebnisses
 

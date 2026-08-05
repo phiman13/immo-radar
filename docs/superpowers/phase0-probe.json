@@ -6,8 +6,13 @@
     "robots": true,
     "robots_allows_root": true,
     "sitemap": true,
+    "sitemap_object_urls": 200,
     "sitemap_entries": 7,
     "sitemap_listing_like": 7,
+    "sitemap_object_sample": [
+      "https://loeger-immobilien.de/listing/2-1-2-zimmer-wohnung-in-zentraler-lage-von-tutzing/",
+      "https://loeger-immobilien.de/listing/2-zimmer-dachgeschoss-wohnung-in-ruhiger-und-zentraler-lage-von-tutzing/"
+    ],
     "feeds": [
       {
         "url": "https://loeger-immobilien.de/feed/",
@@ -51,8 +56,10 @@
       "html_kb": 102
     },
     "probed_listing_page": true,
-    "detail_links": 0,
-    "detail_sample": [],
+    "detail_links": 1,
+    "detail_sample": [
+      "https://makler-empfehlung.de/immobilienmakler/1946"
+    ],
     "stage": "2-vendor"
   },
   {
@@ -62,14 +69,16 @@
     "robots": true,
     "robots_allows_root": true,
     "sitemap": true,
+    "sitemap_object_urls": 0,
     "sitemap_entries": 8,
     "sitemap_listing_like": 0,
+    "sitemap_object_sample": [],
     "feeds": [
       {
         "url": "https://graef-immo.de/feed/",
         "ok": true,
         "items": 10,
-        "object_items": 1,
+        "object_items": 0,
         "immo_like": false
       },
       {
@@ -102,11 +111,1120 @@
       "html_kb": 402
     },
     "probed_listing_page": true,
+    "detail_links": 6,
+    "detail_sample": [
+      "https://graef-immo.de/immobilien/charmantes-mehrgenerationenhaus-mit-grosem-garten-und-zukunftspotenzial/",
+      "https://graef-immo.de/immobilien/grafelfing-ruhiges-grundstuck-mit-bis-zu-290-m%c2%b2-gf-neubaupotenzial/"
+    ],
+    "stage": "5-detail-links"
+  },
+  {
+    "domain": "locate-immobilien.com",
+    "reachable": true,
+    "final_url": "https://www.locate-immobilien.com/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 4,
+    "sitemap_listing_like": 4,
+    "sitemap_object_sample": [],
+    "feeds": [
+      {
+        "url": "https://www.locate-immobilien.com/feed/",
+        "ok": true,
+        "items": 1,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "DiviChild by wplo.de v.1.0.0",
+    "wordpress": true,
+    "listing_url": "https://www.locate-immobilien.com/immobilien-tutzing/",
+    "vendors": [
+      "propstack"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 8,
+      "html_kb": 412
+    },
+    "probed_listing_page": true,
+    "detail_links": 0,
+    "detail_sample": [],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "torres-immobilien.de",
+    "reachable": true,
+    "final_url": "https://torres-immobilien.de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 0,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": false,
+    "listing_url": "https://torres-immobilien.de/immobilien",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "ItemList",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 8,
+      "areas": 9,
+      "html_kb": 113
+    },
+    "probed_listing_page": true,
+    "detail_links": 19,
+    "detail_sample": [
+      "https://torres-immobilien.de/immobilien/erdgeschosswohnung-in-bad-hindelang-kauf-1008",
+      "https://torres-immobilien.de/immobilien/erdgeschosswohnung-in-bad-hindelang-kauf-1009"
+    ],
+    "stage": "5-detail-links"
+  },
+  {
+    "domain": "see-residenz.de",
+    "reachable": true,
+    "final_url": "https://see-residenz.de/home-see-residenz.html",
+    "robots": false,
+    "robots_allows_root": true,
+    "sitemap": false,
+    "sitemap_object_urls": 0,
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "TYPO3 6.1 CMS",
+    "wordpress": false,
+    "listing_url": "https://see-residenz.de/eigentumswohnung-tutzing-kaufen.html",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 15,
+      "html_kb": 24
+    },
+    "probed_listing_page": true,
+    "detail_links": 0,
+    "detail_sample": [],
+    "stage": "7-js-shell/unklar"
+  },
+  {
+    "domain": "kpcimmobilien.de",
+    "reachable": true,
+    "final_url": "https://www.kpcimmobilien.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 51,
+    "sitemap_entries": 9,
+    "sitemap_listing_like": 9,
+    "sitemap_object_sample": [
+      "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-40423/",
+      "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-65026/"
+    ],
+    "feeds": [
+      {
+        "url": "https://www.kpcimmobilien.de/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      },
+      {
+        "url": "https://www.kpcimmobilien.de/comments/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "Divi Child Theme v.1.0.0",
+    "wordpress": true,
+    "listing_url": "https://www.kpcimmobilien.de/aktuelle-immobilienangebote",
+    "vendors": [
+      "wp-immomakler"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 16,
+      "html_kb": 356
+    },
+    "probed_listing_page": true,
+    "detail_links": 41,
+    "detail_sample": [
+      "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-40423/",
+      "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-65026/"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "heidinger-immobilien.de",
+    "reachable": true,
+    "final_url": "https://www.heidinger-immobilien.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 4,
+    "sitemap_listing_like": 4,
+    "sitemap_object_sample": [],
+    "feeds": [
+      {
+        "url": "https://www.heidinger-immobilien.de/feed/",
+        "ok": true,
+        "items": 10,
+        "object_items": 0,
+        "immo_like": false
+      },
+      {
+        "url": "https://www.heidinger-immobilien.de/comments/feed/",
+        "ok": true,
+        "items": 1,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "WordPress 7.0.2",
+    "wordpress": true,
+    "listing_url": "https://www.heidinger-immobilien.de/kaufobjekte/",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "Organization",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 20,
+      "html_kb": 96
+    },
+    "probed_listing_page": true,
+    "detail_links": 0,
+    "detail_sample": [],
+    "stage": "7-js-shell/unklar"
+  },
+  {
+    "domain": "jannikzimmer.com",
+    "reachable": true,
+    "final_url": "https://jannikzimmer.com",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 43,
+    "sitemap_entries": 13,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [
+      "https://jannikzimmer.com/immobilien/2-zimmer-charakter-wohnung-nur-wenige-meter-vom-tegernsee/",
+      "https://jannikzimmer.com/immobilien/auf-links-gedreht-durchdacht-sanierte-doppelhaushaelfte-in-saulgrub-mit-traumhaftem-bergblick/"
+    ],
+    "feeds": [
+      {
+        "url": "https://jannikzimmer.com/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      },
+      {
+        "url": "https://jannikzimmer.com/comments/feed/",
+        "ok": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": true,
+    "openimmo_url": null,
+    "generator": "WordPress 7.0.2",
+    "wordpress": true,
+    "listing_url": "https://jannikzimmer.com/immobilienangebote/",
+    "vendors": [
+      "onoffice",
+      "immonex",
+      "openimmo2wp"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "Apartment",
+        "BreadcrumbList",
+        "House",
+        "Organization",
+        "Person",
+        "Place",
+        "Product",
+        "RealEstateAgent",
+        "RealEstateListing",
+        "SingleFamilyResidence",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 10,
+      "areas": 5,
+      "html_kb": 374
+    },
+    "probed_listing_page": true,
+    "detail_links": 29,
+    "detail_sample": [
+      "https://jannikzimmer.com/immobilien/2-zimmer-charakter-wohnung-nur-wenige-meter-vom-tegernsee/?inx-backlink-url=https%3A%2F%2Fjannikzimmer.com%2Fimmobilienangebote%2F",
+      "https://jannikzimmer.com/immobilien/auf-links-gedreht-durchdacht-sanierte-doppelhaushaelfte-in-saulgrub-mit-traumhaftem-bergblick/?inx-backlink-url=https%3A%2F%2Fjannikzimmer.com%2Fimmobilienangebote%2F"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "starnbergersee-immobilien.de",
+    "reachable": true,
+    "final_url": "https://www.starnbergersee-immobilien.de/",
+    "robots": true,
+    "robots_allows_root": false,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 315,
+    "sitemap_listing_like": 315,
+    "sitemap_object_sample": [],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": false,
+    "listing_url": "https://www.starnbergersee-immobilien.de/Angebote.htm",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "RealEstateAgent"
+      ],
+      "microdata": true
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 9,
+      "html_kb": 194
+    },
+    "probed_listing_page": true,
+    "detail_links": 0,
+    "detail_sample": [],
+    "stage": "7-js-shell/unklar"
+  },
+  {
+    "domain": "immobilienmakler-starnberg-blasig.de",
+    "reachable": true,
+    "final_url": "https://immobilienmakler-starnberg-blasig.de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": false,
+    "sitemap_object_urls": 0,
+    "feeds": [
+      {
+        "url": "https://immobilienmakler-starnberg-blasig.de/feed/",
+        "ok": false
+      },
+      {
+        "url": "https://immobilienmakler-starnberg-blasig.de/comments/feed/",
+        "ok": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "WordPress 7.0.2",
+    "wordpress": true,
+    "listing_url": null,
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [],
+      "microdata": true
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 0,
+      "html_kb": 116
+    },
+    "probed_listing_page": false,
+    "detail_links": 0,
+    "stage": "7-js-shell/unklar"
+  },
+  {
+    "domain": "weichselgartner-immo.de",
+    "reachable": true,
+    "final_url": "https://www.weichselgartner-immo.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 3,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [],
+    "feeds": [
+      {
+        "url": "https://www.weichselgartner-immo.de/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      },
+      {
+        "url": "https://www.weichselgartner-immo.de/comments/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "WordPress 7.0.2",
+    "wordpress": true,
+    "listing_url": "https://www.weichselgartner-immo.de/kaufen/gewerbeimmobilien/",
+    "vendors": [
+      "wp-immomakler"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "RealEstateListing",
+        "SiteNavigationElement",
+        "realestateagent"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 0,
+      "html_kb": 171
+    },
+    "probed_listing_page": true,
+    "detail_links": 7,
+    "detail_sample": [
+      "https://www.weichselgartner-immo.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-kaufen-4225/",
+      "https://www.weichselgartner-immo.de/immobilien/buero-praxis-buerohaus-in-muenchen-mieten-5600/"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "schlossberger-immobilien.de",
+    "reachable": true,
+    "final_url": "https://schlossberger-immobilien.de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 58,
+    "sitemap_entries": 3,
+    "sitemap_listing_like": 3,
+    "sitemap_object_sample": [
+      "https://schlossberger-immobilien.de/immobilie-kaufen-im-landkreis-starnberg/aktuell-eine-immobilie-kaufen/",
+      "https://schlossberger-immobilien.de/immobilien-verkaufen-starnberg/eigentumswohnung-verkaufen/"
+    ],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": true,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": true,
+    "listing_url": "https://schlossberger-immobilien.de/immobilien-angebote/?inx-sort=availability_desc",
+    "vendors": [
+      "immonex",
+      "openimmo2wp"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "Article",
+        "BreadcrumbList",
+        "ImageObject",
+        "Organization",
+        "Person",
+        "Place",
+        "RealEstateAgent",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 9,
+      "html_kb": 300
+    },
+    "probed_listing_page": true,
+    "detail_links": 54,
+    "detail_sample": [
+      "https://schlossberger-immobilien.de/immobilien-verkaufen-starnberg/erbengemeinschaft/",
+      "https://schlossberger-immobilien.de/immobilien-verkaufen-starnberg/haus-verkaufen-und-wohnen-bleiben/"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "bs-immo.de",
+    "reachable": true,
+    "final_url": "https://bs-immo.de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 0,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [],
+    "feeds": [
+      {
+        "url": "https://bs-immo.de/feed",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      },
+      {
+        "url": "https://bs-immo.de/comments/feed",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "All in One SEO (AIOSEO) 4.7.1.1",
+    "wordpress": true,
+    "listing_url": "https://bs-immo.de/referenzen",
+    "vendors": [
+      "immonex",
+      "immoscout-widget"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "Organization",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 0,
+      "html_kb": 120
+    },
+    "probed_listing_page": true,
+    "detail_links": 0,
+    "detail_sample": [],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "zillerimmobilien.de",
+    "reachable": false,
+    "error": "unreachable",
+    "stage": "unreachable"
+  },
+  {
+    "domain": "windisch-immobilien.de",
+    "reachable": false,
+    "error": "HTTP 403",
+    "blocked": true,
+    "stage": "blocked (braucht Browser)"
+  },
+  {
+    "domain": "sedlmayr-immo.de",
+    "reachable": true,
+    "final_url": "https://www.sedlmayr-immo.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 82,
+    "sitemap_entries": 14,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [
+      "https://www.sedlmayr-immo.de/immobilie/reserviert-4-zimmer-erbbaurechtwohnung-in-ruhiger-lage/",
+      "https://www.sedlmayr-immo.de/immobilie/reserviert-kapitalanlage-vermietete-3-zimmer-wohnung-mit-optimalem-schnitt/"
+    ],
+    "feeds": [
+      {
+        "url": "https://www.sedlmayr-immo.de/feed/",
+        "ok": true,
+        "items": 10,
+        "object_items": 0,
+        "immo_like": false
+      },
+      {
+        "url": "https://www.sedlmayr-immo.de/comments/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "WordPress 7.0.2",
+    "wordpress": true,
+    "listing_url": "https://www.sedlmayr-immo.de/immobilien/",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "ImageObject",
+        "ItemList",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 12,
+      "areas": 37,
+      "html_kb": 179
+    },
+    "probed_listing_page": true,
+    "detail_links": 12,
+    "detail_sample": [
+      "https://www.sedlmayr-immo.de/immobilie/verkauf-attraktive-eigentumswohnung-mit-balkon-und-schoener-aussicht-ueber-peissenberg/",
+      "https://www.sedlmayr-immo.de/immobilie/verkauf-ein-zuhause-zum-verlieben-stilvoll-wohnen-mit-traumhaftem-garten/"
+    ],
+    "stage": "4-sitemap-objekte"
+  },
+  {
+    "domain": "akurat.net",
+    "reachable": true,
+    "final_url": "https://www.akurat.net/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 7,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "Divi Child v.4.9.10.1649323507",
+    "wordpress": true,
+    "listing_url": "https://www.akurat.net/immobilienangebote",
+    "vendors": [
+      "onoffice"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "Organization",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 0,
+      "html_kb": 1060
+    },
+    "probed_listing_page": true,
+    "detail_links": 6,
+    "detail_sample": [
+      "https://www.akurat.net/immobilienangebote/finanzierung/",
+      "https://www.akurat.net/immobilienangebote/grundstueck-kaufen/"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "citigrund.de",
+    "reachable": true,
+    "final_url": "https://citigrund.de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 4,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [],
+    "feeds": [
+      {
+        "url": "https://citigrund.de/feed/",
+        "ok": true,
+        "items": 10,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "performant-translations 1.2.0",
+    "wordpress": true,
+    "listing_url": "https://citigrund.de/immobilienangebote/",
+    "vendors": [
+      "onoffice"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 73,
+      "html_kb": 599
+    },
+    "probed_listing_page": true,
+    "detail_links": 82,
+    "detail_sample": [
+      "https://citigrund.de/expose/14361-holzkirchen-foeching-grundstueck-mit-genehmigtem/",
+      "https://citigrund.de/expose/14987-nahe-theresienwiese-elegantes-lifestyle-penthouse/"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "liebhardt-immobilien.de",
+    "reachable": true,
+    "final_url": "https://www.liebhardt-immobilien.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 5,
+    "sitemap_entries": 2,
+    "sitemap_listing_like": 2,
+    "sitemap_object_sample": [
+      "https://www.liebhardt-immobilien.de/hausverwaltung/downloads/",
+      "https://www.liebhardt-immobilien.de/immobilien/gewerbe/"
+    ],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": true,
+    "listing_url": "https://www.liebhardt-immobilien.de/immobilien/",
+    "vendors": [
+      "onoffice"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "LocalBusiness",
+        "RealEstateAgent",
+        "RealEstateListing",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 22,
+      "html_kb": 422
+    },
+    "probed_listing_page": true,
+    "detail_links": 6,
+    "detail_sample": [
+      "https://www.liebhardt-immobilien.de/hausverwaltung/downloads/",
+      "https://www.liebhardt-immobilien.de/immobilien/gewerbe/"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "riedel-immobilien.de",
+    "reachable": true,
+    "final_url": "https://www.riedel-immobilien.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 3483,
+    "sitemap_entries": 3847,
+    "sitemap_listing_like": 3847,
+    "sitemap_object_sample": [
+      "https://www.riedel-immobilien.de/angebote/bayerische-seen/",
+      "https://www.riedel-immobilien.de/angebote/gewerbe/"
+    ],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": false,
+    "listing_url": "https://www.riedel-immobilien.de/angebote/?navid=473116473116",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 253,
+      "areas": 510,
+      "html_kb": 3583
+    },
+    "probed_listing_page": true,
+    "detail_links": 284,
+    "detail_sample": [
+      "https://www.riedel-immobilien.de/angebote/internationale/",
+      "https://www.riedel-immobilien.de/angebote/kauf/"
+    ],
+    "stage": "4-sitemap-objekte"
+  },
+  {
+    "domain": "ubi-immobilien.de",
+    "reachable": true,
+    "final_url": "https://www.ubi-immobilien.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 3,
+    "sitemap_entries": 1,
+    "sitemap_listing_like": 1,
+    "sitemap_object_sample": [
+      "https://www.ubi-immobilien.de/immobilien/kauf/",
+      "https://www.ubi-immobilien.de/immobilien/merkliste/"
+    ],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": true,
+    "listing_url": "https://www.ubi-immobilien.de/immobilien/",
+    "vendors": [
+      "onoffice"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 3,
+      "areas": 13,
+      "html_kb": 271
+    },
+    "probed_listing_page": true,
+    "detail_links": 3,
+    "detail_sample": [
+      "https://www.ubi-immobilien.de/immobilien/kauf/",
+      "https://www.ubi-immobilien.de/immobilien/merkliste/"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "aigner-immobilien.de",
+    "reachable": false,
+    "error": "HTTP 403",
+    "blocked": true,
+    "stage": "blocked (braucht Browser)"
+  },
+  {
+    "domain": "rogers-immobilien.de",
+    "reachable": true,
+    "final_url": "https://www.rogers-immobilien.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 124,
+    "sitemap_entries": 5,
+    "sitemap_listing_like": 5,
+    "sitemap_object_sample": [
+      "https://www.rogers-immobilien.de/expose/1-zi-whg-kauf-muenchen-0623/",
+      "https://www.rogers-immobilien.de/expose/2-zi-neubauwohnung-in-poecking-miete-1125/"
+    ],
+    "feeds": [
+      {
+        "url": "https://www.rogers-immobilien.de/feed/",
+        "ok": true,
+        "items": 10,
+        "object_items": 10,
+        "immo_like": true
+      },
+      {
+        "url": "https://www.rogers-immobilien.de/comments/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": true,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "Divi Child-Theme v.1.0.0",
+    "wordpress": true,
+    "listing_url": "https://www.rogers-immobilien.de/immobilienangebote/",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "Organization",
+        "Product",
+        "SiteNavigationElement",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 4,
+      "areas": 6,
+      "html_kb": 196
+    },
+    "probed_listing_page": true,
+    "detail_links": 19,
+    "detail_sample": [
+      "https://www.bellevue.de/immobilienmakler/munchen/111938.html",
+      "https://www.jacasa.de/immobilienmakler/katerina-rogers-immobilienvermittlung-muenchen"
+    ],
+    "stage": "1-feed/openimmo"
+  },
+  {
+    "domain": "alpenimmobilien.de",
+    "reachable": true,
+    "final_url": "https://www.alpenimmobilien.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 550,
+    "sitemap_listing_like": 550,
+    "sitemap_object_sample": [],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": false,
+    "listing_url": "https://www.alpenimmobilien.de/ferienhaus-kaufen.html",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "Product"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 16,
+      "html_kb": 199
+    },
+    "probed_listing_page": true,
+    "detail_links": 0,
+    "detail_sample": [],
+    "stage": "3-structured"
+  },
+  {
+    "domain": "suedhausbau.de",
+    "reachable": true,
+    "final_url": "https://www.suedhausbau.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": false,
+    "sitemap_object_urls": 0,
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "TYPO3 CMS",
+    "wordpress": false,
+    "listing_url": "https://www.suedhausbau.de/immobilienverkauf.html",
+    "vendors": [
+      "propstack",
+      "casavi"
+    ],
+    "structured": {
+      "jsonld_types": [],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 0,
+      "html_kb": 62
+    },
+    "probed_listing_page": true,
+    "detail_links": 7,
+    "detail_sample": [
+      "https://www.suedhausbau.de/fileadmin/suedhausbau/downloads/hausverwaltung/shb_makler_allg_falzansicht.pdf",
+      "https://www.suedhausbau.de/hausverwaltung/gewerbe.html"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "freitag.immobilien",
+    "reachable": true,
+    "final_url": "https://freitag.immobilien",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 15369,
+    "sitemap_listing_like": 15369,
+    "sitemap_object_sample": [],
+    "feeds": [
+      {
+        "url": "https://feeds.feedburner.com/freitag/P0otytyYWT8",
+        "ok": true,
+        "items": 100,
+        "object_items": 1,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": false,
+    "listing_url": "https://freitag.immobilien/angebote",
+    "vendors": [
+      "immonex",
+      "fio"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "ItemList",
+        "RealEstateAgent",
+        "SiteNavigationElement",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 3,
+      "areas": 6,
+      "html_kb": 47
+    },
+    "probed_listing_page": true,
+    "detail_links": 4,
+    "detail_sample": [
+      "https://freitag.immobilien/expose/ammersee-eching-grundstueck",
+      "https://freitag.immobilien/expose/mayrhofen-zillertal-landhaus"
+    ],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "von-poll.com",
+    "reachable": false,
+    "error": "HTTP 403",
+    "blocked": true,
+    "stage": "blocked (braucht Browser)"
+  },
+  {
+    "domain": "engelvoelkers.com",
+    "reachable": true,
+    "final_url": "https://www.engelvoelkers.com/de/de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 1,
+    "sitemap_entries": 452,
+    "sitemap_listing_like": 52,
+    "sitemap_object_sample": [
+      "https://www.engelvoelkers.com/gr/de/immobilienmakler-werden/bewerben"
+    ],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": false,
+    "listing_url": "https://www.engelvoelkers.com/de-de/immobilienpreise",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "FAQPage",
+        "Product"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 48,
+      "areas": 0,
+      "html_kb": 482
+    },
+    "probed_listing_page": true,
+    "detail_links": 42,
+    "detail_sample": [
+      "https://www.engelvoelkers.com/de-de/immobilienpreise/baden-wuerttemberg/",
+      "https://www.engelvoelkers.com/de-de/immobilienpreise/baden-wuerttemberg/stuttgart/"
+    ],
+    "stage": "3-structured"
+  },
+  {
+    "domain": "dahlercompany.com",
+    "reachable": true,
+    "final_url": "https://www.dahlercompany.com/de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 3,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": false,
+    "listing_url": "https://www.dahlercompany.com/de/anlageimmobilien",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 0,
+      "html_kb": 272
+    },
+    "probed_listing_page": true,
     "detail_links": 2,
     "detail_sample": [
-      "https://graef-immo.de/immobilie-verkaufen/",
-      "https://graef-immo.de/immobilie-vermieten/"
+      "https://www.dahlercompany.com/de/anlageimmobilien/immobilie-kaufen/mehrfamilienhaus",
+      "https://www.dahlercompany.com/de/immobilie-kaufen/wohnimmobilien"
     ],
-    "stage": "6-recipe (HTML hat Daten)"
+    "stage": "7-js-shell/unklar"
   }
 ]

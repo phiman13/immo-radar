@@ -1,0 +1,120 @@
+[
+  {
+    "root": "https://www.starnbergersee-immobilien.de/",
+    "listing_url": "https://www.starnbergersee-immobilien.de/Angebote.htm",
+    "static": {
+      "detail_links": 0,
+      "prices": 0,
+      "areas": 9,
+      "kb": 194,
+      "sample": []
+    },
+    "rendered": {
+      "detail_links": 0,
+      "prices": 1,
+      "areas": 19,
+      "kb": 226,
+      "sample": []
+    },
+    "vendors": []
+  },
+  {
+    "root": "https://loeger-immobilien.de/",
+    "listing_url": "https://loeger-immobilien.de/referenzen-immobilien/",
+    "static": {
+      "detail_links": 0,
+      "prices": 0,
+      "areas": 6,
+      "kb": 102,
+      "sample": []
+    },
+    "rendered": {
+      "detail_links": 0,
+      "prices": 0,
+      "areas": 6,
+      "kb": 105,
+      "sample": []
+    },
+    "vendors": [
+      "immonex",
+      "openimmo2wp"
+    ]
+  },
+  {
+    "root": "https://www.riedel-immobilien.de/",
+    "listing_url": "https://www.riedel-immobilien.de/angebote/?navid=473116473116",
+    "static": {
+      "detail_links": 284,
+      "prices": 253,
+      "areas": 510,
+      "kb": 3887,
+      "sample": [
+        "https://www.riedel-immobilien.de/angebote/internationale/",
+        "https://www.riedel-immobilien.de/angebote/kauf/",
+        "https://www.riedel-immobilien.de/angebote/miete/"
+      ]
+    },
+    "rendered": {
+      "detail_links": 285,
+      "prices": 253,
+      "areas": 519,
+      "kb": 4972,
+      "sample": [
+        "https://www.riedel-immobilien.de/angebote/internationale/",
+        "https://www.riedel-immobilien.de/angebote/kauf/",
+        "https://www.riedel-immobilien.de/angebote/miete/"
+      ]
+    },
+    "vendors": []
+  },
+  {
+    "root": "https://www.ubi-immobilien.de/",
+    "listing_url": "https://www.ubi-immobilien.de/immobilien/",
+    "static": {
+      "detail_links": 3,
+      "prices": 3,
+      "areas": 13,
+      "kb": 271,
+      "sample": [
+        "https://www.ubi-immobilien.de/immobilien/kauf/",
+        "https://www.ubi-immobilien.de/immobilien/merkliste/",
+        "https://www.ubi-immobilien.de/immobilien/miete/"
+      ]
+    },
+    "rendered": {
+      "detail_links": 3,
+      "prices": 3,
+      "areas": 13,
+      "kb": 290,
+      "sample": [
+        "https://www.ubi-immobilien.de/immobilien/kauf/",
+        "https://www.ubi-immobilien.de/immobilien/merkliste/",
+        "https://www.ubi-immobilien.de/immobilien/miete/"
+      ]
+    },
+    "vendors": [
+      "onoffice"
+    ]
+  },
+  {
+    "root": "https://www.locate-immobilien.com/",
+    "listing_url": "https://www.locate-immobilien.com/immobilien-tutzing/",
+    "static": {
+      "detail_links": 0,
+      "prices": 0,
+      "areas": 8,
+      "kb": 412,
+      "sample": []
+    },
+    "rendered": {
+      "detail_links": 0,
+      "prices": 0,
+      "areas": 8,
+      "kb": 416,
+      "sample": []
+    },
+    "vendors": [
+      "propstack"
+    ]
+  }
+]

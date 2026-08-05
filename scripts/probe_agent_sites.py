@@ -54,6 +54,7 @@ DOMAINS = [
     "liebhardt-immobilien.de",
     # Überregional / München mit Seeobjekten
     "riedel-immobilien.de",
+    "ubi-immobilien.de",
     "aigner-immobilien.de",
     "rogers-immobilien.de",
     "alpenimmobilien.de",
@@ -92,11 +93,23 @@ LISTING_HINTS = re.compile(
 PRICE_RE = re.compile(r"\d{1,3}(?:[.\s]\d{3})+\s*(?:€|EUR)")
 AREA_RE = re.compile(r"\d{2,4}(?:[,.]\d+)?\s*m²")
 
-# Objekt-Detailseiten folgen fast immer einem dieser Pfadmuster
+# Objekt-Detailseiten folgen fast immer einem dieser Pfadmuster.
+# Wichtig: deutsche Endungen zulassen — /objekte/, /immobilien-tutzing/ … —
+# und ein weiteres Pfadsegment verlangen, sonst matcht die Übersichtsseite
+# selbst oder eine Serviceseite wie /immobilien-verkaufen/.
 DETAIL_RE = re.compile(
-    r"/(immobilie|objekt|expose|exposé|estate|property|immo|angebot)[-_/]|"
-    r"[?&](objekt|immo|expose|property|estate)[-_]?id=",
+    r"/(?:immobilie|objekt|expose|exposé|estate|property|immo|angebot"
+    r"|listing|realestate|wohnung|haus)[a-zäöüß-]*"
+    r"/[^/?#]{4,}"
+    r"|[?&](?:objekt|immo|expose|property|estate)[-_]?id=",
     re.I,
+)
+
+# Namen von Unter-Sitemaps, die auf einen Objekt-Post-Type hindeuten.
+# WordPress-SEO-Plugins erzeugen z.B. listing-sitemap.xml oder
+# immobilie-sitemap.xml — das ist zuverlässiger als URL-Muster zu raten.
+SITEMAP_OBJECT_RE = re.compile(
+    r"(listing|immobilie|objekt|property|estate|expose|angebot|wohnung|haus)", re.I
 )
 
 # Immobilienspezifische schema.org-Typen. Generische Typen wie WebPage,
@@ -272,17 +285,36 @@ async def probe(domain: str, sem: asyncio.Semaphore) -> dict:
                 out["robots"] = False
                 out["robots_allows_root"] = True  # kein robots.txt = kein Verbot
 
-            # Sitemap (aus robots.txt oder Standardpfad)
+            # Sitemap: Index auflösen und Unter-Sitemaps mit Objekt-Post-Type
+            # gezielt auswerten — dort stehen die Objekt-URLs vollständig drin.
             if not sitemap_urls:
-                sitemap_urls = [urljoin(root, "/sitemap.xml")]
-            sm = await fetch(client, sitemap_urls[0])
-            if sm is not None and sm.status_code == 200 and "<" in sm.text[:200]:
+                sitemap_urls = [urljoin(root, "/sitemap.xml"), urljoin(root, "/wp-sitemap.xml")]
+            out["sitemap"] = False
+            out["sitemap_object_urls"] = 0
+            for sm_url in sitemap_urls[:2]:
+                sm = await fetch(client, sm_url)
+                if sm is None or sm.status_code != 200 or "<" not in sm.text[:200]:
+                    continue
                 out["sitemap"] = True
                 locs = re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sm.text)
                 out["sitemap_entries"] = len(locs)
                 out["sitemap_listing_like"] = sum(1 for u in locs if LISTING_HINTS.search(u))
-            else:
-                out["sitemap"] = False
+
+                # Unter-Sitemaps, deren *Name* auf Objekte hindeutet
+                subs = [u for u in locs if u.endswith(".xml") and SITEMAP_OBJECT_RE.search(u)]
+                obj_urls: set[str] = set()
+                for sub in subs[:3]:
+                    sr = await fetch(client, sub)
+                    if sr is None or sr.status_code != 200:
+                        continue
+                    for u in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sr.text):
+                        if DETAIL_RE.search(u):
+                            obj_urls.add(u)
+                # Fallback: Objekt-URLs direkt im Haupt-Index
+                obj_urls.update(u for u in locs if DETAIL_RE.search(u))
+                out["sitemap_object_urls"] = len(obj_urls)
+                out["sitemap_object_sample"] = sorted(obj_urls)[:2]
+                break
 
             # RSS/Atom
             soup_home = BeautifulSoup(home, "html.parser")
@@ -356,10 +388,10 @@ def classify(row: dict) -> str:
     st = row.get("structured", {})
     if IMMO_LD_TYPES.intersection(st.get("jsonld_types", [])):
         return "3-structured"
+    if row.get("sitemap_object_urls", 0) >= 3:
+        return "4-sitemap-objekte"
     if row.get("detail_links", 0) >= 3:
-        return "4-detail-links"
-    if row.get("sitemap") and row.get("sitemap_listing_like", 0) >= 3:
-        return "5-sitemap"
+        return "5-detail-links"
     if row.get("signals", {}).get("prices", 0) >= 2:
         return "6-recipe (HTML hat Daten)"
     return "7-js-shell/unklar"
