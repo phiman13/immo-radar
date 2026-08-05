@@ -1,0 +1,112 @@
+[
+  {
+    "domain": "loeger-immobilien.de",
+    "reachable": true,
+    "final_url": "https://loeger-immobilien.de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_entries": 7,
+    "sitemap_listing_like": 7,
+    "feeds": [
+      {
+        "url": "https://loeger-immobilien.de/feed/",
+        "ok": true,
+        "items": 2,
+        "object_items": 0,
+        "immo_like": false
+      },
+      {
+        "url": "https://loeger-immobilien.de/comments/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": true,
+    "openimmo_url": null,
+    "generator": "WordPress 7.0.2",
+    "wordpress": true,
+    "listing_url": "https://loeger-immobilien.de/referenzen-immobilien/",
+    "vendors": [
+      "immonex",
+      "openimmo2wp"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "Article",
+        "ImageObject",
+        "Organization",
+        "Person",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": true
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 6,
+      "html_kb": 102
+    },
+    "probed_listing_page": true,
+    "detail_links": 0,
+    "detail_sample": [],
+    "stage": "2-vendor"
+  },
+  {
+    "domain": "graef-immo.de",
+    "reachable": true,
+    "final_url": "https://graef-immo.de",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_entries": 8,
+    "sitemap_listing_like": 0,
+    "feeds": [
+      {
+        "url": "https://graef-immo.de/feed/",
+        "ok": true,
+        "items": 10,
+        "object_items": 1,
+        "immo_like": false
+      },
+      {
+        "url": "https://graef-immo.de/comments/feed/",
+        "ok": true,
+        "items": 0,
+        "object_items": 0,
+        "immo_like": false
+      }
+    ],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "WordPress 6.8.6",
+    "wordpress": true,
+    "listing_url": "https://graef-immo.de/immobilien/",
+    "vendors": [],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "ImageObject",
+        "WebPage",
+        "WebSite"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 8,
+      "areas": 89,
+      "html_kb": 402
+    },
+    "probed_listing_page": true,
+    "detail_links": 2,
+    "detail_sample": [
+      "https://graef-immo.de/immobilie-verkaufen/",
+      "https://graef-immo.de/immobilie-vermieten/"
+    ],
+    "stage": "6-recipe (HTML hat Daten)"
+  }
+]
