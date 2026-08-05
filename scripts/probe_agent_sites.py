@@ -41,6 +41,8 @@ DOMAINS = [
     "jannikzimmer.com",
     "starnbergersee-immobilien.de",
     "immobilienmakler-starnberg-blasig.de",
+    "see-immo.de",
+    "remax-starnberg.com",
     "weichselgartner-immo.de",
     "schlossberger-immobilien.de",
     "bs-immo.de",
@@ -82,6 +84,11 @@ VENDORS = {
     "reseda": r"reseda",
     "immosolve": r"immosolve",
     "casavi": r"casavi",
+    # TYPO3-Extension für OpenImmo-Import (see-immo.de)
+    "typo3-openimmo": r"tx_openimmo|typo3conf/ext/openimmo",
+    # Legacy-Makler-CMS mit Cursor-URLs; identisch bei starnbergersee-immobilien
+    # und remax-starnberg — Fingerprint über das URL-Schema statt über Assets.
+    "cursor-cms": r"index\.php4?\?cmd=searchDetails|objq%5Bcursor%5D|objq\[cursor\]",
 }
 
 LISTING_HINTS = re.compile(
@@ -121,36 +128,75 @@ def link_shape(url: str) -> str:
     return f"/{shape}/*" + ("?" + "&".join(keys) if keys else "")
 
 
+# Links, die zwar pro Objekt existieren, aber nicht zum Objekt führen
+FORM_LINK_RE = re.compile(
+    r"(anfrage|request|kontakt|contact|merkzettel|merkliste|watchlist|vormerk"
+    r"|expose-anfordern|print|drucken|share|teilen|cHash)",
+    re.I,
+)
+
+# Objekt-Slugs sind lange, mehrgliedrige Wortketten ("moderne-gartenwohnung-in-
+# ruhiger-wohnlage-von-weilheim"). Navigationsslugs sind kurz ("leistungen").
+SLUG_MIN_LEN = 25
+SLUG_MIN_PARTS = 4
+
+
 def find_detail_links(html: str, base: str) -> tuple[int, list[str]]:
-    """Objektlinks strukturell finden: die größte Gruppe gleichförmiger Links.
+    """Objektlinks strukturell finden — ohne Vokabular-Annahmen.
 
     Wortlisten scheitern an Legacy-CMS (`index.php4?cmd=searchDetails&cursor=7`)
-    und an fremdsprachigen Slugs. Die Struktur trägt weiter: eine Angebotsseite
-    verlinkt viele Objekte nach identischem Muster, während Navigationslinks
-    einzeln und uneinheitlich sind.
+    und an fremdsprachigen Slugs. Zwei strukturelle Signale tragen weiter:
+
+    1. **Gleichförmige Gruppe** — viele Links unter demselben Präfix bzw. mit
+       derselben Query-Signatur, die sich nur im Objektbezeichner unterscheiden.
+    2. **Lange Root-Slugs** — manche CMS legen Objekte flach im Root ab, wodurch
+       jedes Objekt ein eigenes Präfix bekommt und (1) leerläuft. Solche Slugs
+       sind aber deutlich länger und mehrgliedriger als Navigationslinks.
     """
     soup = BeautifulSoup(html, "html.parser")
+    # Nur <footer> entfernen. <nav>/<header> pauschal zu entfernen ist gefährlich:
+    # manche Themes verschachteln die Objektliste darin — bei einer Testsite
+    # blieben davon 3 von 119 Links übrig.
+    for tag in soup.find_all("footer"):
+        tag.decompose()
+
     host = urlparse(base).netloc
-    groups: dict[str, set[str]] = {}
+    base_norm = base.split("#")[0].rstrip("/")
+    candidates: set[str] = set()
     for a in soup.find_all("a", href=True):
         full = urljoin(base, a["href"]).split("#")[0]
-        if urlparse(full).netloc != host or full.rstrip("/") == base.rstrip("/"):
+        p = urlparse(full)
+        if p.netloc != host or full.rstrip("/") == base_norm:
             continue
-        groups.setdefault(link_shape(full), set()).add(full)
+        if FORM_LINK_RE.search(p.query) or FORM_LINK_RE.search(p.path):
+            continue
+        candidates.add(full)
 
-    # Kandidaten: Gruppen mit mehreren gleichförmigen Links. Navigation und
-    # Footer erzeugen kleine, uneinheitliche Gruppen und fallen so heraus.
+    # (1) Gruppen mit gemeinsamem Muster
+    groups: dict[str, set[str]] = {}
+    for url in candidates:
+        groups.setdefault(link_shape(url), set()).add(url)
+
     best: tuple[int, list[str]] = (0, [])
     for shape, urls in groups.items():
-        if len(urls) < 3:
+        if len(urls) < 3 or re.search(r"(impressum|datenschutz|team|news|blog)", shape, re.I):
             continue
-        score = len(urls)
-        if DETAIL_RE.search(next(iter(urls))):
-            score *= 2  # sprechender Pfad bestätigt zusätzlich
-        if re.search(r"(kontakt|impressum|datenschutz|team|news|blog)", shape, re.I):
-            continue
+        score = len(urls) * (2 if DETAIL_RE.search(next(iter(urls))) else 1)
         if score > best[0]:
             best = (score, sorted(urls))
+
+    # (2) Flache Root-Slugs, wenn (1) nichts Überzeugendes gefunden hat
+    flat = sorted(
+        u
+        for u in candidates
+        if (segs := [s for s in urlparse(u).path.split("/") if s])
+        and len(segs) == 1
+        and len(segs[0]) >= SLUG_MIN_LEN
+        and segs[0].count("-") >= SLUG_MIN_PARTS
+    )
+    if len(flat) > len(best[1]):
+        best = (len(flat), flat)
+
     return len(best[1]), best[1][:3]
 
 

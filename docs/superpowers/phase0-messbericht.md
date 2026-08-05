@@ -14,15 +14,15 @@ zünden — bevor sie gebaut werden.
 
 | Messgröße | Ergebnis |
 |---|---|
-| Sites geprüft | 29 |
-| erreichbar | 25 |
+| Sites geprüft | 31 |
+| erreichbar | 27 |
 | aktiv geblockt (HTTP 403) | 3 |
 | tot / DNS-Fehler | 1 |
-| **Vendor-Fingerprint erkannt** | **13 von 25 (52 %)** |
-| Angebotsseite automatisch gefunden | 24 von 25 (96 %) |
-| **Sites mit ≥ 3 auffindbaren Objekt-URLs** | **22 von 25 (88 %)** |
-| Objekt-URLs insgesamt gefunden | **4.275** |
-| Sites ohne jede auffindbare Objekt-URL | 3 von 25 |
+| **Vendor-Fingerprint erkannt** | **16 von 27 (59 %)** |
+| Angebotsseite automatisch gefunden | 26 von 27 |
+| **Sites mit ≥ 3 auffindbaren Objekt-URLs** | **24 von 27 (89 %)** |
+| Objekt-URLs insgesamt gefunden | **4.354** |
+| Sites ohne jede auffindbare Objekt-URL | 3 von 27 |
 | eindeutiges `RealEstateListing` (JSON-LD) | 3 von 25 |
 | echter Objekt-Feed | 1 von 25 |
 | **öffentlich abrufbare OpenImmo-XML** | **0 von 25** |
@@ -37,13 +37,20 @@ alle 12 erkannten Sites ab:**
 
 | System | Sites | kumulative Abdeckung |
 |---|---|---|
-| immonex Kickstart | 5 | 21 % |
-| onOffice | 4 | 33 % |
-| OpenImmo2WP | 3 | 33 % |
-| Propstack | 2 | 42 % |
-| WP-ImmoMakler | 2 | 50 % |
+| immonex Kickstart | 5 | |
+| onOffice | 5 | |
+| OpenImmo2WP | 3 | |
+| WP-ImmoMakler | 2 | |
+| **cursor-cms** (Legacy-Makler-CMS) | 2 | |
+| Propstack, TYPO3-OpenImmo, FIO, casavi, IS24-Widget | je 1 | **16 von 27 (59 %)** |
 
-Dazu je einmal FIO, casavi und ein IS24-Widget.
+Zwei Fingerprints kamen erst durch nachgereichte Referenz-URLs hinzu:
+
+- **`cursor-cms`** — ein Legacy-Makler-CMS mit URLs der Form
+  `index.php4?cmd=searchDetails&objq[cursor]=N`. Es trägt keine erkennbaren
+  Asset-Pfade; der Fingerprint läuft deshalb über das **URL-Schema**. Zwei Sites
+  der Stichprobe nutzen es identisch — ein Adapter deckt beide ab.
+- **`typo3-openimmo`** — TYPO3 mit OpenImmo-Extension (`tx_openimmo`).
 
 **Konsequenz:** Fünf Vendor-Adapter ersetzen rund die Hälfte der sonst nötigen
 Einzelrezepte. Da diese Systeme ihr Markup zentral erzeugen, bricht ein Adapter
@@ -147,7 +154,26 @@ interne Links nach ihrem normalisierten Muster (`/objekte/*`,
 Das Verfahren ist sprach-, CMS- und layoutunabhängig — und damit robuster als
 jede Musterliste, die man pflegen müsste.
 
-**Wirkung:** Sites mit auffindbaren Objekten stiegen von 17 auf **22 von 25**.
+Zwei weitere Site-Bauformen erzwangen Nachbesserungen an diesem Verfahren:
+
+- **Flache Root-Slugs.** Manche CMS legen Objekte direkt im Root ab
+  (`/moderne-gartenwohnung-in-ruhiger-wohnlage-von-weilheim/`). Damit bildet
+  jedes Objekt seine *eigene* Gruppe und die Präfix-Logik läuft leer — die
+  Navigation gewinnt. Zusätzliches Signal: Objekt-Slugs sind lang und
+  mehrgliedrig (≥ 25 Zeichen, ≥ 4 Bindestriche), Navigationsslugs kurz.
+- **Formularlinks pro Objekt.** Eine Site verlinkt pro Objekt einen
+  „Anfragen"-Button; diese Gruppe war größer als die der Detailseiten und
+  gewann. Links mit `anfrage|request|merkliste|print|cHash` werden verworfen.
+
+**Eine Nachbesserung ging zunächst schief und ist als Warnung dokumentiert:**
+Um Navigation auszublenden, entfernte der Prober `<nav>`, `<header>` und
+`<footer>` vor der Analyse. Das kostete vier Sites ihre Objekte — ein Theme
+verschachtelt die Objektliste innerhalb eines `<header>`, wodurch von 119 Links
+noch 3 übrig blieben. Jetzt wird nur `<footer>` entfernt; die Navigation fällt
+ohnehin durch die Slug-Länge heraus.
+
+**Wirkung:** Sites mit auffindbaren Objekten stiegen von 12 über 17 und 22 auf
+**24 von 27 (89 %)**.
 
 ## Befund 7 — Vier Messfehler, die das Bild verzerrt hatten
 
@@ -206,7 +232,25 @@ gebrochen wird.
 
 ---
 
-## Die fünf Referenz-Makler (vom Nutzer benannt)
+## Die acht Referenz-Makler (vom Nutzer benannt)
+
+| Site | Stufe | Objekte | Vendor |
+|---|---|---:|---|
+| `riedel-immobilien.de` | typisierte Sitemap | 3.488 | — |
+| `loeger-immobilien.de` | Vendor | 200 | immonex, OpenImmo2WP |
+| `see-immo.de` | Vendor | 20 | TYPO3-OpenImmo |
+| `starnbergersee-immobilien.de` | Vendor | 16 | cursor-cms |
+| `remax-starnberg.com` | Vendor | 13 | cursor-cms |
+| `ubi-immobilien.de` | Vendor | 12 | onOffice |
+| `heidinger-immobilien.de` | Root-Slugs | 10 | — |
+| `locate-immobilien.com` | — | **0** | Propstack |
+
+Sieben von acht sind erfassbar. Jede dieser URLs hat mindestens eine
+Verbesserung ausgelöst — die Referenzen des Nutzers waren der wirksamste
+Testfall der ganzen Phase.
+
+<details>
+<summary>Frühere Zwischenstände dieser Tabelle</summary>
 
 | Site | Stufe | Objekte auffindbar | Bewertung |
 |---|---|---:|---|
@@ -223,6 +267,8 @@ alle JS-geladenen Objektlisten steht.
 Die Altquelle `starnberg_bader` scheiterte übrigens nicht am Bot-Schutz, sondern
 schlicht an der veralteten Domain und den falschen Selektoren — die Objekte
 waren die ganze Zeit da.
+
+</details>
 
 ## Belastbarkeit dieses Ergebnisses
 

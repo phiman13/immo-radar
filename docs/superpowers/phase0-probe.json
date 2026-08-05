@@ -56,8 +56,10 @@
       "html_kb": 102
     },
     "probed_listing_page": true,
-    "detail_links": 0,
-    "detail_sample": [],
+    "detail_links": 1,
+    "detail_sample": [
+      "https://loeger-immobilien.de/neubauprojekt-tutzing-oskar-schueler-strasse-traubingerstrasse-ecke-kirche/"
+    ],
     "stage": "2-vendor"
   },
   {
@@ -109,11 +111,11 @@
       "html_kb": 402
     },
     "probed_listing_page": true,
-    "detail_links": 6,
+    "detail_links": 45,
     "detail_sample": [
-      "https://graef-immo.de/immobilien/charmantes-mehrgenerationenhaus-mit-grosem-garten-und-zukunftspotenzial/",
-      "https://graef-immo.de/immobilien/grafelfing-ruhiges-grundstuck-mit-bis-zu-290-m%c2%b2-gf-neubaupotenzial/",
-      "https://graef-immo.de/immobilien/ihr-neues-zuhause-im-wurmtal-licht-raum-und-architektur/"
+      "https://graef-immo.de/2-zimmer-wohnung-mit-sudwest-balkon-tg-duplexstellplatz-s-bahn-nahe/",
+      "https://graef-immo.de/240-qm-privatgarten-ihr-wohntraum-2026/",
+      "https://graef-immo.de/attraktive-4-zkb-wohnung-mit-zwei-balkonen-frisch-renoviert-und-bestens-aufgeteilt/"
     ],
     "stage": "5-detail-links"
   },
@@ -245,7 +247,7 @@
     "robots": true,
     "robots_allows_root": true,
     "sitemap": true,
-    "sitemap_object_urls": 51,
+    "sitemap_object_urls": 50,
     "sitemap_entries": 9,
     "sitemap_listing_like": 9,
     "sitemap_object_sample": [
@@ -287,11 +289,11 @@
     },
     "signals": {
       "prices": 0,
-      "areas": 16,
-      "html_kb": 356
+      "areas": 14,
+      "html_kb": 352
     },
     "probed_listing_page": true,
-    "detail_links": 41,
+    "detail_links": 40,
     "detail_sample": [
       "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-40423/",
       "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-65026/",
@@ -348,11 +350,11 @@
       "html_kb": 96
     },
     "probed_listing_page": true,
-    "detail_links": 4,
+    "detail_links": 10,
     "detail_sample": [
-      "https://www.heidinger-immobilien.de/leistungen/",
-      "https://www.heidinger-immobilien.de/leistungen/projektierung-und-verkauf-von-grundstuecken/",
-      "https://www.heidinger-immobilien.de/leistungen/verkauf-von-immobilien/"
+      "https://www.heidinger-immobilien.de/attraktive-grosse-doppelhaushaelfte-in-ruhiger-wohnlage-von-poecking/",
+      "https://www.heidinger-immobilien.de/bezaubernde-sehr-gepflegte-3-zimmer-wohnung-in-bester-wohnlage-von-poecking/",
+      "https://www.heidinger-immobilien.de/charmantes-haus-mit-panoramablick-auf-die-alpen-in-gruener-wohnlage-von-poecking-provisionsfrei/"
     ],
     "stage": "5-detail-links"
   },
@@ -433,8 +435,8 @@
     "robots_allows_root": false,
     "sitemap": true,
     "sitemap_object_urls": 0,
-    "sitemap_entries": 315,
-    "sitemap_listing_like": 315,
+    "sitemap_entries": 316,
+    "sitemap_listing_like": 316,
     "sitemap_object_sample": [],
     "feeds": [],
     "has_immo_feed": false,
@@ -443,7 +445,9 @@
     "generator": "",
     "wordpress": false,
     "listing_url": "https://www.starnbergersee-immobilien.de/Angebote.htm",
-    "vendors": [],
+    "vendors": [
+      "cursor-cms"
+    ],
     "structured": {
       "jsonld_types": [
         "BreadcrumbList",
@@ -463,7 +467,7 @@
       "https://www.starnbergersee-immobilien.de/index.php4?cmd=searchDetails&objq[cursor]=1&alias=suchmaske&obercmd=search_alias_suchmaske&icmd=14477796013078",
       "https://www.starnbergersee-immobilien.de/index.php4?cmd=searchDetails&objq[cursor]=2&alias=suchmaske&obercmd=search_alias_suchmaske&icmd=14477796013078"
     ],
-    "stage": "5-detail-links"
+    "stage": "2-vendor"
   },
   {
     "domain": "immobilienmakler-starnberg-blasig.de",
@@ -502,6 +506,87 @@
     "probed_listing_page": false,
     "detail_links": 0,
     "stage": "7-js-shell/unklar"
+  },
+  {
+    "domain": "see-immo.de",
+    "reachable": true,
+    "final_url": "https://www.see-immo.de/",
+    "robots": true,
+    "robots_allows_root": true,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 0,
+    "sitemap_listing_like": 0,
+    "sitemap_object_sample": [],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": true,
+    "openimmo_url": "https://see-immo.de/openimmo.xml",
+    "generator": "TYPO3 CMS",
+    "wordpress": false,
+    "listing_url": "https://www.see-immo.de/aktuelle-immobilienangebote.html",
+    "vendors": [
+      "typo3-openimmo"
+    ],
+    "structured": {
+      "jsonld_types": [],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 29,
+      "html_kb": 157
+    },
+    "probed_listing_page": true,
+    "detail_links": 20,
+    "detail_sample": [
+      "https://www.see-immo.de/aktuelle-immobilienangebote/augsburg-bel-etage-in-saniertem-einzelbaudenkmal-in-zentrumsnaher-parklage.html",
+      "https://www.see-immo.de/aktuelle-immobilienangebote/berg-optimales-grundstueck-mit-altbestand.html",
+      "https://www.see-immo.de/aktuelle-immobilienangebote/feldafing-architektenvilla-in-privilegierter-lage.html"
+    ],
+    "stage": "1-feed/openimmo"
+  },
+  {
+    "domain": "remax-starnberg.com",
+    "reachable": true,
+    "final_url": "https://www.remax-starnberg.com/",
+    "robots": true,
+    "robots_allows_root": false,
+    "sitemap": true,
+    "sitemap_object_urls": 0,
+    "sitemap_entries": 69,
+    "sitemap_listing_like": 2,
+    "sitemap_object_sample": [],
+    "feeds": [],
+    "has_immo_feed": false,
+    "openimmo_hint": false,
+    "openimmo_url": null,
+    "generator": "",
+    "wordpress": false,
+    "listing_url": "https://www.remax-starnberg.com/Immobilien.htm",
+    "vendors": [
+      "cursor-cms"
+    ],
+    "structured": {
+      "jsonld_types": [
+        "BreadcrumbList",
+        "RealEstateAgent"
+      ],
+      "microdata": false
+    },
+    "signals": {
+      "prices": 0,
+      "areas": 7,
+      "html_kb": 175
+    },
+    "probed_listing_page": true,
+    "detail_links": 13,
+    "detail_sample": [
+      "https://www.remax-starnberg.com/index.php4?cmd=searchDetails&objq[cursor]=0&alias=suchmaske&obercmd=search_alias_suchmaske&icmd=14477796013078",
+      "https://www.remax-starnberg.com/index.php4?cmd=searchDetails&objq[cursor]=1&alias=suchmaske&obercmd=search_alias_suchmaske&icmd=14477796013078",
+      "https://www.remax-starnberg.com/index.php4?cmd=searchDetails&objq[cursor]=2&alias=suchmaske&obercmd=search_alias_suchmaske&icmd=14477796013078"
+    ],
+    "stage": "2-vendor"
   },
   {
     "domain": "weichselgartner-immo.de",
@@ -690,7 +775,7 @@
     "robots": true,
     "robots_allows_root": true,
     "sitemap": true,
-    "sitemap_object_urls": 82,
+    "sitemap_object_urls": 81,
     "sitemap_entries": 14,
     "sitemap_listing_like": 0,
     "sitemap_object_sample": [
@@ -732,7 +817,7 @@
     },
     "signals": {
       "prices": 12,
-      "areas": 37,
+      "areas": 38,
       "html_kb": 179
     },
     "probed_listing_page": true,
@@ -825,11 +910,11 @@
     },
     "signals": {
       "prices": 0,
-      "areas": 73,
-      "html_kb": 599
+      "areas": 72,
+      "html_kb": 598
     },
     "probed_listing_page": true,
-    "detail_links": 82,
+    "detail_links": 81,
     "detail_sample": [
       "https://citigrund.de/expose/14361-holzkirchen-foeching-grundstueck-mit-genehmigtem/",
       "https://citigrund.de/expose/14987-nahe-theresienwiese-elegantes-lifestyle-penthouse/",
@@ -892,9 +977,9 @@
     "robots": true,
     "robots_allows_root": true,
     "sitemap": true,
-    "sitemap_object_urls": 3483,
-    "sitemap_entries": 3847,
-    "sitemap_listing_like": 3847,
+    "sitemap_object_urls": 3488,
+    "sitemap_entries": 3852,
+    "sitemap_listing_like": 3852,
     "sitemap_object_sample": [
       "https://www.riedel-immobilien.de/angebote/bayerische-seen/",
       "https://www.riedel-immobilien.de/angebote/gewerbe/"
@@ -914,12 +999,12 @@
       "microdata": false
     },
     "signals": {
-      "prices": 253,
-      "areas": 510,
-      "html_kb": 3583
+      "prices": 254,
+      "areas": 511,
+      "html_kb": 3629
     },
     "probed_listing_page": true,
-    "detail_links": 280,
+    "detail_links": 284,
     "detail_sample": [
       "https://www.riedel-immobilien.de/objekte/6-zimmer-galeriewohnung-mit-dachterrasse-und-panoramablick_12589.php",
       "https://www.riedel-immobilien.de/objekte/aesthetisch-stilvoll-und-perfekt-geplant-maisonette-wohnung-mit-dachterrasse_11665.php",
@@ -1048,8 +1133,8 @@
     "robots_allows_root": true,
     "sitemap": true,
     "sitemap_object_urls": 0,
-    "sitemap_entries": 550,
-    "sitemap_listing_like": 550,
+    "sitemap_entries": 549,
+    "sitemap_listing_like": 549,
     "sitemap_object_sample": [],
     "feeds": [],
     "has_immo_feed": false,
@@ -1071,7 +1156,7 @@
       "html_kb": 106
     },
     "probed_listing_page": true,
-    "detail_links": 47,
+    "detail_links": 46,
     "detail_sample": [
       "https://www.alpenimmobilien.de/ferienimmobilien/almkopf-lodge-berwang-1319.html",
       "https://www.alpenimmobilien.de/ferienimmobilien/alpenparks-hotel-und-appartements-taxacher-1170.html",
@@ -1131,7 +1216,7 @@
         "url": "https://feeds.feedburner.com/freitag/P0otytyYWT8",
         "ok": true,
         "items": 100,
-        "object_items": 1,
+        "object_items": 0,
         "immo_like": false
       }
     ],
