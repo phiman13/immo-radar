@@ -60,16 +60,21 @@ brüchigste** Stufe und kommt deshalb zuletzt. Vorher werden Mechanismen versuch
 die viele Makler-Sites teilen, weil sie dieselbe Immobiliensoftware oder dieselben
 Web-Standards einsetzen.
 
+> **Durch Phase 0 empirisch bestätigt und neu gewichtet (2026-08-05).**
+> Messgrundlage: 28 Makler-Sites, siehe `docs/superpowers/phase0-messbericht.md`.
+
 ```
 site_probe (einmalig pro Makler, wiederholbar)
    │
-   ├─ 1. feed_adapter          OpenImmo-XML / RSS-Feed vorhanden?
-   ├─ 2. vendor_adapter        Fingerprint bekannter Immobiliensoftware
-   │                           (onOffice, propstack, FlowFact, immoware, …)
-   ├─ 3. structured_data       JSON-LD / Microdata (schema.org RealEstateListing, Offer)
-   ├─ 4. sitemap_adapter       Sitemap liefert Objekt-URLs → Detailseiten parsen
-   ├─ 5. learned_recipe        LLM lernt Selektoren aus der Angebotsseite
+   ├─ 1. feed_adapter          Objekt-Feed / OpenImmo-XML          →  gemessen:  4 %
+   ├─ 2. vendor_adapter        Fingerprint der Immobiliensoftware  →  gemessen: 50 %  ◀ Hauptstufe
+   ├─ 3. structured_data       JSON-LD RealEstateListing           →  gemessen: 12 %
+   ├─ 4. sitemap/detail_links  Objekt-URLs aus Sitemap oder Liste  →  gemessen: ~30 % (Fallback)
+   ├─ 5. learned_recipe        LLM lernt Selektoren                →  Rest, ~25 %
    └─ 6. none                  → coverage_status = needs-manual-watch
+
+   quer zu allen Stufen: browser_rendering (Playwright) statt httpx,
+   wenn die Site JS-gerendert ist oder httpx mit 403 abgewiesen wird
 ```
 
 Jede Stufe liefert entweder `RawListing`-Objekte oder gibt an die nächste ab. Die
@@ -77,10 +82,26 @@ erfolgreiche Stufe wird als `extraction_method` im Makler-Profil festgehalten un
 bei Folgeläufen direkt angesprungen — die Kaskade läuft nur bei Erstkontakt und
 bei Bruch erneut.
 
-**Warum diese Reihenfolge:** Stufen 1-4 sind deterministisch, kostenlos und
-robust gegen Layoutwechsel. Wenn ein relevanter Anteil der Makler über Stufe 1-3
-abgedeckt ist, verwalten wir eine Handvoll Vendor-Adapter statt 200 Einzelrezepte
-— die Wartungslast, die den Ansatz sonst kippen würde.
+**Was die Messung an der ursprünglichen Annahme korrigiert hat:**
+
+- **Stufe 2 ist die tragende Stufe, nicht Stufe 1.** 50 % der erreichbaren Sites
+  tragen einen Vendor-Fingerprint, und **fünf Systeme decken sie vollständig ab**:
+  immonex Kickstart, onOffice, OpenImmo2WP, Propstack, WP-ImmoMakler. Fünf
+  Adapter ersetzen die Hälfte aller sonst nötigen Einzelrezepte, und sie brechen
+  nicht beim Relaunch einer einzelnen Maklerseite.
+- **OpenImmo-XML ist nicht abrufbar.** Null von 24 Sites liefern die Datei
+  öffentlich, obwohl mehrere sie nachweislich importieren. Die Hoffnung auf
+  strukturierte Volldaten als Hauptkanal ist widerlegt; OpenImmo bleibt nur als
+  Fingerprint wertvoll.
+- **Objekt-Feeds sind Einzelfälle, aber gratis.** Genau eine Site liefert Objekte
+  über den WordPress-Feed. Stufe 1 bleibt trotzdem drin — ein `/feed/`-Abruf
+  kostet nichts, und der Kanal ist der stabilste von allen.
+- **Browser-Rendering wird Querschnittsfunktion, keine eigene Stufe.** Drei Sites
+  weisen `httpx` mit HTTP 403 ab — auch mit Chrome-User-Agent, der Block sitzt
+  tiefer (TLS-/HTTP-Fingerprint). Playwright ist im Projekt vorhanden und löst
+  das ohne Verschleierungstechnik.
+- **Die Angebotsseite zu finden ist unkritisch.** 23 von 24 Übersichtsseiten
+  wurden allein per Pfad- und Linktext-Heuristik lokalisiert — kein LLM nötig.
 
 ### 4.2 Change-Gate (Kostenbremse)
 
@@ -246,7 +267,16 @@ unter 5 $/Monat.** Das Crawling ist damit nicht der Kostentreiber.
 
 ## 10. Umsetzungsphasen
 
-### Phase 0 — Vermessung (Voraussetzung für alles Weitere)
+### Phase 0 — Vermessung ✅ abgeschlossen (2026-08-05)
+
+**Ergebnis: `docs/superpowers/phase0-messbericht.md`**, Rohdaten in
+`phase0-probe.json`, Werkzeug in `scripts/probe_agent_sites.py`. Die
+Kaskaden-Gewichte in Abschnitt 4.1 beruhen auf diesen Messwerten. Der Bau
+beginnt mit den fünf Vendor-Adaptern statt mit dem LLM-Rezept.
+
+<details>
+<summary>Ursprüngliche Planung der Phase</summary>
+
 
 **Woher die Stichprobe kommt:** Die Domain-Auflösung (Phase 3) existiert noch
 nicht, und Verzeichnisse geben keine Homepages heraus — die Stichprobe wird
@@ -267,13 +297,19 @@ Stufen 1-3 bei kaum einer Site, sparen wir uns ihren Bau; decken sie die Mehrhei
 ab, wird Stufe 5 zur Randerscheinung. Der Prober ist kein Wegwerf-Code — er wird
 zum `site_probe`-Modul, das später bei jedem Makler-Onboarding läuft.
 
+</details>
+
 ### Phase 1 — Fundament
 `agents`-Tabelle, generischer DB-getriebener Adapter, Geocoding beim Ingest,
 höflicher User-Agent + `robots.txt`.
 
 ### Phase 2 — Kaskade
-Die in Phase 0 als lohnend erwiesenen Extractor-Stufen, Selbsttest,
-Change-Gate über den kanonischen Objekt-Fingerprint.
+Reihenfolge nach gemessenem Ertrag: **zuerst die fünf Vendor-Adapter**
+(immonex, onOffice, OpenImmo2WP, Propstack, WP-ImmoMakler — zusammen 50 %),
+dann JSON-LD und Feed als billige Zusatzstufen, dann Sitemap/Detail-Links,
+zuletzt das LLM-Rezept für den verbleibenden Rest. Dazu Selbsttest und
+Change-Gate über den kanonischen Objekt-Fingerprint sowie die
+Playwright-Querschnittsfunktion für JS-Sites und die drei 403-Fälle.
 
 ### Phase 3 — Discovery
 Seed-Sammlung aus mehreren Kanälen, Domain-Auflösung, Impressum-Verifikation.
@@ -306,9 +342,13 @@ korrekte URL-Form mit Orts-ID und Radius muss neu ermittelt werden.
 
 ## 12. Offene Punkte
 
-- Die tatsächliche Verbreitung von Vendor-Systemen, JSON-LD und Feeds im
-  regionalen Maklermarkt ist **unbekannt** — genau das klärt Phase 0. Vorher
-  ist jede Aussage zur Kaskadentiefe eine Vermutung.
+- ~~Die tatsächliche Verbreitung von Vendor-Systemen, JSON-LD und Feeds ist
+  unbekannt~~ → **durch Phase 0 geklärt**, siehe Abschnitt 4.1 und den
+  Messbericht. Offen bleibt die Verbreitung im *Long Tail* kleiner Makler: die
+  Stichprobe kam per Websuche zustande und überrepräsentiert SEO-aktive Anbieter.
+- Die Kostenschätzung in Abschnitt 9 ist nach Phase 0 **zu hoch angesetzt**: Wenn
+  nur rund ein Viertel der Sites ein LLM-Rezept braucht statt aller, sinken die
+  einmaligen Lernkosten von ~9 $ auf ~2-3 $.
 - Der Betrieb setzt eine wieder aktive Deployment-Umgebung voraus (VPS wurde am
   2026-06-29 abgeräumt); ein täglicher Lauf braucht eine durchlaufende Maschine.
 - Die korrekte Kleinanzeigen-URL-Grammatik mit Orts-ID und Radius muss empirisch
