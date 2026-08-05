@@ -56,10 +56,8 @@
       "html_kb": 102
     },
     "probed_listing_page": true,
-    "detail_links": 1,
-    "detail_sample": [
-      "https://makler-empfehlung.de/immobilienmakler/1946"
-    ],
+    "detail_links": 0,
+    "detail_sample": [],
     "stage": "2-vendor"
   },
   {
@@ -114,7 +112,8 @@
     "detail_links": 6,
     "detail_sample": [
       "https://graef-immo.de/immobilien/charmantes-mehrgenerationenhaus-mit-grosem-garten-und-zukunftspotenzial/",
-      "https://graef-immo.de/immobilien/grafelfing-ruhiges-grundstuck-mit-bis-zu-290-m%c2%b2-gf-neubaupotenzial/"
+      "https://graef-immo.de/immobilien/grafelfing-ruhiges-grundstuck-mit-bis-zu-290-m%c2%b2-gf-neubaupotenzial/",
+      "https://graef-immo.de/immobilien/ihr-neues-zuhause-im-wurmtal-licht-raum-und-architektur/"
     ],
     "stage": "5-detail-links"
   },
@@ -197,10 +196,11 @@
       "html_kb": 113
     },
     "probed_listing_page": true,
-    "detail_links": 19,
+    "detail_links": 11,
     "detail_sample": [
-      "https://torres-immobilien.de/immobilien/erdgeschosswohnung-in-bad-hindelang-kauf-1008",
-      "https://torres-immobilien.de/immobilien/erdgeschosswohnung-in-bad-hindelang-kauf-1009"
+      "https://torres-immobilien.de/immobilienratgeber",
+      "https://torres-immobilien.de/immobilienratgeber/checkliste-hauskauf",
+      "https://torres-immobilien.de/immobilienratgeber/energetische-sanierung-einer-immobilie"
     ],
     "stage": "5-detail-links"
   },
@@ -230,9 +230,13 @@
       "html_kb": 24
     },
     "probed_listing_page": true,
-    "detail_links": 0,
-    "detail_sample": [],
-    "stage": "7-js-shell/unklar"
+    "detail_links": 3,
+    "detail_sample": [
+      "https://see-residenz.de/fileadmin/INTERNET/4-GRUNDRISSE/Haus1_Wohnung1.jpg",
+      "https://see-residenz.de/fileadmin/INTERNET/4-GRUNDRISSE/Haus1_Wohnung1_EG.jpg",
+      "https://see-residenz.de/fileadmin/INTERNET/4-GRUNDRISSE/Haus1_Wohnung1_UG.jpg"
+    ],
+    "stage": "5-detail-links"
   },
   {
     "domain": "kpcimmobilien.de",
@@ -290,7 +294,8 @@
     "detail_links": 41,
     "detail_sample": [
       "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-40423/",
-      "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-65026/"
+      "https://www.kpcimmobilien.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-mieten-65026/",
+      "https://www.kpcimmobilien.de/immobilien/buero-praxis-buerohaus-in-herrsching-am-ammersee-mieten-60125/"
     ],
     "stage": "2-vendor"
   },
@@ -343,9 +348,13 @@
       "html_kb": 96
     },
     "probed_listing_page": true,
-    "detail_links": 0,
-    "detail_sample": [],
-    "stage": "7-js-shell/unklar"
+    "detail_links": 4,
+    "detail_sample": [
+      "https://www.heidinger-immobilien.de/leistungen/",
+      "https://www.heidinger-immobilien.de/leistungen/projektierung-und-verkauf-von-grundstuecken/",
+      "https://www.heidinger-immobilien.de/leistungen/verkauf-von-immobilien/"
+    ],
+    "stage": "5-detail-links"
   },
   {
     "domain": "jannikzimmer.com",
@@ -411,7 +420,8 @@
     "detail_links": 29,
     "detail_sample": [
       "https://jannikzimmer.com/immobilien/2-zimmer-charakter-wohnung-nur-wenige-meter-vom-tegernsee/?inx-backlink-url=https%3A%2F%2Fjannikzimmer.com%2Fimmobilienangebote%2F",
-      "https://jannikzimmer.com/immobilien/auf-links-gedreht-durchdacht-sanierte-doppelhaushaelfte-in-saulgrub-mit-traumhaftem-bergblick/?inx-backlink-url=https%3A%2F%2Fjannikzimmer.com%2Fimmobilienangebote%2F"
+      "https://jannikzimmer.com/immobilien/auf-links-gedreht-durchdacht-sanierte-doppelhaushaelfte-in-saulgrub-mit-traumhaftem-bergblick/?inx-backlink-url=https%3A%2F%2Fjannikzimmer.com%2Fimmobilienangebote%2F",
+      "https://jannikzimmer.com/immobilien/bad-toelz-bergblick-inklusive-solides-und-ruhiges-einfamilienhaus-auf-sonnigem-grundstueck/?inx-backlink-url=https%3A%2F%2Fjannikzimmer.com%2Fimmobilienangebote%2F"
     ],
     "stage": "2-vendor"
   },
@@ -447,9 +457,13 @@
       "html_kb": 194
     },
     "probed_listing_page": true,
-    "detail_links": 0,
-    "detail_sample": [],
-    "stage": "7-js-shell/unklar"
+    "detail_links": 16,
+    "detail_sample": [
+      "https://www.starnbergersee-immobilien.de/index.php4?cmd=searchDetails&objq[cursor]=0&alias=suchmaske&obercmd=search_alias_suchmaske&icmd=14477796013078",
+      "https://www.starnbergersee-immobilien.de/index.php4?cmd=searchDetails&objq[cursor]=1&alias=suchmaske&obercmd=search_alias_suchmaske&icmd=14477796013078",
+      "https://www.starnbergersee-immobilien.de/index.php4?cmd=searchDetails&objq[cursor]=2&alias=suchmaske&obercmd=search_alias_suchmaske&icmd=14477796013078"
+    ],
+    "stage": "5-detail-links"
   },
   {
     "domain": "immobilienmakler-starnberg-blasig.de",
@@ -539,10 +553,11 @@
       "html_kb": 171
     },
     "probed_listing_page": true,
-    "detail_links": 7,
+    "detail_links": 6,
     "detail_sample": [
-      "https://www.weichselgartner-immo.de/immobilien/buero-praxis-bueroflaeche-in-muenchen-kaufen-4225/",
-      "https://www.weichselgartner-immo.de/immobilien/buero-praxis-buerohaus-in-muenchen-mieten-5600/"
+      "https://www.weichselgartner-immo.de/immobilienbewertung/",
+      "https://www.weichselgartner-immo.de/immobilienbewertung/gewerbeimmobilien/",
+      "https://www.weichselgartner-immo.de/immobilienbewertung/grundstuecke/"
     ],
     "stage": "2-vendor"
   },
@@ -591,10 +606,11 @@
       "html_kb": 300
     },
     "probed_listing_page": true,
-    "detail_links": 54,
+    "detail_links": 50,
     "detail_sample": [
-      "https://schlossberger-immobilien.de/immobilien-verkaufen-starnberg/erbengemeinschaft/",
-      "https://schlossberger-immobilien.de/immobilien-verkaufen-starnberg/haus-verkaufen-und-wohnen-bleiben/"
+      "https://schlossberger-immobilien.de/immobilien/ammersee-villa-ihr-exklusives-grosszuegiges-paradies-im-gruenen-fuer-ruhe-erholung-familienleben/?inx-backlink-url=https%3A%2F%2Fschlossberger-immobilien.de%2Fimmobilien-angebote%2F%3Finx-sort%3Davailability_desc",
+      "https://schlossberger-immobilien.de/immobilien/baugrundstueck-fuer-1-villa-ca-220-m%C2%B2-wfl-mit-alpenblick-ortsrandlage-privatem-seezugang/?inx-backlink-url=https%3A%2F%2Fschlossberger-immobilien.de%2Fimmobilien-angebote%2F%3Finx-sort%3Davailability_desc",
+      "https://schlossberger-immobilien.de/immobilien/bauhausstil-top-maisonette-wohnung-in-fussnaehe-zum-starnberger-see/?inx-backlink-url=https%3A%2F%2Fschlossberger-immobilien.de%2Fimmobilien-angebote%2F%3Finx-sort%3Davailability_desc"
     ],
     "stage": "2-vendor"
   },
@@ -723,7 +739,8 @@
     "detail_links": 12,
     "detail_sample": [
       "https://www.sedlmayr-immo.de/immobilie/verkauf-attraktive-eigentumswohnung-mit-balkon-und-schoener-aussicht-ueber-peissenberg/",
-      "https://www.sedlmayr-immo.de/immobilie/verkauf-ein-zuhause-zum-verlieben-stilvoll-wohnen-mit-traumhaftem-garten/"
+      "https://www.sedlmayr-immo.de/immobilie/verkauf-ein-zuhause-zum-verlieben-stilvoll-wohnen-mit-traumhaftem-garten/",
+      "https://www.sedlmayr-immo.de/immobilie/verkauf-familienglueck-mit-weitblick-gepflegte-4-zimmer-wohnung-in-ruhiger-gruenlage/"
     ],
     "stage": "4-sitemap-objekte"
   },
@@ -766,7 +783,8 @@
     "detail_links": 6,
     "detail_sample": [
       "https://www.akurat.net/immobilienangebote/finanzierung/",
-      "https://www.akurat.net/immobilienangebote/grundstueck-kaufen/"
+      "https://www.akurat.net/immobilienangebote/grundstueck-kaufen/",
+      "https://www.akurat.net/immobilienangebote/haus-kaufen/"
     ],
     "stage": "2-vendor"
   },
@@ -814,7 +832,8 @@
     "detail_links": 82,
     "detail_sample": [
       "https://citigrund.de/expose/14361-holzkirchen-foeching-grundstueck-mit-genehmigtem/",
-      "https://citigrund.de/expose/14987-nahe-theresienwiese-elegantes-lifestyle-penthouse/"
+      "https://citigrund.de/expose/14987-nahe-theresienwiese-elegantes-lifestyle-penthouse/",
+      "https://citigrund.de/expose/14993-forstenried-ruhig-zeitgemaess-familienfreundlich-gartenterrasse/"
     ],
     "stage": "2-vendor"
   },
@@ -858,10 +877,11 @@
       "html_kb": 422
     },
     "probed_listing_page": true,
-    "detail_links": 6,
+    "detail_links": 12,
     "detail_sample": [
-      "https://www.liebhardt-immobilien.de/hausverwaltung/downloads/",
-      "https://www.liebhardt-immobilien.de/immobilien/gewerbe/"
+      "https://www.liebhardt-immobilien.de/detailseite/1865-gewerbegrundstueck-in-penzberg-voll-erschlossen/",
+      "https://www.liebhardt-immobilien.de/detailseite/1879-hochwertige-neubauwohnung-sofort-verfuegbar/",
+      "https://www.liebhardt-immobilien.de/detailseite/1957-ankommen-und-wohlfuehlen-ihr-neues/"
     ],
     "stage": "2-vendor"
   },
@@ -899,10 +919,11 @@
       "html_kb": 3583
     },
     "probed_listing_page": true,
-    "detail_links": 284,
+    "detail_links": 280,
     "detail_sample": [
-      "https://www.riedel-immobilien.de/angebote/internationale/",
-      "https://www.riedel-immobilien.de/angebote/kauf/"
+      "https://www.riedel-immobilien.de/objekte/6-zimmer-galeriewohnung-mit-dachterrasse-und-panoramablick_12589.php",
+      "https://www.riedel-immobilien.de/objekte/aesthetisch-stilvoll-und-perfekt-geplant-maisonette-wohnung-mit-dachterrasse_11665.php",
+      "https://www.riedel-immobilien.de/objekte/aesthetisches-design-domizil-mit-hinreissendem-garten-und-viel-privatsphaere_7992.php"
     ],
     "stage": "4-sitemap-objekte"
   },
@@ -943,10 +964,11 @@
       "html_kb": 271
     },
     "probed_listing_page": true,
-    "detail_links": 3,
+    "detail_links": 12,
     "detail_sample": [
-      "https://www.ubi-immobilien.de/immobilien/kauf/",
-      "https://www.ubi-immobilien.de/immobilien/merkliste/"
+      "https://www.ubi-immobilien.de/detailseite/425-vermietetattraktive-2-zi-gartenwohnung-mit/",
+      "https://www.ubi-immobilien.de/detailseite/481-alles-in-naechster-umebung-helle/",
+      "https://www.ubi-immobilien.de/detailseite/493-verkauft-starnberger-see-immer-eine/"
     ],
     "stage": "2-vendor"
   },
@@ -1010,10 +1032,11 @@
       "html_kb": 196
     },
     "probed_listing_page": true,
-    "detail_links": 19,
+    "detail_links": 14,
     "detail_sample": [
-      "https://www.bellevue.de/immobilienmakler/munchen/111938.html",
-      "https://www.jacasa.de/immobilienmakler/katerina-rogers-immobilienvermittlung-muenchen"
+      "https://www.rogers-immobilien.de/expose/2-zi-whg-muenchen-kauf-1225/",
+      "https://www.rogers-immobilien.de/expose/2-zimmer-wohnung-kaufen-muenchen-626/",
+      "https://www.rogers-immobilien.de/expose/2-zimmer-wohnung-muenchen-feldmoching-0426/"
     ],
     "stage": "1-feed/openimmo"
   },
@@ -1034,7 +1057,7 @@
     "openimmo_url": null,
     "generator": "",
     "wordpress": false,
-    "listing_url": "https://www.alpenimmobilien.de/ferienhaus-kaufen.html",
+    "listing_url": "https://www.alpenimmobilien.de/ferienimmobilien/aktuelle-ferien-immobilien.html",
     "vendors": [],
     "structured": {
       "jsonld_types": [
@@ -1044,12 +1067,16 @@
     },
     "signals": {
       "prices": 0,
-      "areas": 16,
-      "html_kb": 199
+      "areas": 0,
+      "html_kb": 106
     },
     "probed_listing_page": true,
-    "detail_links": 0,
-    "detail_sample": [],
+    "detail_links": 47,
+    "detail_sample": [
+      "https://www.alpenimmobilien.de/ferienimmobilien/almkopf-lodge-berwang-1319.html",
+      "https://www.alpenimmobilien.de/ferienimmobilien/alpenparks-hotel-und-appartements-taxacher-1170.html",
+      "https://www.alpenimmobilien.de/ferienimmobilien/alpenparks-montana-matrei-studio-1348.html"
+    ],
     "stage": "3-structured"
   },
   {
@@ -1066,9 +1093,8 @@
     "openimmo_url": null,
     "generator": "TYPO3 CMS",
     "wordpress": false,
-    "listing_url": "https://www.suedhausbau.de/immobilienverkauf.html",
+    "listing_url": "https://www.suedhausbau.de/karriere/stellenangebote.html",
     "vendors": [
-      "propstack",
       "casavi"
     ],
     "structured": {
@@ -1078,13 +1104,14 @@
     "signals": {
       "prices": 0,
       "areas": 0,
-      "html_kb": 62
+      "html_kb": 30
     },
     "probed_listing_page": true,
-    "detail_links": 7,
+    "detail_links": 4,
     "detail_sample": [
-      "https://www.suedhausbau.de/fileadmin/suedhausbau/downloads/hausverwaltung/shb_makler_allg_falzansicht.pdf",
-      "https://www.suedhausbau.de/hausverwaltung/gewerbe.html"
+      "https://www.suedhausbau.de/hausverwaltung/gewerbe.html",
+      "https://www.suedhausbau.de/hausverwaltung/referenzen.html",
+      "https://www.suedhausbau.de/hausverwaltung/uebersicht.html"
     ],
     "stage": "2-vendor"
   },
@@ -1136,7 +1163,8 @@
     "detail_links": 4,
     "detail_sample": [
       "https://freitag.immobilien/expose/ammersee-eching-grundstueck",
-      "https://freitag.immobilien/expose/mayrhofen-zillertal-landhaus"
+      "https://freitag.immobilien/expose/mayrhofen-zillertal-landhaus",
+      "https://freitag.immobilien/expose/muenchen-untergiesing-1zi"
     ],
     "stage": "2-vendor"
   },
@@ -1181,10 +1209,11 @@
       "html_kb": 482
     },
     "probed_listing_page": true,
-    "detail_links": 42,
+    "detail_links": 16,
     "detail_sample": [
       "https://www.engelvoelkers.com/de-de/immobilienpreise/baden-wuerttemberg/",
-      "https://www.engelvoelkers.com/de-de/immobilienpreise/baden-wuerttemberg/stuttgart/"
+      "https://www.engelvoelkers.com/de-de/immobilienpreise/bayern/",
+      "https://www.engelvoelkers.com/de-de/immobilienpreise/berlin/"
     ],
     "stage": "3-structured"
   },
@@ -1220,11 +1249,12 @@
       "html_kb": 272
     },
     "probed_listing_page": true,
-    "detail_links": 2,
+    "detail_links": 5,
     "detail_sample": [
-      "https://www.dahlercompany.com/de/anlageimmobilien/immobilie-kaufen/mehrfamilienhaus",
-      "https://www.dahlercompany.com/de/immobilie-kaufen/wohnimmobilien"
+      "https://www.dahlercompany.com/de",
+      "https://www.dahlercompany.com/de/favoriten",
+      "https://www.dahlercompany.com/de/oesterreich"
     ],
-    "stage": "7-js-shell/unklar"
+    "stage": "5-detail-links"
   }
 ]

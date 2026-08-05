@@ -20,10 +20,9 @@ zünden — bevor sie gebaut werden.
 | tot / DNS-Fehler | 1 |
 | **Vendor-Fingerprint erkannt** | **13 von 25 (52 %)** |
 | Angebotsseite automatisch gefunden | 24 von 25 (96 %) |
-| **Sites mit ≥ 3 auffindbaren Objekt-URLs** | **17 von 25 (68 %)** |
-| Objekt-URLs insgesamt gefunden | **4.225** |
-| davon über typisierte Sitemaps | 9 Sites |
-| Sites ohne jede auffindbare Objekt-URL | 7 von 25 |
+| **Sites mit ≥ 3 auffindbaren Objekt-URLs** | **22 von 25 (88 %)** |
+| Objekt-URLs insgesamt gefunden | **4.275** |
+| Sites ohne jede auffindbare Objekt-URL | 3 von 25 |
 | eindeutiges `RealEstateListing` (JSON-LD) | 3 von 25 |
 | echter Objekt-Feed | 1 von 25 |
 | **öffentlich abrufbare OpenImmo-XML** | **0 von 25** |
@@ -126,7 +125,31 @@ URL-Muster zu raten. Der Prober wertet jetzt Unter-Sitemaps aus, deren Name auf
 Ergebnis: 9 Sites liefern ihre Objekte vollständig über typisierte Sitemaps,
 insgesamt wurden **4.225 Objekt-URLs** auffindbar.
 
-## Befund 7 — Drei Messfehler, die das Bild verzerrt hatten
+## Befund 6b — Objektlinks strukturell erkennen schlägt jede Wortliste
+
+`starnbergersee-immobilien.de` galt nach zwei Messdurchgängen als „tot". Die
+Site hat **65 Objekte**, zuletzt aktualisiert am 03.08.2026. Zwei Gründe für den
+Fehlschluss:
+
+1. Die Angebotsseite heißt `/Angebote.htm` — die Dateiendung verhinderte, dass
+   die Heuristik sie als Volltreffer erkannte.
+2. Die Objektlinks lauten `index.php4?cmd=searchDetails&objq[cursor]=7` — ein
+   Legacy-CMS ohne sprechende Pfade. **Keine Wortliste kann solche URLs
+   erkennen**, weil in ihnen kein Vokabular vorkommt.
+
+Daraus folgt der wichtigste methodische Schluss dieser Phase: Objektlinks werden
+**strukturell** erkannt, nicht über Vokabular. Eine Angebotsseite verlinkt viele
+Objekte nach *identischem Muster* und unterscheidet sie nur im Objektbezeichner,
+während Navigationslinks einzeln und uneinheitlich sind. Der Prober gruppiert
+interne Links nach ihrem normalisierten Muster (`/objekte/*`,
+`/index.php4?cmd&cursor&alias`) und nimmt die größte gleichförmige Gruppe.
+
+Das Verfahren ist sprach-, CMS- und layoutunabhängig — und damit robuster als
+jede Musterliste, die man pflegen müsste.
+
+**Wirkung:** Sites mit auffindbaren Objekten stiegen von 17 auf **22 von 25**.
+
+## Befund 7 — Vier Messfehler, die das Bild verzerrt hatten
 
 Alle drei fielen nur auf, weil Zwischenergebnisse gegen die Realität geprüft
 wurden statt geglaubt. Sie sind hier dokumentiert, weil derselbe Fehler in der
@@ -144,8 +167,14 @@ Produktions-Kaskade jeweils stille Lücken erzeugt hätte:
    zulassen, ein weiteres Pfadsegment verlangen, `listing` ergänzen.
    → von 12 auf 17 Sites mit auffindbaren Objekten, insgesamt 4.225 URLs.
 
-Die dritte Korrektur war die folgenreichste: Sie hat die gemessene
-Erfassbarkeit von „gut ein Drittel" auf „gut zwei Drittel" gehoben.
+4. **Vokabular-Abhängigkeit der Link-Erkennung.** Auch das reparierte Regex
+   versagt bei Legacy-CMS ohne sprechende URLs (Befund 6b). Korrektur: Objekte
+   strukturell über gleichförmige Link-Gruppen erkennen. → von 17 auf 22 Sites.
+
+Die letzten beiden Korrekturen zusammen haben die gemessene Erfassbarkeit von
+**48 % auf 88 %** gehoben. Beide Fehler ließen echte Objekte unsichtbar
+erscheinen — im Betrieb hätte das Makler als „liefert nichts" markiert, die in
+Wahrheit ihren gesamten Bestand online haben.
 
 ## Befund 8 — Die Angebotsseite lässt sich zuverlässig finden
 
@@ -184,12 +213,16 @@ gebrochen wird.
 | `riedel-immobilien.de` | typisierte Sitemap | 3.483 | vollständig erfassbar (Zahl enthält Archiv/verkaufte Objekte — Filterung nötig) |
 | `loeger-immobilien.de` | immonex + `listing`-Sitemap | 200 | vollständig erfassbar |
 | `ubi-immobilien.de` | onOffice | 3 | erfassbar, kleiner Bestand |
+| `starnbergersee-immobilien.de` | strukturelle Link-Gruppe | 16 (von 65 gesamt, paginiert) | erfassbar — Legacy-CMS mit Cursor-URLs; Paginierung muss durchlaufen werden |
 | `locate-immobilien.com` | Propstack | 0 | **offen** — Objekte werden per Propstack-JS nachgeladen; auch Playwright-Rendering brachte sie nicht zum Vorschein. Braucht Analyse des Propstack-Endpunkts. |
-| `starnbergersee-immobilien.de` | keine | 0 | **tot** — nur Bewertungs-Badges, keine Objektliste. Deckt sich mit dem Live-Test der Altquelle `starnberg_bader` (0 Treffer nach Domainwechsel). |
 
-Drei von fünf sind mit der gemessenen Kaskade sofort erfassbar. Der
-Propstack-Fall ist der interessanteste offene Punkt, weil Propstack zweimal in
-der Stichprobe vorkommt und ein gelöster Propstack-Adapter beide Sites abdeckt.
+Vier von fünf sind mit der gemessenen Kaskade erfassbar. Der Propstack-Fall
+bleibt offen und ist der lohnendste nächste Schritt, weil er stellvertretend für
+alle JS-geladenen Objektlisten steht.
+
+Die Altquelle `starnberg_bader` scheiterte übrigens nicht am Bot-Schutz, sondern
+schlicht an der veralteten Domain und den falschen Selektoren — die Objekte
+waren die ganze Zeit da.
 
 ## Belastbarkeit dieses Ergebnisses
 

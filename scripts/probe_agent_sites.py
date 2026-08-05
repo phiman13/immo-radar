@@ -105,6 +105,55 @@ DETAIL_RE = re.compile(
     re.I,
 )
 
+
+def link_shape(url: str) -> str:
+    """Normalisiert eine URL zu ihrem Strukturmuster.
+
+    /objekte/haus-am-see        → /objekte/*
+    /index.php4?cmd=x&cursor=7  → /index.php4?cmd&cursor
+    So fallen Links, die sich nur im Objektbezeichner unterscheiden, in dieselbe
+    Gruppe — unabhängig davon, ob der Pfad sprechend ist.
+    """
+    p = urlparse(url)
+    segs = [s for s in p.path.split("/") if s]
+    shape = "/".join(segs[:-1]) if len(segs) > 1 else (segs[0] if segs else "")
+    keys = sorted(k.split("=")[0] for k in p.query.split("&") if k) if p.query else []
+    return f"/{shape}/*" + ("?" + "&".join(keys) if keys else "")
+
+
+def find_detail_links(html: str, base: str) -> tuple[int, list[str]]:
+    """Objektlinks strukturell finden: die größte Gruppe gleichförmiger Links.
+
+    Wortlisten scheitern an Legacy-CMS (`index.php4?cmd=searchDetails&cursor=7`)
+    und an fremdsprachigen Slugs. Die Struktur trägt weiter: eine Angebotsseite
+    verlinkt viele Objekte nach identischem Muster, während Navigationslinks
+    einzeln und uneinheitlich sind.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    host = urlparse(base).netloc
+    groups: dict[str, set[str]] = {}
+    for a in soup.find_all("a", href=True):
+        full = urljoin(base, a["href"]).split("#")[0]
+        if urlparse(full).netloc != host or full.rstrip("/") == base.rstrip("/"):
+            continue
+        groups.setdefault(link_shape(full), set()).add(full)
+
+    # Kandidaten: Gruppen mit mehreren gleichförmigen Links. Navigation und
+    # Footer erzeugen kleine, uneinheitliche Gruppen und fallen so heraus.
+    best: tuple[int, list[str]] = (0, [])
+    for shape, urls in groups.items():
+        if len(urls) < 3:
+            continue
+        score = len(urls)
+        if DETAIL_RE.search(next(iter(urls))):
+            score *= 2  # sprechender Pfad bestätigt zusätzlich
+        if re.search(r"(kontakt|impressum|datenschutz|team|news|blog)", shape, re.I):
+            continue
+        if score > best[0]:
+            best = (score, sorted(urls))
+    return len(best[1]), best[1][:3]
+
+
 # Namen von Unter-Sitemaps, die auf einen Objekt-Post-Type hindeuten.
 # WordPress-SEO-Plugins erzeugen z.B. listing-sitemap.xml oder
 # immobilie-sitemap.xml — das ist zuverlässiger als URL-Muster zu raten.
@@ -198,9 +247,11 @@ def find_listing_url(html: str, base: str) -> str | None:
         if not LISTING_HINTS.search(path):
             continue
         text = a.get_text(" ", strip=True).lower()
-        # Kurze Pfade und sprechende Linktexte bevorzugen
+        # Kurze Pfade und sprechende Linktexte bevorzugen. Dateiendungen
+        # abschneiden, sonst verliert /Angebote.htm gegen /angebote/.
         score = 0
-        if re.search(r"(immobilien|objekte|angebote)$", path.rstrip("/"), re.I):
+        stem = re.sub(r"\.(html?|php\d?|aspx?)$", "", path.rstrip("/"), flags=re.I)
+        if re.search(r"(immobilien|objekte|angebote|kaufobjekte)$", stem, re.I):
             score += 3
         if any(w in text for w in ("angebot", "objekt", "immobilien", "kaufen")):
             score += 2
@@ -356,15 +407,9 @@ async def probe(domain: str, sem: asyncio.Semaphore) -> dict:
 
             # Kernfrage: Verlinkt die Angebotsseite überhaupt Objekt-Detailseiten?
             if listing_html:
-                ls = BeautifulSoup(listing_html, "html.parser")
-                links = {
-                    urljoin(listing_url, a["href"])
-                    for a in ls.find_all("a", href=True)
-                    if DETAIL_RE.search(urljoin(listing_url, a["href"]))
-                }
-                links.discard(listing_url)
-                out["detail_links"] = len(links)
-                out["detail_sample"] = sorted(links)[:2]
+                n, sample = find_detail_links(listing_html, listing_url)
+                out["detail_links"] = n
+                out["detail_sample"] = sample
             else:
                 out["detail_links"] = 0
 
