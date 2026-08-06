@@ -31,6 +31,12 @@ bash scripts/deploy.sh
 Offene Items → **Linear** (HER-577/578). Feature-Backlog: `docs/backlog.md`
 (Stand 2026-05-11, ~17 Posten, noch nicht vollständig nach Linear triagiert).
 
+**Makler-Vollabdeckung** (`docs/superpowers/specs/2026-08-04-makler-vollabdeckung-design.md`):
+Phase 0 (Vermessung) und Phase 1 (Fundament: `agents`-Tabelle, generischer
+Adapter, Geocoding, ehrlicher User-Agent) sind abgeschlossen. Nächster
+Schritt: Implementierungsplan für Phase 2 (Kaskade — acht Vendor-Adapter +
+strukturelle Detail-Link-Erkennung, Change-Gate, Selbsttest).
+
 ## Branch-Map
 
 - `main` — Deploy via `scripts/deploy.sh` (rsync + docker compose).
