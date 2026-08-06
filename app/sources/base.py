@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 import httpx
 
 from app.models import RawListing
+from app.robots import USER_AGENT
 
 
 class SourceAdapter(ABC):
@@ -27,9 +28,9 @@ class SourceAdapter(ABC):
             timeout=30.0,
             follow_redirects=True,
             headers={
-                "User-Agent": (
-                    "immo-radar/0.1 (privates Immobilien-Scouting; Kontakt via immo.herrlich.dev)"
-                ),
+                # Derselbe String, den robots.can_fetch() prüft — nie zwei
+                # Literale, die auseinanderdriften können.
+                "User-Agent": USER_AGENT,
                 "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
             },
         )

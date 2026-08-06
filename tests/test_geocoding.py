@@ -101,3 +101,26 @@ def test_geocode_transient_error_is_not_cached(session, monkeypatch):
     assert geocode("Teststr. 1, 82327 Tutzing") == (None, None, None)
     assert geocode("Teststr. 1, 82327 Tutzing") == (None, None, None)
     assert len(calls) == 2  # kein Cache-Eintrag bei transientem Fehler → jeder Aufruf versucht erneut
+
+
+def test_geocode_non_geopy_exception_is_swallowed_and_not_cached(session, monkeypatch):
+    """geopy verpackt nicht jeden Transportfehler in GeocoderServiceError
+    (ssl.SSLError, socket.timeout, TypeError bei unerwarteter Response-Form).
+    Entkäme so eine Exception aus geocode(), risse sie über
+    pipeline._matches_profile den kompletten Quellenlauf in den Rollback.
+    Deshalb fängt geocode() breit — und behandelt es weiter als transient,
+    cached also nicht."""
+    calls = []
+
+    def failing_geocode(address, **kwargs):
+        calls.append(address)
+        raise ValueError("unerwartete Response-Form")
+
+    monkeypatch.setattr("app.geocoding._rate_limited_geocode", failing_geocode)
+
+    assert geocode("Andere Str. 5, 82327 Tutzing") == (None, None, None)
+    assert geocode("Andere Str. 5, 82327 Tutzing") == (None, None, None)
+    assert len(calls) == 2
+
+    with session() as s:
+        assert s.query(GeocodeCache).count() == 0

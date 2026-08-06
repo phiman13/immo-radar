@@ -67,6 +67,8 @@ pip install -e ".[dev]"
 playwright install chromium
 
 # Selektoren prüfen (read-only, kein DB-Write) — VOR Prod-Lauf!
+# Lokal ggf. DB_PATH=./data/immo.db voranstellen: der Import von app.sources zieht
+# app.db mit (Engine-Konstruktion + DB-Verzeichnis anlegen), geschrieben wird nichts.
 python -m scripts.verify_source kleinanzeigen
 python -m scripts.verify_source bs_immo
 

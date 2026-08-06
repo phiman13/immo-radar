@@ -40,6 +40,11 @@ class AgentSiteSource(SourceAdapter):
         with db_module.SessionLocal() as session:
             agents = list(session.scalars(select(Agent).where(Agent.coverage_status == "auto-harvested")))
 
+        # `agents` sind detachte ORM-Instanzen — die Session ist schon zu. In
+        # dieser Schleife nur lesend verwenden; wer in die Agent-Zeile
+        # zurückschreiben will, öffnet eine frische Session und lädt die Zeile
+        # neu (wie der robots-disallowed-Zweig unten), statt die detachte
+        # Instanz zu mutieren.
         for agent in agents:
             method_name = (agent.extraction or {}).get("method")
             if not method_name:

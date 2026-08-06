@@ -57,10 +57,14 @@ def _is_junk(raw: RawListing) -> bool:
     return bool(JUNK_RE.search(haystack))
 
 
-def _resolve_location(raw: RawListing) -> None:
+def _resolve_location(raw: RawListing, session) -> None:
     """Füllt raw.lat/lon per Geocoding, falls die Quelle sie nicht mitliefert,
     und dokumentiert in region_match_reason, worauf die spätere
-    in_search_area()-Entscheidung beruht (Spec §4.3 Punkt 4)."""
+    in_search_area()-Entscheidung beruht (Spec §4.3 Punkt 4).
+
+    `session` ist die offene Schreib-Session des Aufrufers und wird an
+    geocode() durchgereicht, damit der Cache-Write in derselben Transaktion
+    landet statt als zweiter SQLite-Schreiber dagegen zu laufen."""
     if raw.lat is not None and raw.lon is not None:
         raw.region_match_reason = "coordinates-from-source"
         return
@@ -70,7 +74,7 @@ def _resolve_location(raw: RawListing) -> None:
         raw.region_match_reason = "no-address-info"
         return
 
-    lat, lon, importance = geocode(address)
+    lat, lon, importance = geocode(address, session=session)
     if lat is not None and lon is not None:
         raw.lat, raw.lon = lat, lon
         raw.geocode_confidence = importance
@@ -79,12 +83,12 @@ def _resolve_location(raw: RawListing) -> None:
         raw.region_match_reason = "geocode-failed-regex-fallback"
 
 
-def _matches_profile(raw: RawListing) -> bool:
+def _matches_profile(raw: RawListing, session) -> bool:
     if _is_junk(raw):
         return False
     if not _location_ok(raw):
         return False
-    _resolve_location(raw)
+    _resolve_location(raw, session)
     if raw.lat is not None and raw.lon is not None:
         if not in_search_area(raw.lat, raw.lon, get_setting("search_locations")):
             return False
@@ -166,9 +170,15 @@ def _upsert(session, raw: RawListing) -> tuple[Listing, bool]:
 
     existing.last_seen_at = now
     existing.is_active = True
-    existing.lat = raw.lat
-    existing.lon = raw.lon
-    existing.geocode_confidence = raw.geocode_confidence
+    # Nur überschreiben, wenn diesmal wirklich Koordinaten da sind: ein
+    # transienter Geocoding-Fehler (Timeout) liefert lat/lon = None und würde
+    # sonst bereits persistierte, gute Koordinaten stillschweigend nullen.
+    if raw.lat is not None and raw.lon is not None:
+        existing.lat = raw.lat
+        existing.lon = raw.lon
+        existing.geocode_confidence = raw.geocode_confidence
+    # region_match_reason dokumentiert den JEWEILS letzten Versuch (auch den
+    # gescheiterten) und wird deshalb bewusst unbedingt aktualisiert.
     existing.region_match_reason = raw.region_match_reason
     if raw.images and not existing.images:
         existing.images = raw.images
@@ -189,7 +199,7 @@ async def run_source(adapter) -> tuple[int, int, list[Listing]]:
             async with adapter:
                 async for raw in adapter.fetch():
                     found += 1
-                    if not _matches_profile(raw):
+                    if not _matches_profile(raw, session):
                         continue
                     listing, is_new = _upsert(session, raw)
                     if is_new:
