@@ -43,6 +43,14 @@ DOMAINS = [
     "immobilienmakler-starnberg-blasig.de",
     "see-immo.de",
     "remax-starnberg.com",
+    "starnberger-immobilien.de",
+    "bpl-immobilien.de",
+    "nikki-livings.de",
+    "i-m-living.de",
+    "immobilien-sis.com",
+    "funer-immobilien-starnberg.de",
+    "imothek.de",
+    "immobilien.vr-starnberg-zugspitze.de",
     "weichselgartner-immo.de",
     "schlossberger-immobilien.de",
     "bs-immo.de",
@@ -89,6 +97,12 @@ VENDORS = {
     # Legacy-Makler-CMS mit Cursor-URLs; identisch bei starnbergersee-immobilien
     # und remax-starnberg — Fingerprint über das URL-Schema statt über Assets.
     "cursor-cms": r"index\.php4?\?cmd=searchDetails|objq%5Bcursor%5D|objq\[cursor\]",
+    # Fremdgehostetes Objekt-Widget (Livewire) — Objekte liegen auf einer
+    # anderen Domain als der Makler-Site selbst (z.B. imothek.de). Nur als
+    # src= (Script/Iframe-Einbettung) werten, nicht als href= — sonst matcht
+    # jeder bloße Outbound-Partnerlink zu immobilie1.de (Fund: dahlercompany.com
+    # verlinkt es mit rel="nofollow", ohne jede technische Integration).
+    "immobilie1-widget": r'src=["\']https?://(?:www\.)?immobilie1\.de',
 }
 
 LISTING_HINTS = re.compile(
@@ -128,10 +142,12 @@ def link_shape(url: str) -> str:
     return f"/{shape}/*" + ("?" + "&".join(keys) if keys else "")
 
 
-# Links, die zwar pro Objekt existieren, aber nicht zum Objekt führen
+# Links, die zwar pro Objekt existieren, aber nicht zum Objekt führen.
+# cHash bewusst NICHT hier: das ist TYPO3s generischer Cache-Busting-Parameter
+# auf praktisch jedem Link (auch echten Objektseiten) — kein Formular-Signal.
 FORM_LINK_RE = re.compile(
     r"(anfrage|request|kontakt|contact|merkzettel|merkliste|watchlist|vormerk"
-    r"|expose-anfordern|print|drucken|share|teilen|cHash)",
+    r"|expose-anfordern|print|drucken|share|teilen)",
     re.I,
 )
 
@@ -139,6 +155,38 @@ FORM_LINK_RE = re.compile(
 # ruhiger-wohnlage-von-weilheim"). Navigationsslugs sind kurz ("leistungen").
 SLUG_MIN_LEN = 25
 SLUG_MIN_PARTS = 4
+
+# Letztes Pfadsegment: Kategorie-/Navigationsseiten, die auf derselben Ebene
+# wie Objekte liegen (/immobilien/neubau/ neben /immobilien/<objekt-slug>/)
+# und sonst die Gruppierung verunreinigen.
+NAV_LAST_SEGMENT_RE = re.compile(
+    r"^(neubau|kaufen|mieten|verkaufen|vermieten|kontakt|news|blog|team|karriere"
+    r"|ueber-uns|about|impressum|datenschutz|agb|finanzierung|bewertung"
+    r"|wertermittlung|kapitalanlagen?|grundstuecke|gewerbeimmobilien"
+    r"|auslandsimmobilien|international|referenzen|leistungen|partner)$",
+    re.I,
+)
+
+
+def is_object_like(url: str) -> bool:
+    """Ist das eher ein Objekt als eine Kategorieseite?
+
+    Zwei Fälle: Der Objektbezeichner steckt entweder im letzten Pfadsegment
+    (sprechender Slug) oder in einem Query-Parameter (Legacy-CMS wie
+    `index.php4?...&objq[cursor]=7`). Ein Query-Parameter mit numerischem Wert
+    neben `cmd=searchDetails`/`id=`/`cursor=` zählt als Objektsignal, auch wenn
+    der Pfad selbst kurz ist.
+    """
+    p = urlparse(url)
+    if re.search(r"(cursor|objekt.?id|obj.?id|haus|wohnung|expose.?id)\]?=\d+", p.query, re.I):
+        return True
+    segs = [s for s in p.path.split("/") if s]
+    if not segs:
+        return False
+    last = segs[-1]
+    if NAV_LAST_SEGMENT_RE.match(last):
+        return False
+    return len(last) >= 12 or last.count("-") >= 2
 
 
 def find_detail_links(html: str, base: str) -> tuple[int, list[str]]:
@@ -172,7 +220,10 @@ def find_detail_links(html: str, base: str) -> tuple[int, list[str]]:
             continue
         candidates.add(full)
 
-    # (1) Gruppen mit gemeinsamem Muster
+    # (1) Gruppen mit gemeinsamem Muster. Innerhalb einer Gruppe können
+    # Kategorie-/Navigationsseiten auf derselben Ebene wie Objekte liegen
+    # (/immobilien/neubau/ neben /immobilien/<objekt-slug>/) — deshalb wird
+    # jedes Gruppenmitglied zusätzlich einzeln auf Objekt-Charakter geprüft.
     groups: dict[str, set[str]] = {}
     for url in candidates:
         groups.setdefault(link_shape(url), set()).add(url)
@@ -181,9 +232,12 @@ def find_detail_links(html: str, base: str) -> tuple[int, list[str]]:
     for shape, urls in groups.items():
         if len(urls) < 3 or re.search(r"(impressum|datenschutz|team|news|blog)", shape, re.I):
             continue
-        score = len(urls) * (2 if DETAIL_RE.search(next(iter(urls))) else 1)
+        object_urls = {u for u in urls if is_object_like(u)}
+        if len(object_urls) < 3:
+            continue
+        score = len(object_urls) * (2 if DETAIL_RE.search(next(iter(object_urls))) else 1)
         if score > best[0]:
-            best = (score, sorted(urls))
+            best = (score, sorted(object_urls))
 
     # (2) Flache Root-Slugs, wenn (1) nichts Überzeugendes gefunden hat
     flat = sorted(

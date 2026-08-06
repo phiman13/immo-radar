@@ -14,15 +14,14 @@ zünden — bevor sie gebaut werden.
 
 | Messgröße | Ergebnis |
 |---|---|
-| Sites geprüft | 31 |
-| erreichbar | 27 |
+| Sites geprüft | 39 |
+| erreichbar | 35 |
 | aktiv geblockt (HTTP 403) | 3 |
 | tot / DNS-Fehler | 1 |
-| **Vendor-Fingerprint erkannt** | **16 von 27 (59 %)** |
-| Angebotsseite automatisch gefunden | 26 von 27 |
-| **Sites mit ≥ 3 auffindbaren Objekt-URLs** | **24 von 27 (89 %)** |
-| Objekt-URLs insgesamt gefunden | **4.354** |
-| Sites ohne jede auffindbare Objekt-URL | 3 von 27 |
+| **Vendor-Fingerprint erkannt** | **21 von 35 (60 %)** |
+| **Sites mit ≥ 3 auffindbaren Objekt-URLs** | **31 von 35 (89 %)** |
+| Objekt-URLs insgesamt gefunden | **4.560** |
+| Sites ohne jede auffindbare Objekt-URL | 4 von 35 |
 | eindeutiges `RealEstateListing` (JSON-LD) | 3 von 25 |
 | echter Objekt-Feed | 1 von 25 |
 | **öffentlich abrufbare OpenImmo-XML** | **0 von 25** |
@@ -37,20 +36,25 @@ alle 12 erkannten Sites ab:**
 
 | System | Sites | kumulative Abdeckung |
 |---|---|---|
+| onOffice | 6 | |
 | immonex Kickstart | 5 | |
-| onOffice | 5 | |
 | OpenImmo2WP | 3 | |
-| WP-ImmoMakler | 2 | |
+| WP-ImmoMakler | 3 | |
+| Propstack | 2 | |
 | **cursor-cms** (Legacy-Makler-CMS) | 2 | |
-| Propstack, TYPO3-OpenImmo, FIO, casavi, IS24-Widget | je 1 | **16 von 27 (59 %)** |
+| TYPO3-OpenImmo, immobilie1-Widget, FIO, casavi, IS24-Widget | je 1 | **21 von 35 (60 %)** |
 
-Zwei Fingerprints kamen erst durch nachgereichte Referenz-URLs hinzu:
+Mehrere Fingerprints kamen erst durch nachgereichte Referenz-URLs hinzu:
 
 - **`cursor-cms`** — ein Legacy-Makler-CMS mit URLs der Form
   `index.php4?cmd=searchDetails&objq[cursor]=N`. Es trägt keine erkennbaren
   Asset-Pfade; der Fingerprint läuft deshalb über das **URL-Schema**. Zwei Sites
   der Stichprobe nutzen es identisch — ein Adapter deckt beide ab.
 - **`typo3-openimmo`** — TYPO3 mit OpenImmo-Extension (`tx_openimmo`).
+- **`immobilie1-widget`** — ein fremdgehostetes Objekt-Widget (Livewire), das
+  Objekte auf einer *anderen* Domain hält als die Makler-Site selbst
+  (`imothek.de` bindet `immobilie1.de` per `<script src>` ein). Wichtige
+  Lehre dazu in Befund 9.
 
 **Konsequenz:** Fünf Vendor-Adapter ersetzen rund die Hälfte der sonst nötigen
 Einzelrezepte. Da diese Systeme ihr Markup zentral erzeugen, bricht ein Adapter
@@ -202,7 +206,50 @@ Die letzten beiden Korrekturen zusammen haben die gemessene Erfassbarkeit von
 erscheinen — im Betrieb hätte das Makler als „liefert nichts" markiert, die in
 Wahrheit ihren gesamten Bestand online haben.
 
-## Befund 8 — Die Angebotsseite lässt sich zuverlässig finden
+## Befund 9 — Weitere Bauformen, weitere Nachbesserungen
+
+Zwei weitere Runden nachgereichter Referenz-URLs deckten vier zusätzliche
+Muster auf:
+
+- **Formularlinks können die Objektgruppe zahlenmäßig schlagen.**
+  `see-immo.de` verlinkt pro Objekt einen „Anfragen"-Button; diese Gruppe war
+  genauso groß wie die der echten Detailseiten und gewann zufällig. Fix:
+  Links mit `anfrage|request|merkliste|print|…` werden vor der Gruppierung
+  verworfen.
+- **Kategorie- und Objektseiten können auf derselben Ebene liegen.**
+  `i-m-living.de` legt `/immobilien/neubau/` neben `/immobilien/<objekt-slug>/`
+  — beide fallen in dieselbe Präfix-Gruppe. Fix: jedes Gruppenmitglied wird
+  zusätzlich einzeln geprüft (`is_object_like`) — kurze, aus einer
+  Stichwortliste bekannte Navigationssegmente fliegen auch innerhalb einer
+  sonst gültigen Gruppe heraus.
+- **Der Objektbezeichner kann im Query-String stecken, nicht im Pfad.**
+  `starnberger-immobilien.de` (TYPO3 mit `haus5`-Extension) codiert das Objekt
+  als `tx_haus5_haus5[haus]=124`. Ursächlich war ein zweiter, folgenschwerer
+  Bug: Der Formularfilter enthielt `cHash` — TYPO3s **generischer**
+  Cache-Busting-Parameter, der auf praktisch jedem Link steht, auch auf
+  echten Objektseiten. Der Filter hatte damit die Objekte selbst entfernt.
+  Entfernt; stattdessen erkennt `is_object_like` Query-Parameter wie
+  `cursor=`, `haus=`, `wohnung=` mit numerischem Wert als Objektsignal.
+- **Fingerprints können auf reinen Outbound-Links falsch anschlagen.**
+  Der erste `immobilie1-widget`-Fingerprint matchte jede Erwähnung von
+  `immobilie1.de` — und traf damit auch `dahlercompany.com`, das die Domain
+  nur als `rel="nofollow"`-Partnerlink im Footer verlinkt, ohne jede
+  technische Anbindung. Fix: nur `src="https://immobilie1.de/…"` zählt
+  (Script-/Iframe-Einbettung), kein `href=`.
+
+Eine Domain-Verwechslung kam ebenfalls vor: Für die vom Nutzer genannte URL
+`immobilien.vr-starnberg-zugspitze.de` (Subdomain der VR-Bank für Immobilien)
+war in der Stichprobe versehentlich nur `vr-starnberg-zugspitze.de` (die
+Bank-Hauptseite) eingetragen — eine völlig andere Seite. Nach Korrektur:
+77 Objekte, drei Vendor-Fingerprints gleichzeitig (WP-ImmoMakler, onOffice,
+Propstack — vermutlich mehrere Regionalableger derselben Bankengruppe mit
+unterschiedlicher Technik unter einer Domain).
+
+**Wirkung über alle Nachbesserungsrunden:** Erfassbarkeit stieg von 48 % über
+88 % auf **89 % bei 35 erreichbaren Sites**, 4.560 Objekt-URLs gesamt. Von 21
+einzeln vom Nutzer genannten Referenz-Maklern sind 18 erfassbar.
+
+## Befund 10 — Die Angebotsseite lässt sich zuverlässig finden
 
 **23 von 24** Angebotsübersichten wurden allein aus den Startseiten-Links per
 Pfad- und Linktext-Heuristik lokalisiert. Der Schritt, den ich als fehleranfällig
@@ -220,9 +267,9 @@ deutlich:
 | 1 — Feed / OpenImmo | tragend erhofft | **4 %** (1 Site), OpenImmo 0 % | **Behalten als billiger Vorabtest**, nicht als tragende Stufe. Ein `/feed/`-Abruf kostet nichts. |
 | 2 — Vendor-Fingerprint | mittel erwartet | **50 %** | **Zur Hauptstufe machen.** Fünf Adapter: immonex, onOffice, OpenImmo2WP, Propstack, WP-ImmoMakler. |
 | 3 — JSON-LD | mittel erwartet | 12 % | Mitnehmen, billig. Nur echte Immobilientypen zählen. |
-| 4 — **typisierte Sitemap** | Fallback | **36 %** (9 Sites, vollständige Objektlisten) | **Aufwerten.** Sitemap-Name verrät den Objekt-Post-Type; liefert die Objektliste vollständig statt paginiert. |
-| 4b — Detail-Links der Angebotsseite | mittel | ergänzend | Behalten als Fallback, wenn keine typisierte Sitemap existiert. |
-| 5 — LLM-Rezept | letzte Stufe | Rest, ~25 % | Bleibt nötig, aber für deutlich weniger Sites als befürchtet — die Kostenschätzung sinkt entsprechend. |
+| 4 — **typisierte Sitemap** | Fallback | ~11 % (4 Sites, vollständige Objektlisten) | **Aufwerten.** Sitemap-Name verrät den Objekt-Post-Type; liefert die Objektliste vollständig statt paginiert. |
+| 4b — strukturelle Detail-Links | mittel | **~26 %** (9 Sites, größter Einzelbeitrag nach Vendor) | Zentrale Stufe, wenn kein Vendor-Fingerprint und keine typisierte Sitemap greifen — Objekte über gleichförmige Link-Gruppen/Query-Signaturen erkannt, unabhängig von Sprache/CMS. |
+| 5 — LLM-Rezept | letzte Stufe | Rest, ~11 % (4 Sites ohne Objekte) | Bleibt nötig, aber für deutlich weniger Sites als befürchtet — die Kostenschätzung sinkt entsprechend. |
 | **neu** — Browser-Rendering | nicht geplant | 3 Sites blockiert + 2 JS-Shells | **Als Querschnittsfunktion ergänzen**, nicht als eigene Stufe: jede Stufe kann Playwright statt httpx nutzen. |
 
 **Wichtigste Planungsänderung:** Der Bau beginnt mit den fünf Vendor-Adaptern,
@@ -232,22 +279,36 @@ gebrochen wird.
 
 ---
 
-## Die acht Referenz-Makler (vom Nutzer benannt)
+## Die 21 Referenz-Makler (vom Nutzer benannt, drei Runden)
 
 | Site | Stufe | Objekte | Vendor |
 |---|---|---:|---|
-| `riedel-immobilien.de` | typisierte Sitemap | 3.488 | — |
+| `riedel-immobilien.de` | typisierte Sitemap | 3.489 | — |
 | `loeger-immobilien.de` | Vendor | 200 | immonex, OpenImmo2WP |
-| `see-immo.de` | Vendor | 20 | TYPO3-OpenImmo |
+| `sedlmayr-immo.de` | typisierte Sitemap | 79 | — |
+| `immobilien.vr-starnberg-zugspitze.de` | Vendor | 77 | WP-ImmoMakler, onOffice, Propstack |
+| `schlossberger-immobilien.de` | Vendor | 59 | immonex, OpenImmo2WP |
+| `kpcimmobilien.de` | Vendor | 50 | WP-ImmoMakler |
+| `i-m-living.de` | Detail-Links | 46 | — |
+| `bpl-immobilien.de` | typisierte Sitemap | 33 | — |
+| `immobilien-sis.com` | typisierte Sitemap | 33 | — |
+| `starnberger-immobilien.de` | Detail-Links | 19 | — |
+| `see-immo.de` | Feed | 20 | TYPO3-OpenImmo |
 | `starnbergersee-immobilien.de` | Vendor | 16 | cursor-cms |
 | `remax-starnberg.com` | Vendor | 13 | cursor-cms |
 | `ubi-immobilien.de` | Vendor | 12 | onOffice |
 | `heidinger-immobilien.de` | Root-Slugs | 10 | — |
+| `funer-immobilien-starnberg.de` | Detail-Links | 8 | — |
+| `nikki-livings.de` | Detail-Links | 3 | — |
+| `dahlercompany.com` | Detail-Links | 3 | — |
 | `locate-immobilien.com` | — | **0** | Propstack |
+| `imothek.de` | — | **0** | immobilie1-widget (fremdgehostet) |
+| `aigner-immobilien.de` | — | **0** | blockiert (403, braucht Browser) |
 
-Sieben von acht sind erfassbar. Jede dieser URLs hat mindestens eine
-Verbesserung ausgelöst — die Referenzen des Nutzers waren der wirksamste
-Testfall der ganzen Phase.
+**18 von 21 sind erfassbar.** Jede dieser URLs hat mindestens eine Verbesserung
+ausgelöst — die Referenzen des Nutzers waren der mit Abstand wirksamste Testfall
+der ganzen Phase, wirksamer als die ursprünglich per Websuche zusammengestellte
+Stichprobe.
 
 <details>
 <summary>Frühere Zwischenstände dieser Tabelle</summary>
@@ -272,12 +333,21 @@ waren die ganze Zeit da.
 
 ## Belastbarkeit dieses Ergebnisses
 
-- **Stichprobe:** 28 Sites, per Websuche über die Orte des Suchgebiets gewonnen.
-  Nicht zufällig gezogen — größere und SEO-aktive Makler sind überrepräsentiert.
-  Der Long Tail kleiner Makler dürfte technisch einfacher gebaut sein (mehr
+- **Stichprobe:** 39 Sites — 18 per Websuche über die Orte des Suchgebiets
+  gewonnen, 21 vom Nutzer als real relevante Referenz-Makler benannt. Nicht
+  zufällig gezogen — größere und SEO-aktive Makler sind überrepräsentiert. Der
+  Long Tail kleiner Makler dürfte technisch einfacher gebaut sein (mehr
   statisches HTML, weniger Vendor-Systeme).
 - **Nur statisches HTML gemessen.** Alle Zahlen zu Detail-Links und Preisen sind
-  Untergrenzen; JS-gerenderte Bereiche wurden nicht erfasst.
+  Untergrenzen; JS-gerenderte Bereiche wurden nicht erfasst — der `locate`- und
+  `imothek`-Fall (Propstack bzw. fremdgehostetes Widget) zeigen, dass das real
+  vorkommt und mit reinem `httpx` nicht lösbar ist.
 - **Fingerprint-Liste ist nicht erschöpfend.** Weitere Systeme (FlowFact,
   JustImmo, immoware, Estatik) waren in der Stichprobe nicht nachweisbar,
   existieren im Markt aber.
+- **Die Objekt-Erkennung selbst wurde iterativ gehärtet, nicht vorab bewiesen.**
+  Fünf verschiedene Bauformen (deutsche/englische Slugs, Legacy-CMS mit
+  Query-Parametern, flache Root-Slugs, Formularlinks, Kategorie-Vermischung)
+  brauchten je eine eigene Korrektur, gefunden ausschließlich durch echte Sites,
+  die die vorherige Annahme widerlegten. Eine 22. oder 23. Referenz-URL könnte
+  ein weiteres Muster aufdecken, das die aktuelle Logik noch nicht abdeckt.
