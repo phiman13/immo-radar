@@ -53,18 +53,18 @@ class AgentSiteSource(SourceAdapter):
                 log.warning("agents_adapter.no_listing_url", agent_id=agent.id)
                 continue
 
-            if not await is_allowed(self.client, agent.listing_url):
-                log.info("agents_adapter.robots_disallowed", agent_id=agent.id, url=agent.listing_url)
-                with db_module.SessionLocal() as session:
-                    db_agent = session.get(Agent, agent.id)
-                    if db_agent is not None:
-                        db_agent.coverage_status = "robots-disallowed"
-                        db_agent.coverage_reason = f"robots.txt verbietet Zugriff auf {agent.listing_url}"
-                        db_agent.last_checked = datetime.utcnow()
-                        session.commit()
-                continue
-
             try:
+                if not await is_allowed(self.client, agent.listing_url):
+                    log.info("agents_adapter.robots_disallowed", agent_id=agent.id, url=agent.listing_url)
+                    with db_module.SessionLocal() as session:
+                        db_agent = session.get(Agent, agent.id)
+                        if db_agent is not None:
+                            db_agent.coverage_status = "robots-disallowed"
+                            db_agent.coverage_reason = f"robots.txt verbietet Zugriff auf {agent.listing_url}"
+                            db_agent.last_checked = datetime.utcnow()
+                            session.commit()
+                    continue
+
                 async for raw in handler(agent, self.client):
                     yield raw
             except Exception as e:

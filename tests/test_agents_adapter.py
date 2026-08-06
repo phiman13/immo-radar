@@ -164,6 +164,38 @@ async def test_fetch_isolates_a_failing_agent_from_the_rest(session, monkeypatch
     assert results[0].source_id == f"agent-{ok_id}"
 
 
+@pytest.mark.asyncio
+async def test_fetch_isolates_an_is_allowed_exception_from_the_rest(session, monkeypatch):
+    """Die robots-Prüfung selbst ist Teil der Pro-Agent-Isolation (Spec §7):
+    ein RobotFileParser-Fehler o.ä. für einen Makler darf den Gesamtlauf
+    nicht abbrechen — der review-round-1-Fix für agents_adapter.py."""
+    broken_id = _make_agent(session, name="Broken Makler", listing_url="https://broken.example.de/angebote/")
+    ok_id = _make_agent(session, name="OK Makler", listing_url="https://ok.example.de/angebote/")
+
+    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+        yield RawListing(source="agents", source_id=f"agent-{agent.id}", url=agent.listing_url, title="OK")
+
+    async def flaky_is_allowed(client, url):
+        if url == "https://broken.example.de/angebote/":
+            raise ValueError("malformed robots.txt")
+        return True
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", flaky_is_allowed)
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert len(results) == 1
+    assert results[0].source_id == f"agent-{ok_id}"
+    with session() as s:
+        broken_agent = s.get(Agent, broken_id)
+        # Kein DB-Write erwartet — die Exception fliegt vor dem Commit; nur
+        # die Isolation (kein Abbruch des Gesamtlaufs) ist hier relevant.
+        assert broken_agent.coverage_status == "auto-harvested"
+
+
 def test_registry_includes_agents_source_additively():
     from app.sources import REGISTRY, get_all_adapters
     from app.sources.agents_adapter import AgentSiteSource
