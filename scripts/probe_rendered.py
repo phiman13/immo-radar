@@ -23,7 +23,8 @@ from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
 from app.agent_cascade_detect import AREA_RE, DETAIL_RE, PRICE_RE, detect_vendors
-from scripts.probe_agent_sites import HEADERS, find_listing_url
+from app.agent_probe import find_listing_url
+from scripts.probe_agent_sites import HEADERS
 
 # Vom Nutzer benannte Referenz-Makler der Region
 REFERENCE = [
