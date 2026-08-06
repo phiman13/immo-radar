@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: 7e5372ad3b82 · propagiert: 2026-08-06 -->
+     Kanon-Hash: ff47e9de2c32 · propagiert: 2026-08-06 -->
 
 # Konventionen — kanonischer Kern
 

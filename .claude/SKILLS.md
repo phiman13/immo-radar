@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
-     Kanon-Hash: 7e5372ad3b82 · propagiert: 2026-08-06 -->
+     Kanon-Hash: ff47e9de2c32 · propagiert: 2026-08-06 -->
 
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
      Änderung am Kanon, dann propagieren (scripts/propagate-canon.sh). -->
@@ -104,11 +104,21 @@ via `/find-skills` auflösen.
 Claude zieht Codex als Sparring-Partner hinzu — macht den Vorschlag, der User
 entscheidet, ob er ihn annimmt.
 
-| Auslöser | Command |
-|---|---|
-| Architekturentscheidung (Design, Schema, API-Kontrakt) | `/codex:adversarial-review` |
-| Debugging-Deadlock (≥2 Versuche ohne Durchbruch) | `/codex:rescue` |
-| Quick Second Opinion (Unsicherheit, kein Deadlock) | `/codex:review` |
+**Selbst auslösbar vs. nur vorschlagbar:** `/codex:review` und
+`/codex:adversarial-review` sind `disable-model-invocation` (Plugin-Vorgabe,
+verifiziert bis Marketplace-Stand 2026-06-23) — Claude kann sie **nie** selbst
+per Skill-Tool ziehen, nur den User bitten, den Command selbst zu tippen.
+`/codex:rescue` hat dieses Flag nicht und deckt laut eigener Runtime-Doku
+„diagnosis, planning, research" ab — für eigenständige Konsultation (Claude
+löst selbst aus) immer `/codex:rescue` mit passendem Task-Prompt, nicht
+`/codex:review`.
+
+| Auslöser | Command | Wer löst aus |
+|---|---|---|
+| Architekturentscheidung (Design, Schema, API-Kontrakt) | `/codex:adversarial-review` (User) oder `/codex:rescue` mit Adversarial-Framing (Claude) | User bzw. Claude |
+| Debugging-Deadlock (≥2 Versuche ohne Durchbruch) | `/codex:rescue` | Claude |
+| Quick Second Opinion (Unsicherheit, kein Deadlock) | `/codex:rescue` | Claude |
+| Formaler Vier-Augen-Gate vor Merge (DoD §7) | `/codex:review` | **User** — Claude fragt nur an |
 
 **Trigger-Heuristik:** Nach 2 erfolglosen Fix-Iterationen mit User-Negativ-Feedback
 aktiv `/codex:rescue` vorschlagen — nicht warten, bis der User es einfordert.
