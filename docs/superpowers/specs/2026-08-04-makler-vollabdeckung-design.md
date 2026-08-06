@@ -60,22 +60,29 @@ brüchigste** Stufe und kommt deshalb zuletzt. Vorher werden Mechanismen versuch
 die viele Makler-Sites teilen, weil sie dieselbe Immobiliensoftware oder dieselben
 Web-Standards einsetzen.
 
-> **Durch Phase 0 empirisch bestätigt und neu gewichtet (2026-08-05).**
-> Messgrundlage: 28 Makler-Sites, siehe `docs/superpowers/phase0-messbericht.md`.
+> **Durch Phase 0 empirisch bestätigt und neu gewichtet (2026-08-05/06,
+> abgeschlossen nach drei Nachbesserungsrunden mit 21 vom Nutzer benannten
+> Referenz-Maklern).** Messgrundlage: 39 Makler-Sites, siehe
+> `docs/superpowers/phase0-messbericht.md`.
 
 ```
 site_probe (einmalig pro Makler, wiederholbar)
    │
-   ├─ 1. feed_adapter          Objekt-Feed / OpenImmo-XML          →  gemessen:  4 %
-   ├─ 2. vendor_adapter        Fingerprint der Immobiliensoftware  →  gemessen: 50 %  ◀ Hauptstufe
-   ├─ 3. structured_data       JSON-LD RealEstateListing           →  gemessen: 12 %
-   ├─ 4. sitemap/detail_links  Objekt-URLs aus Sitemap oder Liste  →  gemessen: ~30 % (Fallback)
-   ├─ 5. learned_recipe        LLM lernt Selektoren                →  Rest, ~25 %
+   ├─ 1. feed_adapter          Objekt-Feed / OpenImmo-XML          →  gemessen:  6 %
+   ├─ 2. vendor_adapter        Fingerprint der Immobiliensoftware  →  gemessen: 49 %  ◀ Hauptstufe
+   ├─ 3. structured_data       JSON-LD RealEstateListing           →  gemessen:  6 %
+   ├─ 4. sitemap_objekte       Objekt-URLs aus typisierter Sitemap →  gemessen: 11 %
+   ├─ 4b. detail_links         Objektlinks strukturell erkannt     →  gemessen: 26 %  ◀ zweitwichtigste Stufe
+   ├─ 5. learned_recipe        LLM lernt Selektoren                →  Rest, ~3 %
    └─ 6. none                  → coverage_status = needs-manual-watch
 
    quer zu allen Stufen: browser_rendering (Playwright) statt httpx,
    wenn die Site JS-gerendert ist oder httpx mit 403 abgewiesen wird
 ```
+
+Insgesamt **89 % der 35 erreichbaren Sites** liefern ≥ 3 auffindbare Objekte
+(4.560 Objekt-URLs); von 21 einzeln vom Nutzer genannten Referenz-Maklern sind
+18 erfassbar.
 
 Jede Stufe liefert entweder `RawListing`-Objekte oder gibt an die nächste ab. Die
 erfolgreiche Stufe wird als `extraction_method` im Makler-Profil festgehalten und
@@ -84,23 +91,36 @@ bei Bruch erneut.
 
 **Was die Messung an der ursprünglichen Annahme korrigiert hat:**
 
-- **Stufe 2 ist die tragende Stufe, nicht Stufe 1.** 50 % der erreichbaren Sites
-  tragen einen Vendor-Fingerprint, und **fünf Systeme decken sie vollständig ab**:
-  immonex Kickstart, onOffice, OpenImmo2WP, Propstack, WP-ImmoMakler. Fünf
-  Adapter ersetzen die Hälfte aller sonst nötigen Einzelrezepte, und sie brechen
-  nicht beim Relaunch einer einzelnen Maklerseite.
-- **OpenImmo-XML ist nicht abrufbar.** Null von 24 Sites liefern die Datei
-  öffentlich, obwohl mehrere sie nachweislich importieren. Die Hoffnung auf
-  strukturierte Volldaten als Hauptkanal ist widerlegt; OpenImmo bleibt nur als
-  Fingerprint wertvoll.
-- **Objekt-Feeds sind Einzelfälle, aber gratis.** Genau eine Site liefert Objekte
-  über den WordPress-Feed. Stufe 1 bleibt trotzdem drin — ein `/feed/`-Abruf
-  kostet nichts, und der Kanal ist der stabilste von allen.
-- **Browser-Rendering wird Querschnittsfunktion, keine eigene Stufe.** Drei Sites
-  weisen `httpx` mit HTTP 403 ab — auch mit Chrome-User-Agent, der Block sitzt
-  tiefer (TLS-/HTTP-Fingerprint). Playwright ist im Projekt vorhanden und löst
-  das ohne Verschleierungstechnik.
-- **Die Angebotsseite zu finden ist unkritisch.** 23 von 24 Übersichtsseiten
+- **Stufe 2 ist die tragende Stufe, nicht Stufe 1.** 49 % der erreichbaren Sites
+  tragen einen Vendor-Fingerprint (60 % zeigen mindestens ein Vendor-Signal,
+  auch wenn eine andere Stufe zuerst greift), und **acht Systeme decken sie
+  praktisch vollständig ab**: onOffice, immonex Kickstart, OpenImmo2WP,
+  WP-ImmoMakler, Propstack, cursor-cms (Legacy-Makler-CMS), TYPO3-OpenImmo,
+  IS24-Widget. Diese Adapter ersetzen den Großteil aller sonst nötigen
+  Einzelrezepte und brechen nicht beim Relaunch einer einzelnen Maklerseite.
+- **Stufe 4b ist die zweitwichtigste — und die technisch anspruchsvollste.**
+  26 % der Sites haben keinen erkennbaren Vendor, liefern ihre Objekte aber
+  auffindbar über strukturell gleichförmige Links (gleiches URL-Muster oder
+  gleiche Query-Signatur) oder — bei Legacy-CMS ohne sprechende Pfade — über
+  lange, mehrgliedrige Root-Slugs. Diese Erkennung ist **vokabularfrei**: sie
+  funktioniert unabhängig von Sprache, CMS und Layout und war der Teil der
+  Kaskade, der die meiste Härtung brauchte (fünf verschiedene Bauformen,
+  siehe Messbericht Befund 6b und 9).
+- **OpenImmo-XML ist nicht öffentlich abrufbar.** Null der geprüften Sites
+  liefern die Datei direkt, obwohl mehrere sie nachweislich importieren. Die
+  Hoffnung auf strukturierte Volldaten als Hauptkanal ist widerlegt; OpenImmo
+  bleibt nur als Fingerprint wertvoll (die Import-Extension verrät das
+  erzeugte Template).
+- **Objekt-Feeds sind selten, aber gratis.** Nur 2 von 35 Sites liefern
+  Objekte über einen Feed. Stufe 1 bleibt trotzdem drin — ein `/feed/`-Abruf
+  kostet nichts, und wo er trägt, ist er der stabilste Kanal von allen.
+- **Browser-Rendering wird Querschnittsfunktion, keine eigene Stufe.** Drei
+  Sites weisen `httpx` mit HTTP 403 ab — auch mit Chrome-User-Agent, der
+  Block sitzt tiefer (TLS-/HTTP-Fingerprint). Zwei weitere laden Objekte per
+  JavaScript aus einem fremdgehosteten Widget nach (Propstack bzw. ein
+  Livewire-Widget auf einer zweiten Domain) — dort half auch Playwright
+  nicht, das ist der einzige unter Phase 0 ungelöste Fall.
+- **Die Angebotsseite zu finden ist unkritisch.** Fast alle Übersichtsseiten
   wurden allein per Pfad- und Linktext-Heuristik lokalisiert — kein LLM nötig.
 
 ### 4.2 Change-Gate (Kostenbremse)
@@ -304,12 +324,17 @@ zum `site_probe`-Modul, das später bei jedem Makler-Onboarding läuft.
 höflicher User-Agent + `robots.txt`.
 
 ### Phase 2 — Kaskade
-Reihenfolge nach gemessenem Ertrag: **zuerst die fünf Vendor-Adapter**
-(immonex, onOffice, OpenImmo2WP, Propstack, WP-ImmoMakler — zusammen 50 %),
-dann JSON-LD und Feed als billige Zusatzstufen, dann Sitemap/Detail-Links,
-zuletzt das LLM-Rezept für den verbleibenden Rest. Dazu Selbsttest und
-Change-Gate über den kanonischen Objekt-Fingerprint sowie die
-Playwright-Querschnittsfunktion für JS-Sites und die drei 403-Fälle.
+Reihenfolge nach gemessenem Ertrag: **zuerst die Vendor-Adapter** (onOffice,
+immonex, OpenImmo2WP, WP-ImmoMakler, Propstack, cursor-cms, TYPO3-OpenImmo,
+IS24-Widget — zusammen 49 %), **dann die vokabularfreie strukturelle
+Detail-Link-Erkennung** (26 %, zweitwichtigste Stufe — deckt Legacy-CMS und
+fremdsprachige Slugs ab, für die keine Wortliste je funktionieren würde), dann
+JSON-LD, Feed und typisierte Sitemap als ergänzende Stufen, zuletzt das
+LLM-Rezept für den verbleibenden Rest (~3 %, deutlich kleiner als ursprünglich
+angenommen). Dazu Selbsttest und Change-Gate über den kanonischen
+Objekt-Fingerprint sowie die Playwright-Querschnittsfunktion für JS-Sites und
+403-Fälle — mit der bekannten Einschränkung, dass fremdgehostete JS-Widgets
+(Propstack, Livewire) auch damit nicht immer lösbar sind.
 
 ### Phase 3 — Discovery
 Seed-Sammlung aus mehreren Kanälen, Domain-Auflösung, Impressum-Verifikation.
@@ -346,9 +371,15 @@ korrekte URL-Form mit Orts-ID und Radius muss neu ermittelt werden.
   unbekannt~~ → **durch Phase 0 geklärt**, siehe Abschnitt 4.1 und den
   Messbericht. Offen bleibt die Verbreitung im *Long Tail* kleiner Makler: die
   Stichprobe kam per Websuche zustande und überrepräsentiert SEO-aktive Anbieter.
-- Die Kostenschätzung in Abschnitt 9 ist nach Phase 0 **zu hoch angesetzt**: Wenn
-  nur rund ein Viertel der Sites ein LLM-Rezept braucht statt aller, sinken die
-  einmaligen Lernkosten von ~9 $ auf ~2-3 $.
+- Die Kostenschätzung in Abschnitt 9 ist nach Phase 0 **deutlich zu hoch
+  angesetzt**: Nur rund 3 % der Sites brauchen überhaupt ein LLM-Rezept statt
+  aller. Die einmaligen Lernkosten sinken von ~9 $ auf einen niedrigen
+  einstelligen Betrag.
+- **Ungelöst nach Phase 0:** Fremdgehostete JS-Widgets (Propstack,
+  Livewire-basiert) laden Objekte serverseitig hinter einer API nach, die
+  weder `httpx` noch Playwright-Rendering offenlegt. Betrifft 2 von 35
+  geprüften Sites. Erfordert eine gezielte Analyse des jeweiligen
+  API-Endpunkts, kein Kaskaden-Fix.
 - Der Betrieb setzt eine wieder aktive Deployment-Umgebung voraus (VPS wurde am
   2026-06-29 abgeräumt); ein täglicher Lauf braucht eine durchlaufende Maschine.
 - Die korrekte Kleinanzeigen-URL-Grammatik mit Orts-ID und Radius muss empirisch
