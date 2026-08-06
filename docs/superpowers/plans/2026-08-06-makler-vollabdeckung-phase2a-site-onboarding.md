@@ -27,6 +27,13 @@
       "needs_browser": bool,  # nur bei method-losen/blockierten Agents gesetzt
   }
   ```
+  **Sparse-Key-Vertrag (Nachtrag Final-Review, Fix 4):** obiger Block zeigt alle
+  fünf möglichen Keys — er ist aber KEIN "immer alle Keys gesetzt"-Schema. Jede
+  Kaskadenstufe setzt nur die für sie zutreffenden Keys (z.B. hat der
+  `2-vendor`-Fall nur `method`/`vendor`, kein `feed_url`/`sitemap_url`; der
+  `bot-blocked`-Terminalfall hat nur `needs_browser`, gar kein `method`).
+  Konsumenten (Phase 2b) müssen `.get()` verwenden, nie Bracket-Zugriff — siehe
+  Docstring von `app/agent_onboarding.py`.
 - **`coverage_status` ausschließlich aus `app.db.COVERAGE_STATUSES`** — kein neuer Statuswert.
 - **robots.txt hat Vorrang vor jeder Kaskaden-Klassifikation** (Spec §8: "Disallow → kein Abruf"). Das unterscheidet `agent_probe.py` bewusst vom Phase-0-Messwerkzeug, das trotz Disallow weiterlas (einmaliger Testlauf gegen vom Nutzer geprüfte Domains) — das echte, automatisiert laufende Onboarding darf das nicht.
 - **Kein Objekt-Abruf in diesem Plan.** Phase 2a klassifiziert nur, welche Stufe greifen würde, und ruft dafür maximal die Startseite, `robots.txt`, `sitemap.xml`, bis zu 2 Feeds und die Angebotsseite ab (identisch zum bereits erprobten Umfang aus `probe_agent_sites.py`). Das tatsächliche Abholen einzelner Objekt-Detailseiten ist Phase 2b.
