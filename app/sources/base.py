@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 import httpx
 
 from app.models import RawListing
+from app.robots import USER_AGENT
 
 
 class SourceAdapter(ABC):
@@ -22,16 +23,14 @@ class SourceAdapter(ABC):
     def __init__(self) -> None:
         self.client: httpx.AsyncClient | None = None
 
-    async def __aenter__(self) -> "SourceAdapter":
+    async def __aenter__(self) -> SourceAdapter:
         self.client = httpx.AsyncClient(
             timeout=30.0,
             follow_redirects=True,
             headers={
-                "User-Agent": (
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/130.0 Safari/537.36"
-                ),
+                # Derselbe String, den robots.can_fetch() prüft — nie zwei
+                # Literale, die auseinanderdriften können.
+                "User-Agent": USER_AGENT,
                 "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
             },
         )

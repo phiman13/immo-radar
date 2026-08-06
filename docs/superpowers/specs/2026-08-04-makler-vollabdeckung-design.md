@@ -319,7 +319,7 @@ zum `site_probe`-Modul, das später bei jedem Makler-Onboarding läuft.
 
 </details>
 
-### Phase 1 — Fundament
+### Phase 1 — Fundament ✅ abgeschlossen (2026-08-06)
 `agents`-Tabelle, generischer DB-getriebener Adapter, Geocoding beim Ingest,
 höflicher User-Agent + `robots.txt`.
 

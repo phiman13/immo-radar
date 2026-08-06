@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.sources.agents_adapter import AgentSiteSource
 from app.sources.base import SourceAdapter
 from app.sources.immoscout24_rss import ImmoScout24RSSSource
 from app.sources.kleinanzeigen import KleinanzeigenSource
@@ -15,6 +16,7 @@ REGISTRY: dict[str, type[SourceAdapter]] = {
     "starnberg_bader": StarnbergImmoSource,
     "bs_immo": BsImmoSource,
     "tutzing24": Tutzing24Source,
+    "agents": AgentSiteSource,
 }
 
 

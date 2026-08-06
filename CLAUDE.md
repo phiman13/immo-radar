@@ -14,7 +14,10 @@ Auth: Caddy basicauth (kein Tailscale-Direktzugriff mehr). Docker-Container bind
 app/
   sources/        Scraper: kleinanzeigen.py, bs_immo.py, riedel.py, starnberg_bader.py, tutzing24.py
                   immoscout24_rss.py  ← RSS-Adapter (IS24 blockiert ohne Auth — skippt wenn keine ID)
+                  agents_adapter.py  ← generischer, DB-getriebener Adapter für die agents-Tabelle (additiv zur REGISTRY)
   scoring/        ai_match.py (Claude Haiku), lage.py (regelbasiert), risk.py
+  geocoding.py    Nominatim-Geocoding mit persistentem Adress-Hash-Cache
+  robots.py       robots.txt-Respekt für den Makler-Crawl
   notify/         telegram.py
   pipeline.py     Haupt-Pipeline (run_all, run_profile)
   scheduler.py    APScheduler — Interval + Enrich-Toggle aus DB, ändert sich ohne Container-Restart
@@ -64,6 +67,8 @@ pip install -e ".[dev]"
 playwright install chromium
 
 # Selektoren prüfen (read-only, kein DB-Write) — VOR Prod-Lauf!
+# Lokal ggf. DB_PATH=./data/immo.db voranstellen: der Import von app.sources zieht
+# app.db mit (Engine-Konstruktion + DB-Verzeichnis anlegen), geschrieben wird nichts.
 python -m scripts.verify_source kleinanzeigen
 python -m scripts.verify_source bs_immo
 
