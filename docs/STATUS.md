@@ -4,13 +4,16 @@
 > **Linear** (Team HER, Projekt `immo-radar`): `linear i list -P immo-radar`.
 > Architektur-/Quellen-Detail: `CLAUDE.md`.
 
-## Status: Archiviert (2026-06-29)
+## Status: Aktiv (reaktiviert 2026-08-06)
 
 Immobilien-Aggregator für Tutzing (PLZ 82327 + 5 km): scrapt Portale, bewertet Objekte
 per Claude (Haiku), sendet Telegram-Alerts. Python/FastAPI + SQLite (Scraper +
 Scoring + APScheduler) · React 18 + Vite Dashboard.
 
-**Projekt ruht.** VPS-Deployment vollständig abgeräumt (2026-06-29):
+**Wiederbelebt.** War 2026-06-29 archiviert, lokale Weiterarbeit lief seither durch
+(Probe/Scraper-Feature-Arbeit bis 2026-08-05). 2026-08-06 zurück in `targets.txt` +
+Linear-Projekt entarchiviert, HER-577/578 zurück auf Todo. **VPS-Deployment weiterhin
+abgeräumt** (Stand 2026-06-29, noch nicht neu aufgesetzt):
 - Docker-Container + Image entfernt, `/opt/immo-radar` gelöscht
 - Caddy-Vhost `immo.herrlich.dev` entfernt
 - DB-Backup: `~/Downloads/immo-radar-db-backup-2026-06-29.sqlite`
