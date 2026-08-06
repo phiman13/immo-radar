@@ -18,27 +18,26 @@ import asyncio
 import json
 import re
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 from urllib.robotparser import RobotFileParser
 
 import httpx
 from bs4 import BeautifulSoup
 
 from app.agent_cascade_detect import (
-    AREA_RE,
     DETAIL_RE,
     IMMO_LD_TYPES,
     LISTING_HINTS,
-    PRICE_RE,
     SITEMAP_OBJECT_RE,
     content_signals,
     detect_structured,
     detect_vendors,
     find_detail_links,
 )
+from app.agent_probe import fetch, find_listing_url, find_openimmo, validate_feed
+from app.robots import USER_AGENT
 
-UA = "immo-radar-probe/0.1 (privates Immobilien-Scouting; Kontakt via immo.herrlich.dev)"
-HEADERS = {"User-Agent": UA, "Accept-Language": "de-DE,de;q=0.9"}
+HEADERS = {"User-Agent": USER_AGENT, "Accept-Language": "de-DE,de;q=0.9"}
 
 # Stichprobe: Makler im Suchgebiet (Fünfseenland) + überregionale mit Seeobjekten.
 DOMAINS = [
@@ -90,91 +89,6 @@ DOMAINS = [
 ]
 
 
-async def validate_feed(client: httpx.AsyncClient, url: str) -> dict:
-    """Enthält der Feed Objekte — oder ist es der WordPress-Blogfeed?
-
-    Der naive Test (Preis/m² irgendwo im Body) schlägt bei SEO-Ratgeberartikeln
-    an ("Was ist mein Haus wert?"). Entscheidend ist deshalb die *Einzel-Einträge*:
-    Objekte liegen unter Objekt-Pfaden und tragen Eckdaten im Titel, Blogposts
-    liegen unter /blog/ oder Datumspfaden und stellen Fragen.
-    """
-    r = await fetch(client, url)
-    if r is None or r.status_code != 200:
-        return {"url": url, "ok": False}
-
-    items = re.findall(r"<(?:item|entry)\b.*?</(?:item|entry)>", r.text, re.S | re.I)
-    hits = 0
-    for it in items:
-        link_m = re.search(r"<link[^>]*>([^<]+)</link>|<link[^>]*href=\"([^\"]+)\"", it, re.I)
-        link = (link_m.group(1) or link_m.group(2) or "") if link_m else ""
-        title_m = re.search(r"<title[^>]*>(.*?)</title>", it, re.S | re.I)
-        title = title_m.group(1) if title_m else ""
-        looks_like_object = bool(DETAIL_RE.search(link)) or bool(
-            PRICE_RE.search(title)
-            or AREA_RE.search(title)
-            or re.search(r"\d+([,.]\d+)?[-\s]?Zimmer", title, re.I)
-        )
-        if looks_like_object and "?" not in title:
-            hits += 1
-    return {
-        "url": url,
-        "ok": True,
-        "items": len(items),
-        "object_items": hits,
-        "immo_like": hits >= 2,
-    }
-
-
-async def find_openimmo(client: httpx.AsyncClient, root: str) -> str | None:
-    """Typische Ablageorte einer öffentlich erreichbaren OpenImmo-XML."""
-    for path in (
-        "/openimmo.xml",
-        "/export/openimmo.xml",
-        "/wp-content/uploads/openimmo/",
-        "/wp-content/uploads/immonex-openimmo/",
-        "/openimmo/",
-    ):
-        r = await fetch(client, urljoin(root, path))
-        if r is not None and r.status_code == 200 and re.search(r"openimmo|<immobilie", r.text[:4000], re.I):
-            return urljoin(root, path)
-    return None
-
-
-async def fetch(client: httpx.AsyncClient, url: str) -> httpx.Response | None:
-    try:
-        r = await client.get(url)
-        return r
-    except Exception:
-        return None
-
-
-def find_listing_url(html: str, base: str) -> str | None:
-    """Beste Kandidaten-URL für die Angebotsübersicht aus den Startseiten-Links."""
-    soup = BeautifulSoup(html, "html.parser")
-    host = urlparse(base).netloc
-    best: tuple[int, str] | None = None
-    for a in soup.find_all("a", href=True):
-        full = urljoin(base, a["href"])
-        if urlparse(full).netloc != host:
-            continue
-        path = urlparse(full).path
-        if not LISTING_HINTS.search(path):
-            continue
-        text = a.get_text(" ", strip=True).lower()
-        # Kurze Pfade und sprechende Linktexte bevorzugen. Dateiendungen
-        # abschneiden, sonst verliert /Angebote.htm gegen /angebote/.
-        score = 0
-        stem = re.sub(r"\.(html?|php\d?|aspx?)$", "", path.rstrip("/"), flags=re.I)
-        if re.search(r"(immobilien|objekte|angebote|kaufobjekte)$", stem, re.I):
-            score += 3
-        if any(w in text for w in ("angebot", "objekt", "immobilien", "kaufen")):
-            score += 2
-        score -= path.count("/")
-        if best is None or score > best[0]:
-            best = (score, full)
-    return best[1] if best else None
-
-
 async def probe(domain: str, sem: asyncio.Semaphore) -> dict:
     out: dict = {"domain": domain, "reachable": False}
     async with sem:
@@ -206,7 +120,7 @@ async def probe(domain: str, sem: asyncio.Semaphore) -> dict:
                 sitemap_urls = re.findall(r"(?im)^\s*sitemap:\s*(\S+)", rp_txt.text)
                 rp = RobotFileParser()
                 rp.parse(rp_txt.text.splitlines())
-                out["robots_allows_root"] = rp.can_fetch(UA, root)
+                out["robots_allows_root"] = rp.can_fetch(USER_AGENT, root)
             else:
                 out["robots"] = False
                 out["robots_allows_root"] = True  # kein robots.txt = kein Verbot
