@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.db import FetchRun, Listing, ListingHistory, SessionLocal
+from app.geocoding import geocode
 from app.logging_setup import log
 from app.models import RawListing
 from app.scoring.lage import in_search_area
@@ -56,14 +57,37 @@ def _is_junk(raw: RawListing) -> bool:
     return bool(JUNK_RE.search(haystack))
 
 
+def _resolve_location(raw: RawListing) -> None:
+    """Füllt raw.lat/lon per Geocoding, falls die Quelle sie nicht mitliefert,
+    und dokumentiert in region_match_reason, worauf die spätere
+    in_search_area()-Entscheidung beruht (Spec §4.3 Punkt 4)."""
+    if raw.lat is not None and raw.lon is not None:
+        raw.region_match_reason = "coordinates-from-source"
+        return
+
+    address = " ".join(filter(None, [raw.address, raw.plz, raw.city])).strip()
+    if not address:
+        raw.region_match_reason = "no-address-info"
+        return
+
+    lat, lon, importance = geocode(address)
+    if lat is not None and lon is not None:
+        raw.lat, raw.lon = lat, lon
+        raw.geocode_confidence = importance
+        raw.region_match_reason = "geocoded"
+    else:
+        raw.region_match_reason = "geocode-failed-regex-fallback"
+
+
 def _matches_profile(raw: RawListing) -> bool:
     if _is_junk(raw):
         return False
     if not _location_ok(raw):
         return False
-    # Coordinate-based filter: reject if coordinates are known but outside all search areas
-    if not in_search_area(raw.lat, raw.lon, get_setting("search_locations")):
-        return False
+    _resolve_location(raw)
+    if raw.lat is not None and raw.lon is not None:
+        if not in_search_area(raw.lat, raw.lon, get_setting("search_locations")):
+            return False
     if raw.price_eur is not None:
         if raw.price_eur < settings.price_min or raw.price_eur > settings.price_max:
             return False
@@ -104,6 +128,8 @@ def _upsert(session, raw: RawListing) -> tuple[Listing, bool]:
             ortsteil=raw.ortsteil,
             lat=raw.lat,
             lon=raw.lon,
+            geocode_confidence=raw.geocode_confidence,
+            region_match_reason=raw.region_match_reason,
             hausgeld_eur=raw.hausgeld_eur,
             energie_kwh=raw.energie_kwh,
             energie_class=raw.energie_class,
@@ -140,6 +166,10 @@ def _upsert(session, raw: RawListing) -> tuple[Listing, bool]:
 
     existing.last_seen_at = now
     existing.is_active = True
+    existing.lat = raw.lat
+    existing.lon = raw.lon
+    existing.geocode_confidence = raw.geocode_confidence
+    existing.region_match_reason = raw.region_match_reason
     if raw.images and not existing.images:
         existing.images = raw.images
     return existing, False

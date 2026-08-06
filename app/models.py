@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class PropertyType(str, Enum):
+class PropertyType(StrEnum):
     WOHNUNG = "wohnung"
     HAUS = "haus"
     DOPPELHAUSHAELFTE = "doppelhaushaelfte"
@@ -16,7 +15,7 @@ class PropertyType(str, Enum):
     UNKNOWN = "unknown"
 
 
-class ListingStatus(str, Enum):
+class ListingStatus(StrEnum):
     NEW = "new"
     SEEN = "seen"
     CONTACTED = "contacted"
@@ -33,24 +32,26 @@ class RawListing(BaseModel):
     source_id: str
     url: str
     title: str
-    description: Optional[str] = None
-    price_eur: Optional[int] = None
-    qm: Optional[float] = None
-    rooms: Optional[float] = None
-    year_built: Optional[int] = None
+    description: str | None = None
+    price_eur: int | None = None
+    qm: float | None = None
+    rooms: float | None = None
+    year_built: int | None = None
     property_type: PropertyType = PropertyType.UNKNOWN
-    address: Optional[str] = None
-    plz: Optional[str] = None
-    city: Optional[str] = None
-    ortsteil: Optional[str] = None
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    hausgeld_eur: Optional[int] = None
-    energie_kwh: Optional[float] = None
-    energie_class: Optional[str] = None
+    address: str | None = None
+    plz: str | None = None
+    city: str | None = None
+    ortsteil: str | None = None
+    lat: float | None = None
+    lon: float | None = None
+    geocode_confidence: float | None = None
+    region_match_reason: str | None = None
+    hausgeld_eur: int | None = None
+    energie_kwh: float | None = None
+    energie_class: str | None = None
     images: list[str] = Field(default_factory=list)
-    raw_html: Optional[str] = None
-    listed_at: Optional[datetime] = None
+    raw_html: str | None = None
+    listed_at: datetime | None = None
     fetched_at: datetime = Field(default_factory=datetime.utcnow)
 
     def dedup_hash(self) -> str:
