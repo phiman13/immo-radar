@@ -5,7 +5,15 @@ Ergebnis auf die Agent-Zeile zurück.
 Session-Muster identisch zu geocode() in app/geocoding.py: SQLite erlaubt nur
 einen offenen Schreiber — wer bereits eine Transaktion offen hält (z.B.
 run_source()), übergibt seine Session; onboard_agent() merged/committet dann
-nicht selbst, sondern überlässt das dem Aufrufer."""
+nicht selbst, sondern überlässt das dem Aufrufer.
+
+`extraction`-Sparse-Key-Vertrag: Keys sind NUR gesetzt, wenn sie für die
+jeweilige Kaskadenstufe zutreffen (z.B. hat `{"method": "vendor:x", "vendor":
+"x"}` keine `feed_url`/`sitemap_url`/`needs_browser`-Keys; `{"needs_browser":
+True}` für blockierte Agents hat gar keinen `method`-Key). Konsumenten (Phase
+2b) MÜSSEN `.get()` verwenden, nie Bracket-Zugriff (`extraction["feed_url"]`)
+— das gilt auch für `method` selbst, das bei den terminalen bot-blocked-/
+unreachable-Stufen fehlt."""
 
 from __future__ import annotations
 
@@ -24,6 +32,13 @@ _AUTO_HARVEST_STAGES = {
     "4-sitemap-objekte",
     "5-detail-links",
 }
+
+# Stufen, die ein Vendor-/Struktur-/Sitemap-Signal allein von der Startseite
+# aus erkennen können, OHNE dass dabei zwingend eine Angebotsseite gefunden
+# wurde (anders als "1-feed/openimmo", das feed_url statt listing_url trägt,
+# und "5-detail-links", das strukturell nur über eine gefundene Angebotsseite
+# überhaupt erreichbar ist).
+_REQUIRES_LISTING_URL_STAGES = {"2-vendor", "3-structured", "4-sitemap-objekte"}
 
 # stage -> (coverage_status, coverage_reason, zusätzliche extraction-Felder)
 _TERMINAL_STAGES: dict[str, tuple[str, str, dict]] = {
@@ -63,8 +78,7 @@ def _extraction_for_auto_harvest_stage(stage: str, row: dict) -> dict:
     if stage == "3-structured":
         return {"method": "structured_data"}
     if stage == "4-sitemap-objekte":
-        sample = row.get("sitemap_object_sample") or []
-        return {"method": "sitemap_objekte", "sitemap_url": sample[0] if sample else None}
+        return {"method": "sitemap_objekte", "sitemap_url": row.get("sitemap_url")}
     if stage == "5-detail-links":
         return {"method": "detail_links"}
     raise ValueError(f"kein auto-harvest-Mapping für Stufe {stage!r}")
@@ -87,10 +101,27 @@ async def _onboard(agent_id: int, client: httpx.AsyncClient, session) -> Agent:
         agent.robots_status = None
 
     if stage in _AUTO_HARVEST_STAGES:
-        agent.extraction = _extraction_for_auto_harvest_stage(stage, row)
-        agent.listing_url = row.get("listing_url")
-        agent.coverage_status = "auto-harvested"
-        agent.coverage_reason = None
+        listing_url = row.get("listing_url")
+        # Vendor-/Struktur-/Sitemap-Signal ohne je gefundene Angebotsseite (weder
+        # in diesem Probe noch in einem früheren Onboard-Lauf auf dieser Zeile):
+        # Phase 2b hätte nichts zu crawlen -> nicht als auto-harvested zählen,
+        # sondern für manuelle Nachschau markieren (Fix 2).
+        if stage in _REQUIRES_LISTING_URL_STAGES and not listing_url and not agent.listing_url:
+            agent.coverage_status = "needs-manual-watch"
+            agent.coverage_reason = (
+                f"Kaskadenstufe {stage!r} erkannt, aber keine Angebotsseite "
+                "(listing_url) gefunden — Extraktion kann noch nicht laufen."
+            )
+            agent.extraction = {}
+        else:
+            agent.extraction = _extraction_for_auto_harvest_stage(stage, row)
+            # Nie mit None überschreiben: ein Re-Onboard, das diesmal keine
+            # listing_url findet, darf eine zuvor gute nicht stillschweigend
+            # nullen (Fix 2).
+            if listing_url:
+                agent.listing_url = listing_url
+            agent.coverage_status = "auto-harvested"
+            agent.coverage_reason = None
     elif stage == "robots-disallowed":
         agent.coverage_status = "robots-disallowed"
         agent.coverage_reason = "robots.txt verbietet den Zugriff auf die Startseite."
@@ -101,7 +132,12 @@ async def _onboard(agent_id: int, client: httpx.AsyncClient, session) -> Agent:
         )
         agent.coverage_status = status
         agent.coverage_reason = reason
-        agent.extraction = extra
+        # extra ist derselbe Dict-Objekt wie im Modul-Konstanten _TERMINAL_STAGES
+        # (z.B. dasselbe {"needs_browser": True} für jeden bot-blockierten
+        # Agent) -- Kopie verhindert, dass eine künftige In-Place-Mutation
+        # (agent.extraction["x"] = ...) die Konstante für den ganzen Prozess
+        # korrumpiert (Fix 3).
+        agent.extraction = dict(extra)
 
     return agent
 

@@ -104,6 +104,32 @@ async def test_probe_agent_detects_vendor_and_detail_links():
     assert classify_stage(row) == "2-vendor"
 
 
+@pytest.mark.asyncio
+async def test_probe_agent_captures_sitemap_url_for_sitemap_objekte_stage():
+    """Fix 1 (Final-Review): der Sitemap-URL selbst (zum späteren Re-Fetch in
+    Phase 2b) muss im Ergebnis landen -- getrennt von sitemap_object_sample,
+    das lediglich ein paar Beispiel-Objekt-URLs für Diagnosezwecke trägt."""
+    sitemap_xml = """<?xml version="1.0"?>
+    <urlset>
+      <url><loc>https://x.de/immobilien/villa-am-see-tutzing</loc></url>
+      <url><loc>https://x.de/immobilien/wohnung-starnberg-zentral</loc></url>
+      <url><loc>https://x.de/immobilien/haus-poecking-mit-garten</loc></url>
+    </urlset>"""
+    routes = {
+        "https://x.de/": _resp(text="<html></html>"),
+        "https://x.de/robots.txt": _resp(status_code=404),
+        "https://x.de/sitemap.xml": _resp(text=sitemap_xml),
+    }
+    client = _routed_client(routes)
+
+    row = await probe_agent("x.de", client)
+
+    assert row["sitemap"] is True
+    assert row["sitemap_url"] == "https://x.de/sitemap.xml"
+    assert row["sitemap_object_urls"] == 3
+    assert classify_stage(row) == "4-sitemap-objekte"
+
+
 def test_classify_stage_unreachable():
     assert classify_stage({"reachable": False}) == "unreachable"
 

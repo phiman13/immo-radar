@@ -164,6 +164,7 @@ async def probe_agent(domain: str, client: httpx.AsyncClient) -> dict:
         if sm is None or sm.status_code != 200 or "<" not in sm.text[:200]:
             continue
         out["sitemap"] = True
+        out["sitemap_url"] = sm_url
         locs = re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sm.text)
         out["sitemap_entries"] = len(locs)
         out["sitemap_listing_like"] = sum(1 for u in locs if LISTING_HINTS.search(u))
