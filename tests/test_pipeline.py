@@ -230,3 +230,65 @@ async def test_run_source_survives_geocode_cache_miss_inside_open_transaction(se
 
         # Der Cache-Write landete in derselben Transaktion und ist mit-committet
         assert s.query(GeocodeCache).count() == 2
+
+
+@pytest.mark.asyncio
+async def test_run_source_survives_duplicate_address_before_first_upsert(session, monkeypatch):
+    """Regression gegen den UNIQUE-Constraint-Crash bei doppelter Adresse.
+
+    `SessionLocal` läuft mit autoflush=False: ein `session.merge()` im
+    Geocoding-Cache bleibt PENDING und ist damit für ein späteres
+    `session.get(GeocodeCache, key)` derselben Transaktion unsichtbar (ohne
+    Identity-Key kein Identity-Map-Treffer, ohne Autoflush kein DB-Treffer).
+
+    Teilen sich zwei Objekte EINES Laufs dieselbe Geocoding-Adresse und wurde
+    dazwischen nichts geflusht (weil ein NACH dem Geocoding laufender Filter —
+    hier der Preisfilter — sie verwirft, `_upsert` also nie greift), dann
+    entstehen zwei pending INSERTs auf denselben Primary Key. Spätestens beim
+    ersten echten Flush wirft SQLite
+    `UNIQUE constraint failed: geocode_cache.address_hash`; das breite except
+    in run_source() rollbackt daraufhin den KOMPLETTEN Quellenlauf — inklusive
+    aller bis dahin gültigen Objekte.
+
+    Der Fix ist ein `session.flush()` direkt nach dem `session.merge()` im
+    Session-Pfad von geocode(): der Cache-Eintrag wird sofort sichtbar, der
+    zweite Treffer ist ein echter Cache-HIT (belegt durch `len(calls) == 1`)."""
+    monkeypatch.setattr(pipeline_module, "SessionLocal", session)
+    monkeypatch.setattr(pipeline_module.settings, "price_max", 1_000_000)
+    set_setting("search_locations", TUTZING_LOCATIONS)
+
+    calls: list[str] = []
+
+    def fake_nominatim(address, **kwargs):
+        calls.append(address)
+        return SimpleNamespace(latitude=47.9095, longitude=11.2783, raw={"importance": 0.6})
+
+    monkeypatch.setattr("app.geocoding._rate_limited_geocode", fake_nominatim)
+
+    # Identischer Adress-String für alle drei ("82327 Tutzing"), aber nur das
+    # letzte Objekt passiert den Preisfilter — davor flusht also nichts.
+    shared = dict(address=None, plz="82327", city="Tutzing")
+    raws = [
+        _raw(source_id="1", url="https://example.de/1", price_eur=5_000_000, **shared),
+        _raw(source_id="2", url="https://example.de/2", price_eur=5_000_000, **shared),
+        _raw(source_id="3", url="https://example.de/3", price_eur=800_000, **shared),
+    ]
+
+    found, new, new_listings = await pipeline_module.run_source(_FakeAdapter("fake", raws))
+
+    assert found == 3
+    assert new == 1
+    assert len(new_listings) == 1
+    assert calls == ["82327 Tutzing"]  # ein Miss, danach Cache-HITs
+
+    with session() as s:
+        run = s.query(FetchRun).one()
+        assert run.error is None
+
+        listings = s.query(Listing).all()
+        assert len(listings) == 1
+        assert listings[0].source_id == "3"
+        assert listings[0].lat == 47.9095
+        assert listings[0].region_match_reason == "geocoded"
+
+        assert s.query(GeocodeCache).count() == 1

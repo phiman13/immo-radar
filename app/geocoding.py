@@ -99,6 +99,13 @@ def geocode(address: str, session=None) -> tuple[float | None, float | None, flo
     )
     if session is not None:
         session.merge(entry)
+        # SessionLocal läuft mit autoflush=False: ohne dieses Flush bliebe der
+        # gemergte Eintrag pending und für ein späteres _read_cache() derselben
+        # Transaktion unsichtbar. Zwei Objekte mit derselben Adresse in EINEM
+        # Lauf erzeugten dann zwei pending INSERTs auf denselben Primary Key →
+        # UNIQUE-Constraint-Fehler und Rollback des ganzen Quellenlaufs.
+        # Flush, kein Commit — den Commit besitzt weiterhin der Aufrufer.
+        session.flush()
     else:
         with db_module.SessionLocal() as own_session:
             own_session.merge(entry)
