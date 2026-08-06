@@ -22,15 +22,13 @@ class SourceAdapter(ABC):
     def __init__(self) -> None:
         self.client: httpx.AsyncClient | None = None
 
-    async def __aenter__(self) -> "SourceAdapter":
+    async def __aenter__(self) -> SourceAdapter:
         self.client = httpx.AsyncClient(
             timeout=30.0,
             follow_redirects=True,
             headers={
                 "User-Agent": (
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/130.0 Safari/537.36"
+                    "immo-radar/0.1 (privates Immobilien-Scouting; Kontakt via immo.herrlich.dev)"
                 ),
                 "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
             },
