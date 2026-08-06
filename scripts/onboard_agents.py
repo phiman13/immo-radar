@@ -46,8 +46,12 @@ async def main(agent_id: int | None) -> None:
         headers={"User-Agent": USER_AGENT, "Accept-Language": "de-DE,de;q=0.9"},
     ) as client:
         for aid in ids:
-            agent = await onboard_agent(aid, client)
-            print(f"  [{agent.id:>4}] {agent.name:<30} {agent.coverage_status:<20} {agent.extraction}")
+            try:
+                agent = await onboard_agent(aid, client)
+                print(f"  [{agent.id:>4}] {agent.name:<30} {agent.coverage_status:<20} {agent.extraction}")
+            except Exception as e:
+                print(f"  [{aid:>4}] ERROR: {type(e).__name__}: {e}")
+                continue
 
 
 if __name__ == "__main__":
