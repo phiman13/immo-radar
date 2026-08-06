@@ -573,10 +573,10 @@ async def probe_agent(domain: str, client: httpx.AsyncClient) -> dict:
     app.sources.base.SourceAdapter — derselbe String wie app.robots.USER_AGENT,
     damit robots.can_fetch() und der tatsächliche Abruf nicht auseinanderlaufen)."""
     out: dict = {"domain": domain, "reachable": False}
-    root = f"https://{domain}"
+    root = f"https://{domain}/"
     r = await fetch(client, root)
     if r is None:  # DNS/TLS-Fehler: einmal mit www. gegenprüfen
-        root = f"https://www.{domain}"
+        root = f"https://www.{domain}/"
         r = await fetch(client, root)
     if r is None or r.status_code >= 400:
         if r is not None and r.status_code in (401, 403, 429):
