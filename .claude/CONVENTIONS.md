@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: ff47e9de2c32 · propagiert: 2026-08-06 -->
+     Kanon-Hash: 2cb3301a5a23 · propagiert: 2026-08-07 -->
 
 # Konventionen — kanonischer Kern
 
@@ -37,7 +37,9 @@
 2. Cross-App-Impact geprüft.
 3. Relevante Doku aktualisiert (`CLAUDE.md`, `DEVELOPMENT.md`, `README` wo nötig).
 4. *(falls TypeScript)* TypeCheck grün: `tsc --noEmit`.
-5. *(falls UI-Änderung)* `/audit` + Browser-Test ausgeführt. Bei vorhandener visueller
+5. *(falls UI-Änderung)* `/audit` + UI-Verifikation nach Arbeitsweise
+   „Verifizierer-Wahl". Delegierte Sichtprüfung zählt erst nach User-Bestätigung als
+   erledigt — bis dahin offenes Prüfrisiko, kein „done". Bei vorhandener visueller
    Referenz (HTML-Mockup, Design-Sandbox, Screenshot-PNG): Referenz zuerst gelesen (Read,
    nicht nur Pfad-Mention), nach Edit expliziter Side-by-Side-Vergleich. Bei Mobile-
    Performance/Animation: „done" erst nach User-Bestätigung auf Test-Profil.
@@ -136,6 +138,13 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
 - **User-Decision-Pattern:** Entscheidungen, deren Antwort den weiteren Weg
   ändert und die nicht aus dem Repo verifizierbar sind, dem User vorlegen — nicht
   raten. Sonst konventionelle Defaults wählen und weitermachen.
+- **Verifizierer-Wahl bei UI-Änderungen:** Vor jedem Browser-Start die günstigste
+  verlässliche Verifikation wählen. Maschinenprüfbares macht Claude selbst (`tsc`,
+  Tests, `curl`, `/audit`). Einmalige Sichtprüfung geht an den erreichbaren User —
+  gebündelt am Ende, nicht mitten im Lauf (was, wo, worauf achten). Wiederkehrende
+  UI-Risiken (Responsive-Matrix, Login-Flows, Formularzustand, Regressionen) werden
+  als Browser-Test skriptiert, nicht einmalig handgefahren. Autonome Läufe (`/goal`,
+  `/loop`, `/schedule`, Headless-Subagents) verifizieren selbst.
 - **Session-Kickoff:** Bei nicht-trivialen Aufgaben: Scope + Approach skizzieren (bei impliziter Breite bewusst weit scopen, Scope-Grenzen explizit nennen), alle Entscheidungs-Forks + riskante Aktionen gebündelt vorlegen. Danach autonom bis zum nächsten echten Blocker — nicht zwischendrin fragen, wenn der Kickoff es geklärt hat.
 - **Plugin-/Skill-Discovery:** Nach Plugin-Install oder Skill-Änderung erst
   `/reload-plugins` (oder neue Session) + Verfügbarkeitsprüfung, bevor der
