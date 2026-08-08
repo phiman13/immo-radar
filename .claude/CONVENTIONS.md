@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: 2cb3301a5a23 · propagiert: 2026-08-07 -->
+     Kanon-Hash: e6f8929aa320 · propagiert: 2026-08-08 -->
 
 # Konventionen — kanonischer Kern
 
@@ -44,12 +44,17 @@
    nicht nur Pfad-Mention), nach Edit expliziter Side-by-Side-Vergleich. Bei Mobile-
    Performance/Animation: „done" erst nach User-Bestätigung auf Test-Profil.
 6. Committed und gepusht.
-7. *(bei substanziellen Änderungen)* Vor dem Merge `/codex:review` als Vier-Augen-Prinzip
-   — Code-Review + Optimierung durch eine zweite Engine. Echter Widerspruch → klären;
-   ergänzende Perspektive → Synthesis. *(Routing: SKILLS §8.)*
-8. *(bei kritischen Änderungen — Auth, Datenmigration, RLS-Policies, Payment)* Vor dem
-   Merge `/ultrareview` gegen Branch/PR (Cloud-Bug-Hunt-Flotte) — user-getriggert und
-   kostenpflichtig, nicht automatisch startbar. *(Research preview, Stand 2026-05.)*
+7. *(bei substanziellen Änderungen)* Review-Leiter — günstigste ausreichende Stufe zuerst,
+   nicht die teuerste vorsorglich: `/code-review` (lokal, Effort `low|medium|high|max`,
+   Claude löst selbst aus) für den Normalfall; `/security-review` zusätzlich bei
+   sicherheitsrelevanten Diffs. Vier-Augen durch eine zweite Engine: `/codex:review`
+   (User tippt). Echter Widerspruch → klären; ergänzende Perspektive → Synthesis.
+   *(Routing: SKILLS §8.)*
+8. *(bei kritischen Änderungen — Auth, Datenmigration, RLS-Policies, Payment)* Default-Gate
+   ist `/code-review max` lokal. `/code-review ultra` (Cloud-Multi-Agent-Flotte,
+   kostenintensiv, nur user-getriggert — Claude kann es nicht starten) **nur** wenn der
+   Blast-Radius es rechtfertigt: irreversibel UND produktive Fremddaten betroffen. Claude
+   nennt es als Option mit Begründung — nie als pauschale Empfehlung.
 
 ## Globale Konventionen
 

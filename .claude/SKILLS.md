@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
-     Kanon-Hash: 2cb3301a5a23 · propagiert: 2026-08-07 -->
+     Kanon-Hash: e6f8929aa320 · propagiert: 2026-08-08 -->
 
 <!-- Kanon: personal-stack/core/SKILLS.md — nicht hier editieren.
      Änderung am Kanon, dann propagieren (scripts/propagate-canon.sh). -->
@@ -115,10 +115,12 @@ löst selbst aus) immer `/codex:rescue` mit passendem Task-Prompt, nicht
 
 | Auslöser | Command | Wer löst aus |
 |---|---|---|
+| Review einer Code-Änderung (Normalfall, DoD §7) | `/code-review` lokal, Effort `low\|medium\|high\|max` — die **erste** Stufe, bevor eine externe Engine gezogen wird | Claude |
 | Architekturentscheidung (Design, Schema, API-Kontrakt) | `/codex:adversarial-review` (User) oder `/codex:rescue` mit Adversarial-Framing (Claude) | User bzw. Claude |
 | Debugging-Deadlock (≥2 Versuche ohne Durchbruch) | `/codex:rescue` | Claude |
 | Quick Second Opinion (Unsicherheit, kein Deadlock) | `/codex:rescue` | Claude |
 | Formaler Vier-Augen-Gate vor Merge (DoD §7) | `/codex:review` | **User** — Claude fragt nur an |
+| Kritische Änderung mit irreversiblem Blast-Radius (DoD §8) | `/code-review ultra` — kostenintensiv, letzte Stufe; `/ultrareview` ist der veraltete Alias | **User** — Claude nennt es nur als begründete Option |
 
 **Trigger-Heuristik:** Nach 2 erfolglosen Fix-Iterationen mit User-Negativ-Feedback
 aktiv `/codex:rescue` vorschlagen — nicht warten, bis der User es einfordert.
