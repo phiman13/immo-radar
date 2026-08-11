@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.db import Agent
-from app.sources.agent_handlers import crawl_and_extract
+from app.sources.agent_handlers import crawl_and_extract, sitemap_objekte_handler
 
 
 def _resp(status_code=200, text=""):
@@ -154,3 +154,42 @@ async def test_crawl_and_extract_keeps_objects_distinct_despite_shared_footer_ad
     assert all(r.price_eur is None and r.qm is None for r in results)
     hashes = {r.dedup_hash() for r in results}
     assert len(hashes) == 3
+
+
+@pytest.mark.asyncio
+async def test_sitemap_objekte_handler_follows_sub_sitemap_to_object_urls():
+    index_xml = """
+    <urlset>
+      <url><loc>https://x.de/immobilie-sitemap.xml</loc></url>
+    </urlset>
+    """
+    sub_xml = """
+    <urlset>
+      <url><loc>https://x.de/immobilien/villa-am-see-tutzing</loc></url>
+      <url><loc>https://x.de/immobilien/wohnung-starnberg</loc></url>
+    </urlset>
+    """
+    detail_html = "<html><body><h1>Villa</h1><p>600.000 € 200 m² 82327 Tutzing</p></body></html>"
+    routes = {
+        "https://x.de/sitemap.xml": _resp(text=index_xml),
+        "https://x.de/immobilie-sitemap.xml": _resp(text=sub_xml),
+        "https://x.de/immobilien/villa-am-see-tutzing": _resp(text=detail_html),
+        "https://x.de/immobilien/wohnung-starnberg": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(extraction={"method": "sitemap_objekte", "sitemap_url": "https://x.de/sitemap.xml"})
+
+    results = [r async for r in sitemap_objekte_handler(agent, client)]
+
+    assert len(results) == 2
+    assert all(r.price_eur == 600000 for r in results)
+
+
+@pytest.mark.asyncio
+async def test_sitemap_objekte_handler_returns_nothing_without_sitemap_url():
+    client = _routed_client({})
+    agent = _agent(extraction={})
+
+    results = [r async for r in sitemap_objekte_handler(agent, client)]
+
+    assert results == []

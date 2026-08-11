@@ -26,7 +26,7 @@ from collections.abc import AsyncIterator
 import httpx
 from bs4 import BeautifulSoup
 
-from app.agent_cascade_detect import find_detail_links
+from app.agent_cascade_detect import DETAIL_RE, SITEMAP_OBJECT_RE, find_detail_links
 from app.agent_field_extract import extract_fields
 from app.db import Agent
 from app.logging_setup import log
@@ -87,6 +87,48 @@ async def crawl_and_extract(agent: Agent, client: httpx.AsyncClient) -> AsyncIte
     _, urls = find_detail_links(r.text, agent.listing_url, limit=None)
     urls = urls[:MAX_DETAIL_PAGES_PER_AGENT]
 
+    for url in urls:
+        listing = await _fetch_detail_listing(agent, client, url)
+        if listing is not None:
+            yield listing
+        await asyncio.sleep(DETAIL_FETCH_DELAY_SECONDS)
+
+
+async def _discover_sitemap_object_urls(client: httpx.AsyncClient, sitemap_url: str) -> list[str]:
+    try:
+        r = await client.get(sitemap_url)
+        r.raise_for_status()
+    except Exception as e:
+        log.warning("agent_handlers.sitemap_fetch_failed", url=sitemap_url, error=str(e))
+        return []
+
+    locs = re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", r.text)
+    subs = [u for u in locs if u.endswith(".xml") and SITEMAP_OBJECT_RE.search(u)]
+    obj_urls: set[str] = {u for u in locs if DETAIL_RE.search(u)}
+    for sub in subs[:3]:
+        try:
+            sr = await client.get(sub)
+            sr.raise_for_status()
+        except Exception as e:
+            log.warning("agent_handlers.sub_sitemap_fetch_failed", url=sub, error=str(e))
+            continue
+        obj_urls.update(u for u in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sr.text) if DETAIL_RE.search(u))
+    return sorted(obj_urls)
+
+
+async def sitemap_objekte_handler(agent: Agent, client: httpx.AsyncClient) -> AsyncIterator[RawListing]:
+    """Handler für `sitemap_objekte`: die in extraction['sitemap_url']
+    festgehaltene Sitemap wird erneut abgerufen (der Onboarding-Probe hat sie
+    nur klassifiziert, nicht für den Harvest behalten), Objekt-URLs per
+    DETAIL_RE/SITEMAP_OBJECT_RE identifiziert (identisch zur Probe-Logik in
+    app.agent_probe.probe_agent), dann wie crawl_and_extract je Detailseite
+    extrahiert."""
+    sitemap_url = (agent.extraction or {}).get("sitemap_url")
+    if not sitemap_url:
+        log.warning("agent_handlers.sitemap_no_url", agent_id=agent.id)
+        return
+
+    urls = (await _discover_sitemap_object_urls(client, sitemap_url))[:MAX_DETAIL_PAGES_PER_AGENT]
     for url in urls:
         listing = await _fetch_detail_listing(agent, client, url)
         if listing is not None:
