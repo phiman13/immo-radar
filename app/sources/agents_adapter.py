@@ -2,30 +2,93 @@
 
 Tritt NEBEN die statische REGISTRY, ersetzt sie nicht (Vollabdeckung-Spec
 §5.3). Verteilt jede agents-Zeile mit coverage_status == "auto-harvested" an
-die in EXTRACTION_METHODS registrierte Methode. EXTRACTION_METHODS ist in
-Phase 1 bewusst leer — Phase 2 registriert hier die acht Vendor-Adapter und
-die strukturelle Detail-Link-Erkennung. Eine leere Registry bedeutet, dass
-fetch() nichts liefert, was bis Phase 2 korrekt ist.
-"""
+die in EXTRACTION_METHODS registrierte Methode. Phase 2b registriert hier die
+Kaskaden-Handler aus app.sources.agent_handlers: `vendor:<x>` (alle Einträge
+aus app.agent_cascade_detect.VENDORS) und `detail_links` teilen sich EINEN
+generischen Crawl+Extraktions-Handler (Phase 0 lieferte nur Vendor-
+Fingerprints, keine Vendor-spezifischen Selektoren — `vendor:<x>` bleibt nur
+Herkunfts-Tag), `sitemap_objekte`/`structured_data`/`feed_adapter` haben je
+eigene Handler.
+
+Zweistufiger Selbsttest (Vollabdeckung-Spec §7): das Ergebnis eines Handlers
+wird gepuffert (Objektzahl pro Makler ist klein) und geprüft, bevor es
+weitergereicht wird.
+- Lieferte ein Makler NOCH NIE etwas (last_nonempty_at ist None) und der
+  aktuelle Lauf liefert nichts Verwertbares, wird die optimistische, rein
+  klassifikationsbasierte `auto-harvested`-Einstufung aus Phase 2a
+  (app.agent_onboarding) sofort auf `needs-manual-watch` zurückgestuft
+  ("Selbsttest vor Aktivierung").
+- War der Makler zuvor erfolgreich, wird ein einzelner leerer Lauf NICHT als
+  Rezept-Bruch gewertet (Spec §7 verlangt zwei aufeinanderfolgende leere
+  Läufe) — nur `last_checked` wird aktualisiert, `coverage_status` bleibt
+  `auto-harvested`. Der Zwei-Läufe-Zähler für echte Bruch-Erkennung ist
+  Change-Gate-Arbeit (Phase 2c).
+Auf dem Erfolgspfad werden `last_checked`/`last_nonempty_at`/
+`last_listing_count` geschrieben — vorher waren diese Spalten nur auf den
+Fehlerpfaden gepflegt, für funktionierende Agents also tot.
+
+Crawl-Frequenz-Guard (UX-Entscheidung nach Nutzer-Rückfrage): AgentSiteSource
+hat bewusst KEIN eigenes Poll-Intervall-Setting — ein zweites Dashboard-Feld
+nur für Makler-Sites wäre für den Nutzer schwer einzuordnen. Stattdessen
+erzwingt fetch() strukturell (nicht nur per UI-Warnung), dass ein einzelner
+Agent höchstens alle MIN_RECRAWL_INTERVAL neu gecrawlt wird — unabhängig vom
+gewählten poll_interval_minutes (Dashboard-Presets: 6 Std. bis 3 Tage). Die
+schnellste UI-Option (6 Std.) würde ohne diesen Guard Makler-Sites 4x
+häufiger crawlen als Spec §3 "Täglich" vorsieht. Portal-Quellen sind davon
+nicht betroffen und folgen weiterhin exakt dem gewählten Intervall."""
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import httpx
 from sqlalchemy import select
 
 import app.db as db_module
+from app.agent_cascade_detect import VENDORS
 from app.db import Agent
 from app.logging_setup import log
 from app.models import RawListing
 from app.robots import is_allowed
+from app.sources import agent_handlers
 from app.sources.base import SourceAdapter
 
 ExtractionMethod = Callable[[Agent, httpx.AsyncClient], AsyncIterator[RawListing]]
 
-EXTRACTION_METHODS: dict[str, ExtractionMethod] = {}
+# Höflichkeits-Guard (Spec §3/§8): unabhängig vom gewählten poll_interval_minutes
+# wird ein einzelner Agent höchstens alle 20 Stunden neu gecrawlt (etwas unter
+# 24h, um Scheduler-Jitter zu tolerieren, ohne einen Tag ganz auszulassen).
+# Bewusst kein DB-Setting — das ist eine Höflichkeits-/Rechtsgrenze, kein
+# Produkt-Feature, das der Nutzer versehentlich lockern können soll.
+MIN_RECRAWL_INTERVAL = timedelta(hours=20)
+
+
+def _default_extraction_methods() -> dict[str, ExtractionMethod]:
+    methods: dict[str, ExtractionMethod] = {
+        "detail_links": agent_handlers.crawl_and_extract,
+        "sitemap_objekte": agent_handlers.sitemap_objekte_handler,
+        "structured_data": agent_handlers.structured_data_handler,
+        "feed_adapter": agent_handlers.feed_adapter_handler,
+    }
+    methods.update({f"vendor:{vendor}": agent_handlers.crawl_and_extract for vendor in VENDORS})
+    return methods
+
+
+EXTRACTION_METHODS: dict[str, ExtractionMethod] = _default_extraction_methods()
+
+
+def _passes_self_test(listings: list[RawListing]) -> bool:
+    """Vollabdeckung-Spec §7: ein Rezept wird aktiv, wenn es mindestens ein
+    Objekt mit Titel, Detail-Link UND mindestens einem Sachattribut (Preis
+    ODER Fläche) liefert. Fehlende Preise allein sind KEIN Fehlschlag — viele
+    Seeobjekte tragen grundsätzlich "Preis auf Anfrage"."""
+    for raw in listings:
+        if not raw.title or not raw.url:
+            continue
+        if raw.price_eur is not None or raw.qm is not None:
+            return True
+    return False
 
 
 class AgentSiteSource(SourceAdapter):
@@ -41,11 +104,19 @@ class AgentSiteSource(SourceAdapter):
             agents = list(session.scalars(select(Agent).where(Agent.coverage_status == "auto-harvested")))
 
         # `agents` sind detachte ORM-Instanzen — die Session ist schon zu. In
-        # dieser Schleife nur lesend verwenden; wer in die Agent-Zeile
+        # dieser Schleife nur lesend verwenden (inkl. agent.last_nonempty_at,
+        # bereits Teil des initialen SELECTs); wer in die Agent-Zeile
         # zurückschreiben will, öffnet eine frische Session und lädt die Zeile
-        # neu (wie der robots-disallowed-Zweig unten), statt die detachte
-        # Instanz zu mutieren.
+        # neu (wie die robots-disallowed-/Selbsttest-/Erfolgs-Zweige unten),
+        # statt die detachte Instanz zu mutieren.
         for agent in agents:
+            since_last_check = agent.last_checked and datetime.utcnow() - agent.last_checked
+            if since_last_check is not None and since_last_check < MIN_RECRAWL_INTERVAL:
+                # Höflichkeits-Guard: unabhängig vom Poll-Intervall max. ~1x/Tag
+                # pro Agent (siehe Modul-Docstring "Crawl-Frequenz-Guard").
+                log.debug("agents_adapter.recrawl_too_soon", agent_id=agent.id)
+                continue
+
             method_name = (agent.extraction or {}).get("method")
             if not method_name:
                 log.warning("agents_adapter.no_method", agent_id=agent.id, agent_name=agent.name)
@@ -54,23 +125,71 @@ class AgentSiteSource(SourceAdapter):
             if handler is None:
                 log.warning("agents_adapter.unknown_method", agent_id=agent.id, method=method_name)
                 continue
-            if not agent.listing_url:
+            # HER-726: feed_adapter braucht keine listing_url, sondern
+            # extraction["feed_url"] — das Gate darf ihn deshalb nicht mehr
+            # unbedingt an listing_url binden.
+            feed_url = (agent.extraction or {}).get("feed_url")
+            if not agent.listing_url and not feed_url:
                 log.warning("agents_adapter.no_listing_url", agent_id=agent.id)
                 continue
 
             try:
-                if not await is_allowed(self.client, agent.listing_url):
-                    log.info("agents_adapter.robots_disallowed", agent_id=agent.id, url=agent.listing_url)
+                robots_check_url = agent.listing_url or feed_url
+                if not await is_allowed(self.client, robots_check_url):
+                    log.info("agents_adapter.robots_disallowed", agent_id=agent.id, url=robots_check_url)
                     with db_module.SessionLocal() as session:
                         db_agent = session.get(Agent, agent.id)
                         if db_agent is not None:
                             db_agent.coverage_status = "robots-disallowed"
-                            db_agent.coverage_reason = f"robots.txt verbietet Zugriff auf {agent.listing_url}"
+                            db_agent.coverage_reason = f"robots.txt verbietet Zugriff auf {robots_check_url}"
                             db_agent.last_checked = datetime.utcnow()
                             session.commit()
                     continue
 
-                async for raw in handler(agent, self.client):
+                harvested = [raw async for raw in handler(agent, self.client)]
+                now = datetime.utcnow()
+
+                if not _passes_self_test(harvested):
+                    if agent.last_nonempty_at is None:
+                        # Nie zuvor erfolgreich -> die optimistische
+                        # Phase-2a-Klassifikation war falsch, sofort
+                        # zurückstufen (Spec §7: Selbsttest vor Aktivierung).
+                        log.info("agents_adapter.self_test_failed", agent_id=agent.id, count=len(harvested))
+                        with db_module.SessionLocal() as session:
+                            db_agent = session.get(Agent, agent.id)
+                            if db_agent is not None:
+                                db_agent.coverage_status = "needs-manual-watch"
+                                db_agent.coverage_reason = (
+                                    f"Selbsttest fehlgeschlagen: Handler {method_name!r} lieferte "
+                                    "keine verwertbaren Objekte (Titel, Detail-Link und mind. ein "
+                                    "Sachattribut nötig)."
+                                )
+                                db_agent.last_checked = now
+                                session.commit()
+                    else:
+                        # War zuvor erfolgreich -> ein einzelner leerer Lauf
+                        # ist noch kein Rezept-Bruch (Spec §7: Bruch erst nach
+                        # ZWEI aufeinanderfolgenden leeren Läufen — die dafür
+                        # nötige Zähl-Logik ist Change-Gate-Arbeit, Phase 2c).
+                        # Nur last_checked aktualisieren, Status bleibt
+                        # auto-harvested.
+                        log.info("agents_adapter.empty_run_after_prior_success", agent_id=agent.id)
+                        with db_module.SessionLocal() as session:
+                            db_agent = session.get(Agent, agent.id)
+                            if db_agent is not None:
+                                db_agent.last_checked = now
+                                session.commit()
+                    continue
+
+                with db_module.SessionLocal() as session:
+                    db_agent = session.get(Agent, agent.id)
+                    if db_agent is not None:
+                        db_agent.last_checked = now
+                        db_agent.last_nonempty_at = now
+                        db_agent.last_listing_count = len(harvested)
+                        session.commit()
+
+                for raw in harvested:
                     yield raw
             except Exception as e:
                 log.error(

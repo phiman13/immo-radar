@@ -4,6 +4,7 @@ agents-Tabelle. Additiv zur REGISTRY (Vollabdeckung-Spec §5.3)."""
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -58,6 +59,7 @@ async def test_fetch_yields_from_registered_method(session, monkeypatch):
             source_id=f"agent-{agent.id}-1",
             url="https://example.de/angebote/1",
             title="Testobjekt",
+            price_eur=450000,
             property_type=PropertyType.HAUS,
         )
 
@@ -150,7 +152,13 @@ async def test_fetch_isolates_a_failing_agent_from_the_rest(session, monkeypatch
         call_count["n"] += 1
         if agent.name == "Broken Makler":
             raise RuntimeError("boom")
-        yield RawListing(source="agents", source_id=f"agent-{agent.id}", url=agent.listing_url, title="OK")
+        yield RawListing(
+            source="agents",
+            source_id=f"agent-{agent.id}",
+            url=agent.listing_url,
+            title="OK",
+            price_eur=450000,
+        )
 
     EXTRACTION_METHODS["fake"] = flaky_method
     monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
@@ -173,7 +181,13 @@ async def test_fetch_isolates_an_is_allowed_exception_from_the_rest(session, mon
     ok_id = _make_agent(session, name="OK Makler", listing_url="https://ok.example.de/angebote/")
 
     async def fake_method(agent, client) -> AsyncIterator[RawListing]:
-        yield RawListing(source="agents", source_id=f"agent-{agent.id}", url=agent.listing_url, title="OK")
+        yield RawListing(
+            source="agents",
+            source_id=f"agent-{agent.id}",
+            url=agent.listing_url,
+            title="OK",
+            price_eur=450000,
+        )
 
     async def flaky_is_allowed(client, url):
         if url == "https://broken.example.de/angebote/":
@@ -207,3 +221,199 @@ def test_registry_includes_agents_source_additively():
     adapters = get_all_adapters()
     assert any(isinstance(a, AgentSiteSource) for a in adapters)
     assert len(adapters) == len(REGISTRY)
+
+
+def test_default_extraction_methods_cover_every_vendor_and_stage_key():
+    from app.agent_cascade_detect import VENDORS
+    from app.sources import agent_handlers
+    from app.sources.agents_adapter import _default_extraction_methods
+
+    methods = _default_extraction_methods()
+
+    assert methods["detail_links"] is agent_handlers.crawl_and_extract
+    assert methods["sitemap_objekte"] is agent_handlers.sitemap_objekte_handler
+    assert methods["structured_data"] is agent_handlers.structured_data_handler
+    assert methods["feed_adapter"] is agent_handlers.feed_adapter_handler
+    for vendor in VENDORS:
+        assert methods[f"vendor:{vendor}"] is agent_handlers.crawl_and_extract
+
+
+@pytest.mark.asyncio
+async def test_fetch_dispatches_feed_adapter_agent_without_listing_url(session, monkeypatch):
+    """HER-726: feed_adapter-Agents haben keine listing_url, nur
+    extraction['feed_url'] — das Gate darf sie deshalb nicht mehr blind
+    überspringen."""
+    agent_id = _make_agent(
+        session,
+        listing_url=None,
+        extraction={"method": "fake", "feed_url": "https://example.de/feed/"},
+    )
+
+    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+        yield RawListing(
+            source="agents",
+            source_id=f"agent-{agent.id}",
+            url="https://example.de/objekte/1",
+            title="Feed-Objekt",
+            price_eur=450000,
+        )
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert len(results) == 1
+    assert results[0].source_id == f"agent-{agent_id}"
+
+
+@pytest.mark.asyncio
+async def test_fetch_downgrades_agent_on_first_ever_empty_run(session, monkeypatch):
+    """Spec §7 Selbsttest vor Aktivierung: ein Makler, der NIE zuvor etwas
+    geliefert hat (last_nonempty_at ist der Default None), wird bei 0
+    verwertbaren Objekten sofort auf needs-manual-watch zurückgestuft."""
+    agent_id = _make_agent(session)
+
+    async def empty_field_method(agent, client) -> AsyncIterator[RawListing]:
+        # Titel + URL vorhanden, aber weder Preis noch Fläche -> Selbsttest
+        # muss das als "nicht verwertbar" werten.
+        yield RawListing(source="agents", source_id="x", url="https://example.de/x", title="Ohne Sachdaten")
+
+    EXTRACTION_METHODS["fake"] = empty_field_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert results == []
+    with session() as s:
+        agent = s.get(Agent, agent_id)
+        assert agent.coverage_status == "needs-manual-watch"
+        assert "Selbsttest" in agent.coverage_reason
+
+
+@pytest.mark.asyncio
+async def test_fetch_passes_self_test_when_area_present_without_price(session, monkeypatch):
+    """Spec §7: fehlender Preis allein ist KEIN Fehlschlag (Seeobjekte:
+    "Preis auf Anfrage") — Fläche allein reicht als Sachattribut."""
+    _make_agent(session)
+
+    async def qm_only_method(agent, client) -> AsyncIterator[RawListing]:
+        yield RawListing(
+            source="agents", source_id="x", url="https://example.de/x", title="Preis auf Anfrage", qm=180.0
+        )
+
+    EXTRACTION_METHODS["fake"] = qm_only_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_fetch_writes_last_checked_and_last_nonempty_at_on_success(session, monkeypatch):
+    """Spec §5.1: 'Ein Status gilt nur mit frischem Beleg' -- last_checked/
+    last_nonempty_at/last_listing_count müssen auch auf dem Erfolgspfad
+    geschrieben werden, nicht nur bei robots-disallowed/Selbsttest-Downgrade
+    (Advisor-Fund: waren bisher tote Spalten für funktionierende Agents)."""
+    agent_id = _make_agent(session)
+
+    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+        yield RawListing(
+            source="agents", source_id="x", url="https://example.de/x", title="OK", price_eur=450000
+        )
+        yield RawListing(source="agents", source_id="y", url="https://example.de/y", title="OK2", qm=100.0)
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert len(results) == 2
+    with session() as s:
+        agent = s.get(Agent, agent_id)
+        assert agent.coverage_status == "auto-harvested"
+        assert agent.last_checked is not None
+        assert agent.last_nonempty_at is not None
+        assert agent.last_listing_count == 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_tolerates_single_empty_run_after_prior_success(session, monkeypatch):
+    """Spec §7 Bruch-Erkennung: ein Rezept gilt erst nach ZWEI
+    aufeinanderfolgenden leeren Läufen als gebrochen (Zähl-Logik selbst ist
+    Change-Gate-Arbeit, Phase 2c) -- ein einzelner transienter Leerlauf
+    (z.B. ein 5xx) darf einen zuvor erfolgreichen Agent nicht sofort auf
+    needs-manual-watch zurückstufen, sonst fliegt er dauerhaft aus dem Crawl
+    (fetch() selektiert nur coverage_status == 'auto-harvested')."""
+    agent_id = _make_agent(session, last_nonempty_at=datetime(2026, 8, 1))
+
+    async def empty_method(agent, client) -> AsyncIterator[RawListing]:
+        if False:
+            yield RawListing(source="agents", source_id="x", url="https://x", title="x")
+
+    EXTRACTION_METHODS["fake"] = empty_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert results == []
+    with session() as s:
+        agent = s.get(Agent, agent_id)
+        assert agent.coverage_status == "auto-harvested"
+        assert agent.last_checked is not None
+
+
+@pytest.mark.asyncio
+async def test_fetch_skips_agent_recrawled_too_recently(session, monkeypatch):
+    """UX-Entscheidung (Nutzer-Rückfrage zur Crawl-Frequenz): Makler-Sites
+    werden unabhängig vom gewählten Poll-Intervall max. ~1x/Tag pro Agent neu
+    gecrawlt. Ein last_checked von vor 2 Stunden ist zu frisch -- der Handler
+    darf gar nicht erst aufgerufen werden."""
+    _make_agent(session, last_checked=datetime.utcnow() - timedelta(hours=2))
+
+    call_count = {"n": 0}
+
+    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+        call_count["n"] += 1
+        yield RawListing(source="agents", source_id="x", url="https://x", title="x", price_eur=1)
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert results == []
+    assert call_count["n"] == 0
+
+
+@pytest.mark.asyncio
+async def test_fetch_crawls_agent_when_last_checked_is_stale_enough(session, monkeypatch):
+    """Gegenprobe: last_checked von vor 25 Stunden liegt über der
+    MIN_RECRAWL_INTERVAL-Schwelle (20 Std.) -- der Agent wird ganz normal
+    gecrawlt."""
+    _make_agent(session, last_checked=datetime.utcnow() - timedelta(hours=25))
+
+    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+        yield RawListing(source="agents", source_id="x", url="https://x", title="x", price_eur=450000)
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert len(results) == 1
