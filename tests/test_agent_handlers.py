@@ -9,7 +9,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.db import Agent
-from app.sources.agent_handlers import crawl_and_extract, sitemap_objekte_handler, structured_data_handler
+from app.sources.agent_handlers import (
+    crawl_and_extract,
+    feed_adapter_handler,
+    sitemap_objekte_handler,
+    structured_data_handler,
+)
 
 
 def _resp(status_code=200, text=""):
@@ -259,3 +264,36 @@ async def test_structured_data_handler_resolves_relative_jsonld_url_against_list
     assert results[0].price_eur == 1200000
     assert results[0].qm == 180.0
     assert results[0].rooms == 6.0
+
+
+@pytest.mark.asyncio
+async def test_feed_adapter_handler_extracts_from_feed_items_directly():
+    feed_xml = """
+    <rss><channel>
+      <item>
+        <title>Haus in Tutzing, 450.000 €</title>
+        <link>https://x.de/objekte/haus-tutzing</link>
+        <description>140 m², 5 Zimmer, 82327 Tutzing</description>
+      </item>
+    </channel></rss>
+    """
+    client = _routed_client({"https://x.de/feed/": _resp(text=feed_xml)})
+    agent = _agent(extraction={"method": "feed_adapter", "feed_url": "https://x.de/feed/"})
+
+    results = [r async for r in feed_adapter_handler(agent, client)]
+
+    assert len(results) == 1
+    assert results[0].price_eur == 450000
+    assert results[0].qm == 140.0
+    assert results[0].url == "https://x.de/objekte/haus-tutzing"
+    assert results[0].address is None
+
+
+@pytest.mark.asyncio
+async def test_feed_adapter_handler_returns_nothing_without_feed_url():
+    client = _routed_client({})
+    agent = _agent(extraction={})
+
+    results = [r async for r in feed_adapter_handler(agent, client)]
+
+    assert results == []

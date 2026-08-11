@@ -28,7 +28,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.agent_cascade_detect import DETAIL_RE, SITEMAP_OBJECT_RE, extract_jsonld_nodes, find_detail_links
-from app.agent_field_extract import extract_fields, fields_from_jsonld, merge_fields
+from app.agent_field_extract import extract_fields, fields_from_jsonld, merge_fields, parse_feed_items
 from app.db import Agent
 from app.logging_setup import log
 from app.models import PropertyType, RawListing
@@ -206,3 +206,41 @@ async def structured_data_handler(agent: Agent, client: httpx.AsyncClient) -> As
             property_type=merged.get("property_type") or PropertyType.UNKNOWN,
         )
         await asyncio.sleep(DETAIL_FETCH_DELAY_SECONDS)
+
+
+async def feed_adapter_handler(agent: Agent, client: httpx.AsyncClient) -> AsyncIterator[RawListing]:
+    """Handler für `feed_adapter`: Objekte kommen direkt aus den Feed-Items
+    (Titel/Link/Beschreibung), kein zusätzlicher Detailseiten-Abruf nötig —
+    der Feed selbst trägt bereits genug Text für die generische
+    Feld-Extraktion (identisch zur Prüfung in app.agent_probe.validate_feed,
+    hier für den tatsächlichen Ertrag statt nur für die Ja/Nein-Prüfung).
+    Braucht bewusst KEINE agent.listing_url — nur extraction['feed_url']."""
+    feed_url = (agent.extraction or {}).get("feed_url")
+    if not feed_url:
+        log.warning("agent_handlers.feed_no_url", agent_id=agent.id)
+        return
+
+    try:
+        r = await client.get(feed_url)
+        r.raise_for_status()
+    except Exception as e:
+        log.warning("agent_handlers.feed_fetch_failed", agent_id=agent.id, url=feed_url, error=str(e))
+        return
+
+    items = parse_feed_items(r.text)[:MAX_DETAIL_PAGES_PER_AGENT]
+    for item in items:
+        blob = f"{item['title']} {item['description']}"
+        fields = extract_fields("", blob)
+        yield RawListing(
+            source="agents",
+            source_id=_source_id(agent.id, item["link"]),
+            url=item["link"],
+            title=item["title"] or fields["title"],
+            description=item["description"][:2000] or None,
+            price_eur=fields["price_eur"],
+            qm=fields["qm"],
+            rooms=fields["rooms"],
+            plz=fields["plz"],
+            city=fields["city"],
+            property_type=fields["property_type"],
+        )
