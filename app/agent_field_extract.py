@@ -130,3 +130,107 @@ def extract_fields(html: str, text: str) -> dict:
         "city": city,
         "property_type": extract_property_type(text),
     }
+
+
+_CDATA_RE = re.compile(r"<!\[CDATA\[(.*?)\]\]>", re.S)
+
+
+def _clean_feed_text(raw: str) -> str:
+    m = _CDATA_RE.search(raw)
+    if m:
+        return m.group(1).strip()
+    return _TAG_STRIP_RE.sub("", raw).strip()
+
+
+def fields_from_jsonld(node: dict) -> dict:
+    """Liest Preis/Fläche/Zimmer/Titel/URL/PLZ/Ort direkt aus einem
+    schema.org-Knoten (app.agent_cascade_detect.extract_jsonld_nodes) —
+    reicher als der Text-Regex-Weg, wo die Site das tatsächlich befüllt.
+    Fehlende Felder bleiben None; der Aufrufer kombiniert mit dem
+    Regex-Extraktor als Fallback (merge_fields). Liefert "plz"/"city" statt
+    eines kombinierten "address"-Strings — dieselbe Dedup-Sicherheitsregel
+    wie extract_fields (siehe Modul-Docstring), auch wenn das JSON-LD-Adressfeld
+    strukturierter ist: ein Freitext-Adressfeld ohne postalCode/
+    addressLocality-Trennung wird über extract_plz_city nachgeparst statt
+    ungeprüft übernommen zu werden."""
+    offers = node.get("offers")
+    if isinstance(offers, list):
+        offers = offers[0] if offers else {}
+    if not isinstance(offers, dict):
+        offers = {}
+    price = offers.get("price")
+    try:
+        price_eur = int(float(price)) if price is not None else None
+    except (TypeError, ValueError):
+        price_eur = None
+
+    floor_size = node.get("floorSize")
+    qm = None
+    if isinstance(floor_size, dict):
+        val = floor_size.get("value")
+        try:
+            qm = float(val) if val is not None else None
+        except (TypeError, ValueError):
+            qm = None
+    elif floor_size is not None:
+        try:
+            qm = float(floor_size)
+        except (TypeError, ValueError):
+            qm = None
+
+    rooms = node.get("numberOfRooms")
+    try:
+        rooms = float(rooms) if rooms is not None else None
+    except (TypeError, ValueError):
+        rooms = None
+
+    address = node.get("address")
+    plz = None
+    city = None
+    if isinstance(address, dict):
+        plz = address.get("postalCode") or None
+        city = address.get("addressLocality") or None
+    elif isinstance(address, str):
+        plz, city = extract_plz_city(address)
+
+    return {
+        "title": node.get("name"),
+        "url": node.get("url"),
+        "price_eur": price_eur,
+        "qm": qm,
+        "rooms": rooms,
+        "plz": plz,
+        "city": city,
+    }
+
+
+def merge_fields(primary: dict, fallback: dict) -> dict:
+    """Kombiniert zwei Feld-Dicts — primary gewinnt, fallback füllt nur
+    fehlende (None/leere) Werte. Für die structured_data-Stufe: JSON-LD
+    zuerst, Regex-Extraktion aus dem Fließtext nur für Lücken."""
+    merged = dict(primary)
+    for key, value in fallback.items():
+        if merged.get(key) in (None, ""):
+            merged[key] = value
+    return merged
+
+
+def parse_feed_items(feed_xml: str) -> list[dict]:
+    """Extrahiert Link/Titel/Text je <item>/<entry> aus einem RSS-/Atom-Feed —
+    dieselbe Item-Regex wie app.agent_probe.validate_feed(), hier aber für den
+    tatsächlichen Objekt-Ertrag statt nur für die Ja/Nein-Prüfung, ob der Feed
+    Immobilien enthält."""
+    items = re.findall(r"<(?:item|entry)\b.*?</(?:item|entry)>", feed_xml, re.S | re.I)
+    result = []
+    for it in items:
+        link_m = re.search(r"<link[^>]*>([^<]+)</link>|<link[^>]*href=[\"']([^\"']+)[\"']", it, re.I)
+        link = (link_m.group(1) or link_m.group(2) or "").strip() if link_m else ""
+        title_m = re.search(r"<title[^>]*>(.*?)</title>", it, re.S | re.I)
+        title = _clean_feed_text(title_m.group(1)) if title_m else ""
+        desc_m = re.search(
+            r"<(?:description|content|summary)[^>]*>(.*?)</(?:description|content|summary)>", it, re.S | re.I
+        )
+        description = _clean_feed_text(desc_m.group(1)) if desc_m else ""
+        if link:
+            result.append({"link": link, "title": title, "description": description})
+    return result

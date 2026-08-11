@@ -11,6 +11,9 @@ from app.agent_field_extract import (
     extract_qm,
     extract_rooms,
     extract_title,
+    fields_from_jsonld,
+    merge_fields,
+    parse_feed_items,
 )
 from app.models import PropertyType
 
@@ -93,3 +96,85 @@ def test_extract_fields_bundles_all_extractions():
     assert fields["city"] == "Tutzing"
     assert fields["property_type"] == PropertyType.HAUS
     assert "address" not in fields
+
+
+def test_fields_from_jsonld_reads_offers_price_and_floor_size():
+    node = {
+        "@type": "RealEstateListing",
+        "name": "Villa am See",
+        "url": "https://x.de/objekte/villa-am-see",
+        "offers": {"price": 1200000},
+        "floorSize": {"value": 180},
+        "numberOfRooms": 6,
+        "address": {"postalCode": "82327", "addressLocality": "Tutzing"},
+    }
+    fields = fields_from_jsonld(node)
+    assert fields["title"] == "Villa am See"
+    assert fields["url"] == "https://x.de/objekte/villa-am-see"
+    assert fields["price_eur"] == 1200000
+    assert fields["qm"] == 180.0
+    assert fields["rooms"] == 6.0
+    assert fields["plz"] == "82327"
+    assert fields["city"] == "Tutzing"
+
+
+def test_fields_from_jsonld_handles_missing_offers_gracefully():
+    node = {"@type": "Apartment", "name": "ETW"}
+    fields = fields_from_jsonld(node)
+    assert fields["price_eur"] is None
+    assert fields["qm"] is None
+    assert fields["rooms"] is None
+    assert fields["plz"] is None
+    assert fields["city"] is None
+
+
+def test_fields_from_jsonld_parses_freetext_address_string():
+    node = {"@type": "House", "name": "Haus", "address": "82327 Tutzing"}
+    fields = fields_from_jsonld(node)
+    assert fields["plz"] == "82327"
+    assert fields["city"] == "Tutzing"
+
+
+def test_merge_fields_prefers_primary_and_fills_gaps():
+    primary = {"title": "Villa am See", "price_eur": None, "qm": 180.0}
+    fallback = {"title": "Fallback-Titel", "price_eur": 999000, "qm": 200.0}
+    merged = merge_fields(primary, fallback)
+    assert merged["title"] == "Villa am See"
+    assert merged["price_eur"] == 999000
+    assert merged["qm"] == 180.0
+
+
+def test_parse_feed_items_extracts_link_title_description():
+    feed = """
+    <rss><channel>
+      <item>
+        <title>Haus in Tutzing, 450.000 €</title>
+        <link>https://x.de/objekte/haus-tutzing</link>
+        <description>140 m², 5 Zimmer</description>
+      </item>
+    </channel></rss>
+    """
+    items = parse_feed_items(feed)
+    assert len(items) == 1
+    assert items[0]["link"] == "https://x.de/objekte/haus-tutzing"
+    assert items[0]["title"] == "Haus in Tutzing, 450.000 €"
+    assert items[0]["description"] == "140 m², 5 Zimmer"
+
+
+def test_parse_feed_items_unwraps_cdata_title():
+    feed = """
+    <feed>
+      <entry>
+        <title><![CDATA[Villa & Seeblick]]></title>
+        <link href="https://x.de/objekte/villa-seeblick"/>
+      </entry>
+    </feed>
+    """
+    items = parse_feed_items(feed)
+    assert items[0]["title"] == "Villa & Seeblick"
+    assert items[0]["link"] == "https://x.de/objekte/villa-seeblick"
+
+
+def test_parse_feed_items_skips_entries_without_link():
+    feed = "<rss><channel><item><title>Kein Link</title></item></channel></rss>"
+    assert parse_feed_items(feed) == []
