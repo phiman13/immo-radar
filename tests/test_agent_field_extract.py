@@ -178,3 +178,30 @@ def test_parse_feed_items_unwraps_cdata_title():
 def test_parse_feed_items_skips_entries_without_link():
     feed = "<rss><channel><item><title>Kein Link</title></item></channel></rss>"
     assert parse_feed_items(feed) == []
+
+
+def test_parse_feed_items_decodes_html_entities_in_title():
+    feed = """
+    <rss><channel>
+      <item>
+        <title>Villa &amp; Seeblick</title>
+        <link>https://x.de/objekte/villa</link>
+      </item>
+    </channel></rss>
+    """
+    items = parse_feed_items(feed)
+    assert items[0]["title"] == "Villa & Seeblick"
+
+
+def test_parse_feed_items_decodes_html_entities_in_description():
+    feed = """
+    <rss><channel>
+      <item>
+        <title>Haus</title>
+        <link>https://x.de/objekte/haus</link>
+        <description>120 m&#178; mit B&#228;umen</description>
+      </item>
+    </channel></rss>
+    """
+    items = parse_feed_items(feed)
+    assert items[0]["description"] == "120 m² mit Bäumen"

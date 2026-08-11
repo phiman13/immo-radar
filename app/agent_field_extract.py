@@ -25,6 +25,7 @@ Zwei bewusste Abweichungen von den Portal-Adaptern:
 
 from __future__ import annotations
 
+import html
 import re
 
 from app.models import PropertyType
@@ -138,8 +139,10 @@ _CDATA_RE = re.compile(r"<!\[CDATA\[(.*?)\]\]>", re.S)
 def _clean_feed_text(raw: str) -> str:
     m = _CDATA_RE.search(raw)
     if m:
-        return m.group(1).strip()
-    return _TAG_STRIP_RE.sub("", raw).strip()
+        text = m.group(1).strip()
+    else:
+        text = _TAG_STRIP_RE.sub("", raw).strip()
+    return html.unescape(text)
 
 
 def fields_from_jsonld(node: dict) -> dict:
