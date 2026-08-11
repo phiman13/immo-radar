@@ -145,7 +145,7 @@ def is_object_like(url: str) -> bool:
     return len(last) >= 12 or last.count("-") >= 2
 
 
-def find_detail_links(html: str, base: str) -> tuple[int, list[str]]:
+def find_detail_links(html: str, base: str, limit: int | None = 3) -> tuple[int, list[str]]:
     """Objektlinks strukturell finden — ohne Vokabular-Annahmen.
 
     Wortlisten scheitern an Legacy-CMS (`index.php4?cmd=searchDetails&cursor=7`)
@@ -156,6 +156,12 @@ def find_detail_links(html: str, base: str) -> tuple[int, list[str]]:
     2. **Lange Root-Slugs** — manche CMS legen Objekte flach im Root ab, wodurch
        jedes Objekt ein eigenes Präfix bekommt und (1) leerläuft. Solche Slugs
        sind aber deutlich länger und mehrgliedriger als Navigationslinks.
+
+    `limit` begrenzt die zurückgegebene URL-Liste (Default 3, wie bisher —
+    für Probing/Logging reicht eine Stichprobe). `limit=None` liefert die
+    volle Liste — für den tatsächlichen Harvest in Phase 2b
+    (app.sources.agent_handlers), wo jede gefundene Objekt-URL abgerufen
+    werden muss, nicht nur eine Stichprobe.
     """
     soup = BeautifulSoup(html, "html.parser")
     # Nur <footer> entfernen. <nav>/<header> pauschal zu entfernen ist gefährlich:
@@ -207,7 +213,8 @@ def find_detail_links(html: str, base: str) -> tuple[int, list[str]]:
     if len(flat) > len(best[1]):
         best = (len(flat), flat)
 
-    return len(best[1]), best[1][:3]
+    sample = best[1][:limit] if limit is not None else best[1]
+    return len(best[1]), sample
 
 
 def detect_vendors(blob: str) -> list[str]:
@@ -238,6 +245,39 @@ def detect_structured(html: str) -> dict:
                         types.update(st if isinstance(st, list) else [st])
     microdata = bool(soup.find(attrs={"itemtype": re.compile(r"schema\.org", re.I)}))
     return {"jsonld_types": sorted(types), "microdata": microdata}
+
+
+def extract_jsonld_nodes(html: str) -> list[dict]:
+    """Rohe schema.org-Knoten mit immobilienspezifischem @type — Gegenstück zu
+    detect_structured(), das nur die Typen zählt. Für die structured_data-
+    Kaskadenstufe (Phase 2b), die tatsächliche Feldwerte (Preis, Fläche, Name)
+    aus dem Knoten lesen muss, nicht nur wissen, DASS JSON-LD vorhanden ist.
+    Kaputtes JSON wird übersprungen statt (wie detect_structured()) per Regex
+    nach Typnamen zu durchsuchen — für Feldwerte gibt es dort ohnehin nichts
+    Verwertbares zu retten."""
+    soup = BeautifulSoup(html, "html.parser")
+    nodes: list[dict] = []
+    for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        raw = tag.string or tag.get_text() or ""
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+        for node in data if isinstance(data, list) else [data]:
+            if not isinstance(node, dict):
+                continue
+            t = node.get("@type")
+            types = t if isinstance(t, list) else [t] if t else []
+            if IMMO_LD_TYPES.intersection(types):
+                nodes.append(node)
+            for sub in node.get("@graph", []) or []:
+                if not isinstance(sub, dict):
+                    continue
+                st = sub.get("@type")
+                stypes = st if isinstance(st, list) else [st] if st else []
+                if IMMO_LD_TYPES.intersection(stypes):
+                    nodes.append(sub)
+    return nodes
 
 
 def content_signals(html: str) -> dict:

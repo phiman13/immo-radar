@@ -7,6 +7,7 @@ from app.agent_cascade_detect import (
     content_signals,
     detect_structured,
     detect_vendors,
+    extract_jsonld_nodes,
     find_detail_links,
     is_object_like,
     link_shape,
@@ -103,3 +104,66 @@ def test_content_signals_counts_prices_and_areas():
     sig = content_signals(html)
     assert sig["prices"] == 2
     assert sig["areas"] == 2
+
+
+def test_find_detail_links_limit_none_returns_full_set():
+    html = """
+    <html><body>
+      <a href="/immobilien/villa-am-see-tutzing">A</a>
+      <a href="/immobilien/wohnung-starnberg-zentral">B</a>
+      <a href="/immobilien/haus-poecking-mit-garten">C</a>
+      <a href="/immobilien/doppelhaushaelfte-feldafing-ruhig">D</a>
+      <a href="/immobilien/grundstueck-bernried-seenah">E</a>
+    </body></html>
+    """
+    n, urls = find_detail_links(html, "https://x.de/immobilien/", limit=None)
+    assert n == 5
+    assert len(urls) == 5
+
+
+def test_find_detail_links_default_limit_still_three():
+    html = """
+    <html><body>
+      <a href="/immobilien/villa-am-see-tutzing">A</a>
+      <a href="/immobilien/wohnung-starnberg-zentral">B</a>
+      <a href="/immobilien/haus-poecking-mit-garten">C</a>
+      <a href="/immobilien/doppelhaushaelfte-feldafing-ruhig">D</a>
+      <a href="/immobilien/grundstueck-bernried-seenah">E</a>
+    </body></html>
+    """
+    n, urls = find_detail_links(html, "https://x.de/immobilien/")
+    assert n == 5
+    assert len(urls) == 3
+
+
+def test_extract_jsonld_nodes_returns_full_node_for_immo_type():
+    html = """
+    <script type="application/ld+json">
+    {"@type": "RealEstateListing", "name": "Villa am See", "offers": {"price": 1200000}}
+    </script>
+    """
+    nodes = extract_jsonld_nodes(html)
+    assert len(nodes) == 1
+    assert nodes[0]["name"] == "Villa am See"
+    assert nodes[0]["offers"]["price"] == 1200000
+
+
+def test_extract_jsonld_nodes_ignores_generic_webpage_type():
+    html = '<script type="application/ld+json">{"@type": "WebPage", "name": "Startseite"}</script>'
+    assert extract_jsonld_nodes(html) == []
+
+
+def test_extract_jsonld_nodes_reads_graph_wrapped_nodes():
+    html = """
+    <script type="application/ld+json">
+    {"@graph": [{"@type": "WebPage"}, {"@type": "Apartment", "name": "ETW Tutzing"}]}
+    </script>
+    """
+    nodes = extract_jsonld_nodes(html)
+    assert len(nodes) == 1
+    assert nodes[0]["name"] == "ETW Tutzing"
+
+
+def test_extract_jsonld_nodes_skips_broken_json():
+    html = '<script type="application/ld+json">{not valid json</script>'
+    assert extract_jsonld_nodes(html) == []
