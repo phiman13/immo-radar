@@ -14,10 +14,12 @@ Auth: Caddy basicauth (kein Tailscale-Direktzugriff mehr). Docker-Container bind
 app/
   sources/        Scraper: kleinanzeigen.py, bs_immo.py, riedel.py, starnberg_bader.py, tutzing24.py
                   immoscout24_rss.py  ← RSS-Adapter (IS24 blockiert ohne Auth — skippt wenn keine ID)
-                  agents_adapter.py  ← generischer, DB-getriebener Adapter für die agents-Tabelle (additiv zur REGISTRY)
+                  agents_adapter.py  ← generischer, DB-getriebener Adapter für die agents-Tabelle (additiv zur REGISTRY); registriert die Kaskaden-Handler in EXTRACTION_METHODS, zweistufiger Selbsttest + MIN_RECRAWL_INTERVAL-Guard
+                  agent_handlers.py  ← I/O-Handler der Extraktions-Kaskade (crawl_and_extract, sitemap_objekte_handler, structured_data_handler, feed_adapter_handler) — holt echte Listings von Makler-Sites
   agent_cascade_detect.py  Reine Erkennungsfunktionen der Makler-Extraktions-Kaskade (Vendor-Fingerprints, vokabularfreie Detail-Link-Erkennung, JSON-LD) — I/O-frei
   agent_probe.py  Ein-Domain-Netzwerk-Probe + Kaskaden-Klassifikation (robots-first, bricht bei Disallow sofort ab)
   agent_onboarding.py  Bildet die klassifizierte Kaskadenstufe auf agents.extraction ab und schreibt sie zurück
+  agent_field_extract.py  Reiner Feld-Extraktor für Makler-Detailseiten (Preis/Fläche/Zimmer/PLZ+Ort/Titel/Objekttyp; JSON-LD-Mapper; Feed-Item-Parser) — I/O-frei, plz/city statt address (Dedup-Sicherheit)
   scoring/        ai_match.py (Claude Haiku), lage.py (regelbasiert), risk.py
   geocoding.py    Nominatim-Geocoding mit persistentem Adress-Hash-Cache
   robots.py       robots.txt-Respekt für den Makler-Crawl

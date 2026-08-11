@@ -32,16 +32,24 @@ Offene Items → **Linear** (HER-577/578). Feature-Backlog: `docs/backlog.md`
 (Stand 2026-05-11, ~17 Posten, noch nicht vollständig nach Linear triagiert).
 
 **Makler-Vollabdeckung** (`docs/superpowers/specs/2026-08-04-makler-vollabdeckung-design.md`):
-Phase 0 (Vermessung), Phase 1 (Fundament) und Phase 2a (Site-Onboarding —
+Phase 0 (Vermessung), Phase 1 (Fundament), Phase 2a (Site-Onboarding —
 Kaskaden-Klassifikation aus Phase 0 nach `app/agent_cascade_detect.py` +
 `app/agent_probe.py` promoted, `app/agent_onboarding.py` schreibt Ergebnis
 auf die `Agent`-Zeile, `scripts/onboard_agents.py` als manueller CLI-Trigger)
-sind abgeschlossen. Phase 2 ist in vier Teilpläne aufgeteilt. Nächster
-Schritt: Implementierungsplan für Phase 2b (geteilter Feld-Extraktor +
-Cascade-Handler in `EXTRACTION_METHODS` — macht `AgentSiteSource.fetch()`
-erstmals echte Listings liefern). Bekannte Vorbedingungen für spätere
-Phasen: HER-725 (Domain-Validierung vor Phase 3/Discovery), HER-726
-(feed_adapter braucht `listing_url`-Ausnahme im Coverage-Gate, für Phase 2b).
+und Phase 2b (geteilter Feld-Extraktor in `app/agent_field_extract.py` +
+Cascade-Handler in `app/sources/agent_handlers.py`, registriert in
+`EXTRACTION_METHODS` (`app/sources/agents_adapter.py`) — `AgentSiteSource.fetch()`
+liefert damit erstmals echte Listings statt einer leeren Registry; dazu
+zweistufiger Selbsttest (Spec §7) und struktureller Crawl-Frequenz-Guard
+`MIN_RECRAWL_INTERVAL`, der Makler-Sites unabhängig vom gewählten
+Poll-Intervall auf max. ~1×/Tag begrenzt) sind abgeschlossen. HER-726
+(feed_adapter-`listing_url`-Ausnahme im Coverage-Gate) ist mit Phase 2b
+gefixt. Phase 2 ist in vier Teilpläne aufgeteilt. Nächster Schritt: Phase 2c
+(Change-Gate-Fingerprint für „nur neue Objekte", Zwei-Läufe-Zähler für echte
+Rezept-Bruch-Erkennung, Playwright-Rendering für JS-Shells/403-Sites — alle
+drei in Phase 2b bewusst zurückgestellt, siehe Self-Review-Notizen im
+Phase-2b-Plan). Bekannte Vorbedingung vor Phase 3/Discovery bleibt HER-725
+(Domain-Validierung/SSRF-Guard auf `verified_domain`).
 
 ## Branch-Map
 
