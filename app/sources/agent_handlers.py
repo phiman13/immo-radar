@@ -22,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import re
 from collections.abc import AsyncIterator
+from urllib.parse import urljoin
 
 import httpx
 from bs4 import BeautifulSoup
@@ -170,6 +171,7 @@ async def structured_data_handler(agent: Agent, client: httpx.AsyncClient) -> As
         url = jsonld_fields.get("url")
         if not url:
             continue
+        url = urljoin(agent.listing_url, url)
 
         text = ""
         detail_html = ""
