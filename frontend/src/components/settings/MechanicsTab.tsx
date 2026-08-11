@@ -85,6 +85,9 @@ export function MechanicsTab() {
             </button>
           ))}
         </div>
+        <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>
+          Makler-Websites werden aus Rücksicht auf robots.txt max. 1×/Tag pro Website neu geprüft — unabhängig von diesem Intervall.
+        </p>
       </div>
 
       <div className="py-4">
