@@ -26,11 +26,11 @@ from collections.abc import AsyncIterator
 import httpx
 from bs4 import BeautifulSoup
 
-from app.agent_cascade_detect import DETAIL_RE, SITEMAP_OBJECT_RE, find_detail_links
-from app.agent_field_extract import extract_fields
+from app.agent_cascade_detect import DETAIL_RE, SITEMAP_OBJECT_RE, extract_jsonld_nodes, find_detail_links
+from app.agent_field_extract import extract_fields, fields_from_jsonld, merge_fields
 from app.db import Agent
 from app.logging_setup import log
-from app.models import RawListing
+from app.models import PropertyType, RawListing
 
 MAX_DETAIL_PAGES_PER_AGENT = 40
 DETAIL_FETCH_DELAY_SECONDS = 0.5
@@ -133,4 +133,74 @@ async def sitemap_objekte_handler(agent: Agent, client: httpx.AsyncClient) -> As
         listing = await _fetch_detail_listing(agent, client, url)
         if listing is not None:
             yield listing
+        await asyncio.sleep(DETAIL_FETCH_DELAY_SECONDS)
+
+
+_EMPTY_REGEX_FIELDS = {
+    "title": None,
+    "price_eur": None,
+    "qm": None,
+    "rooms": None,
+    "plz": None,
+    "city": None,
+    "property_type": None,
+}
+
+
+async def structured_data_handler(agent: Agent, client: httpx.AsyncClient) -> AsyncIterator[RawListing]:
+    """Handler für `structured_data`: JSON-LD-Knoten zuerst (reichhaltiger —
+    schema.org-Felder statt Freitext-Regex), Regex-Extraktion aus dem
+    Fließtext nur als Lückenfüller (merge_fields). Fehlt einem Knoten die
+    `url` komplett, ist er nicht zu einer eigenen Detailseite verknüpfbar und
+    wird übersprungen (kein sinnvoller RawListing ohne stabile URL)."""
+    if not agent.listing_url:
+        log.warning("agent_handlers.structured_no_listing_url", agent_id=agent.id)
+        return
+
+    try:
+        r = await client.get(agent.listing_url)
+        r.raise_for_status()
+    except Exception as e:
+        log.warning("agent_handlers.structured_listing_fetch_failed", agent_id=agent.id, error=str(e))
+        return
+
+    nodes = extract_jsonld_nodes(r.text)
+    for node in nodes[:MAX_DETAIL_PAGES_PER_AGENT]:
+        jsonld_fields = fields_from_jsonld(node)
+        url = jsonld_fields.get("url")
+        if not url:
+            continue
+
+        text = ""
+        detail_html = ""
+        try:
+            dr = await client.get(url)
+            dr.raise_for_status()
+            detail_html = dr.text
+            text = BeautifulSoup(detail_html, "html.parser").get_text(" ", strip=True)
+        except Exception as e:
+            log.warning(
+                "agent_handlers.structured_detail_fetch_failed", agent_id=agent.id, url=url, error=str(e)
+            )
+
+        if text:
+            regex_fields = extract_fields(detail_html, text)
+        else:
+            regex_fields = dict(_EMPTY_REGEX_FIELDS)
+
+        merged = merge_fields(jsonld_fields, regex_fields)
+
+        yield RawListing(
+            source="agents",
+            source_id=_source_id(agent.id, url),
+            url=url,
+            title=merged.get("title") or "Makler-Objekt",
+            description=text[:2000] if text else None,
+            price_eur=merged.get("price_eur"),
+            qm=merged.get("qm"),
+            rooms=merged.get("rooms"),
+            plz=merged.get("plz"),
+            city=merged.get("city"),
+            property_type=merged.get("property_type") or PropertyType.UNKNOWN,
+        )
         await asyncio.sleep(DETAIL_FETCH_DELAY_SECONDS)

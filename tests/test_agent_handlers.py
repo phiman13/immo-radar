@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.db import Agent
-from app.sources.agent_handlers import crawl_and_extract, sitemap_objekte_handler
+from app.sources.agent_handlers import crawl_and_extract, sitemap_objekte_handler, structured_data_handler
 
 
 def _resp(status_code=200, text=""):
@@ -191,5 +191,46 @@ async def test_sitemap_objekte_handler_returns_nothing_without_sitemap_url():
     agent = _agent(extraction={})
 
     results = [r async for r in sitemap_objekte_handler(agent, client)]
+
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_structured_data_handler_reads_jsonld_and_fills_gaps_from_detail_page():
+    listing_html = """
+    <script type="application/ld+json">
+    {"@type": "RealEstateListing", "name": "Villa am See",
+     "url": "https://x.de/objekte/villa-am-see", "offers": {"price": 1200000}}
+    </script>
+    """
+    detail_html = "<html><body><p>180 m² 6 Zimmer 82327 Tutzing</p></body></html>"
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        "https://x.de/objekte/villa-am-see": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/")
+
+    results = [r async for r in structured_data_handler(agent, client)]
+
+    assert len(results) == 1
+    assert results[0].title == "Villa am See"
+    assert results[0].price_eur == 1200000
+    assert results[0].qm == 180.0
+    assert results[0].rooms == 6.0
+    assert results[0].address is None
+
+
+@pytest.mark.asyncio
+async def test_structured_data_handler_skips_node_without_url():
+    listing_html = """
+    <script type="application/ld+json">
+    {"@type": "Apartment", "name": "ETW ohne URL"}
+    </script>
+    """
+    client = _routed_client({"https://x.de/immobilien/": _resp(text=listing_html)})
+    agent = _agent(listing_url="https://x.de/immobilien/")
+
+    results = [r async for r in structured_data_handler(agent, client)]
 
     assert results == []
