@@ -454,6 +454,38 @@ async def test_feed_adapter_handler_resolves_relative_feed_link_against_feed_url
 
 
 @pytest.mark.asyncio
+async def test_feed_adapter_handler_excludes_off_host_resolved_link():
+    """Finding 3 (Nachtrag): robots.txt wird pro Agent nur einmal für seinen
+    eigenen Host geprüft (agents_adapter.py, vor dem Handler-Dispatch) — ein
+    Feed-<link>, das (nach urljoin gegen feed_url) auf einen fremden Host
+    zeigt, würde sonst Content abrufen, dessen robots.txt nie konsultiert
+    wurde. feed_adapter_handler war die einzige der drei URL-auflösenden
+    Handler ohne diesen Same-Host-Gate (sitemap_objekte_handler und
+    structured_data_handler haben ihn bereits)."""
+    feed_xml = """
+    <rss><channel>
+      <item>
+        <title>Haus in Tutzing, 450.000 €</title>
+        <link>https://x.de/objekte/haus-tutzing</link>
+        <description>140 m², 5 Zimmer, 82327 Tutzing</description>
+      </item>
+      <item>
+        <title>Fremdobjekt</title>
+        <link>https://evil-other-host.de/objekte/hijacked</link>
+        <description>200 m², 82327 Tutzing</description>
+      </item>
+    </channel></rss>
+    """
+    client = _routed_client({"https://x.de/feed/": _resp(text=feed_xml)})
+    agent = _agent(extraction={"method": "feed_adapter", "feed_url": "https://x.de/feed/"})
+
+    results = [r async for r in feed_adapter_handler(agent, client)]
+
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/objekte/haus-tutzing"
+
+
+@pytest.mark.asyncio
 async def test_feed_adapter_handler_returns_nothing_without_feed_url():
     client = _routed_client({})
     agent = _agent(extraction={})

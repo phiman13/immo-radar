@@ -254,9 +254,18 @@ async def feed_adapter_handler(agent: Agent, client: httpx.AsyncClient) -> Async
         log.warning("agent_handlers.feed_fetch_failed", agent_id=agent.id, url=feed_url, error=str(e))
         return
 
+    feed_host = urlparse(feed_url).netloc
     items = parse_feed_items(r.text)[:MAX_DETAIL_PAGES_PER_AGENT]
     for item in items:
         link = urljoin(feed_url, item["link"])
+        if urlparse(link).netloc != feed_host:
+            # Finding 3 (Nachtrag): robots.txt wird nur einmal für
+            # agent.listing_url geprüft (agents_adapter.py, vor
+            # Handler-Dispatch) — ein Feed-<link>, das sich absolut auf einen
+            # anderen Host auflöst, würde sonst Content abrufen, dessen
+            # robots.txt nie konsultiert wurde.
+            log.warning("agent_handlers.feed_link_off_host", agent_id=agent.id, url=link)
+            continue
         blob = f"{item['title']} {item['description']}"
         fields = extract_fields("", blob)
         yield RawListing(
