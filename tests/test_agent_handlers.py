@@ -10,6 +10,7 @@ import pytest
 
 from app.db import Agent
 from app.sources.agent_handlers import (
+    _source_id,
     crawl_and_extract,
     feed_adapter_handler,
     sitemap_objekte_handler,
@@ -43,6 +44,32 @@ def _agent(**overrides) -> Agent:
     defaults = dict(id=1, name="Test Makler", listing_url=None, extraction={})
     defaults.update(overrides)
     return Agent(**defaults)
+
+
+def test_source_id_does_not_collide_on_shared_long_url_tail():
+    """Finding 6: die alte Implementierung slugifizierte die ganze URL und
+    nahm die letzten 64 Zeichen — zwei URLs mit langem gemeinsamem Suffix
+    (aber unterschiedlichem Präfix) konnten denselben 64-Zeichen-Slug-Tail
+    ergeben. Da RawListing.address für Agent-Listings immer None ist, ist
+    source_id die GESAMTE Dedup-Identität (siehe Modul-Docstring) — eine
+    Kollision hier kollabiert zwei echte Objekte auf einen Hash.
+
+    Präzedenzbedingung explizit gepinnt (Stil wie
+    test_crawl_and_extract_keeps_objects_distinct_despite_shared_footer_address):
+    die alten 64-Zeichen-Slug-Tails sind für dieses Paar tatsächlich
+    identisch — sonst würde ein künftiger Fixture-Edit die Regression
+    stillschweigend aushöhlen."""
+    a = "https://x.de/immobilien/kaufen/exklusive-seevilla-mit-privatem-seezugang-und-bootshaus-in-tutzing-am-starnberger-see"
+    b = "https://x.de/immobilien/verkauft/exklusive-seevilla-mit-privatem-seezugang-und-bootshaus-in-tutzing-am-starnberger-see"
+
+    def _old_64_char_slug_tail(url: str) -> str:
+        import re as _re
+
+        return _re.sub(r"[^a-z0-9]+", "-", url.lower()).strip("-")[-64:]
+
+    assert _old_64_char_slug_tail(a) == _old_64_char_slug_tail(b)
+
+    assert _source_id(1, a) != _source_id(1, b)
 
 
 @pytest.mark.asyncio
@@ -188,6 +215,7 @@ async def test_sitemap_objekte_handler_follows_sub_sitemap_to_object_urls():
 
     assert len(results) == 2
     assert all(r.price_eur == 600000 for r in results)
+    assert results[0].address is None
 
 
 @pytest.mark.asyncio
@@ -198,6 +226,59 @@ async def test_sitemap_objekte_handler_returns_nothing_without_sitemap_url():
     results = [r async for r in sitemap_objekte_handler(agent, client)]
 
     assert results == []
+
+
+@pytest.mark.asyncio
+async def test_sitemap_objekte_handler_resolves_relative_loc_entries():
+    """Ergänzung zu Finding 3/Konvention 2: ein relativer <loc>-Eintrag
+    (manche Sitemap-Generatoren emittieren pfadrelative statt absolute URLs)
+    darf nicht als "off-host" verworfen werden (urlparse("").netloc == "" !=
+    host) — er muss zuerst gegen die abrufende Sitemap-URL aufgelöst werden,
+    wie bei Finding 1 für Feed-Links."""
+    index_xml = """
+    <urlset>
+      <url><loc>/immobilien/villa-am-see-tutzing</loc></url>
+    </urlset>
+    """
+    detail_html = "<html><body><h1>Villa</h1><p>600.000 € 200 m² 82327 Tutzing</p></body></html>"
+    routes = {
+        "https://x.de/sitemap.xml": _resp(text=index_xml),
+        "https://x.de/immobilien/villa-am-see-tutzing": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(extraction={"method": "sitemap_objekte", "sitemap_url": "https://x.de/sitemap.xml"})
+
+    results = [r async for r in sitemap_objekte_handler(agent, client)]
+
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/immobilien/villa-am-see-tutzing"
+
+
+@pytest.mark.asyncio
+async def test_sitemap_objekte_handler_excludes_off_host_loc_entries():
+    """Finding 3: robots.txt wird pro Agent nur einmal für seinen eigenen
+    Host geprüft (agents_adapter.py, vor dem Handler-Dispatch) — ein
+    <loc>-Eintrag, der auf einen fremden Host zeigt, würde sonst Content
+    abrufen, dessen robots.txt nie konsultiert wurde."""
+    index_xml = """
+    <urlset>
+      <url><loc>https://x.de/immobilien/villa-am-see-tutzing</loc></url>
+      <url><loc>https://evil-other-host.de/immobilien/hijacked-objekt-hier</loc></url>
+    </urlset>
+    """
+    detail_html = "<html><body><h1>Villa</h1><p>600.000 € 200 m² 82327 Tutzing</p></body></html>"
+    routes = {
+        "https://x.de/sitemap.xml": _resp(text=index_xml),
+        "https://x.de/immobilien/villa-am-see-tutzing": _resp(text=detail_html),
+        "https://evil-other-host.de/immobilien/hijacked-objekt-hier": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(extraction={"method": "sitemap_objekte", "sitemap_url": "https://x.de/sitemap.xml"})
+
+    results = [r async for r in sitemap_objekte_handler(agent, client)]
+
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/immobilien/villa-am-see-tutzing"
 
 
 @pytest.mark.asyncio
@@ -267,6 +348,64 @@ async def test_structured_data_handler_resolves_relative_jsonld_url_against_list
 
 
 @pytest.mark.asyncio
+async def test_structured_data_handler_excludes_off_host_jsonld_url():
+    """Finding 3: eine absolute JSON-LD-"url", die auf einen anderen Host
+    zeigt, ist ein no-op für urljoin() (bleibt unverändert) und würde sonst
+    Content von einem Host abrufen, dessen robots.txt nie geprüft wurde
+    (agents_adapter.py prüft robots.txt nur einmal für agent.listing_url)."""
+    listing_html = """
+    <script type="application/ld+json">
+    {"@type": "RealEstateListing", "name": "Villa am See",
+     "url": "https://x.de/objekte/villa-am-see", "offers": {"price": 1200000}}
+    </script>
+    <script type="application/ld+json">
+    {"@type": "RealEstateListing", "name": "Fremdobjekt",
+     "url": "https://evil-other-host.de/objekte/hijacked", "offers": {"price": 999000}}
+    </script>
+    """
+    detail_html = "<html><body><p>180 m² 6 Zimmer 82327 Tutzing</p></body></html>"
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        "https://x.de/objekte/villa-am-see": _resp(text=detail_html),
+        "https://evil-other-host.de/objekte/hijacked": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/")
+
+    results = [r async for r in structured_data_handler(agent, client)]
+
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/objekte/villa-am-see"
+
+
+@pytest.mark.asyncio
+async def test_structured_data_handler_falls_back_to_jsonld_only_when_detail_fetch_fails():
+    """Finding 11: schlägt der Detailseiten-Abruf fehl (404/5xx/Timeout),
+    liefert der Handler trotzdem einen RawListing mit den JSON-LD-Feldern —
+    nur die regex-abgeleiteten Felder (die es ohne Detailseite nie gab)
+    bleiben None."""
+    listing_html = """
+    <script type="application/ld+json">
+    {"@type": "RealEstateListing", "name": "Villa am See",
+     "url": "https://x.de/objekte/villa-am-see", "offers": {"price": 1200000}}
+    </script>
+    """
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        # bewusst KEINE Route für https://x.de/objekte/villa-am-see -> 404
+    }
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/")
+
+    results = [r async for r in structured_data_handler(agent, client)]
+
+    assert len(results) == 1
+    assert results[0].price_eur == 1200000
+    assert results[0].qm is None
+    assert results[0].rooms is None
+
+
+@pytest.mark.asyncio
 async def test_feed_adapter_handler_extracts_from_feed_items_directly():
     feed_xml = """
     <rss><channel>
@@ -287,6 +426,31 @@ async def test_feed_adapter_handler_extracts_from_feed_items_directly():
     assert results[0].qm == 140.0
     assert results[0].url == "https://x.de/objekte/haus-tutzing"
     assert results[0].address is None
+
+
+@pytest.mark.asyncio
+async def test_feed_adapter_handler_resolves_relative_feed_link_against_feed_url():
+    """Finding 1: RSS/Atom <link>-Werte sind manchmal relativ (z.B.
+    <link href="/objekte/x"/>) -- app.agent_probe.validate_feed's DETAIL_RE
+    matcht relative Pfade genauso wie absolute, das ist also erreichbar in
+    Produktion. feed_url (die tatsächlich abgerufene URL) ist die korrekte
+    Basis für die Auflösung."""
+    feed_xml = """
+    <feed>
+      <entry>
+        <title>Haus in Tutzing, 450.000 €</title>
+        <link href="/objekte/haus-tutzing"/>
+        <summary>140 m², 5 Zimmer, 82327 Tutzing</summary>
+      </entry>
+    </feed>
+    """
+    client = _routed_client({"https://x.de/feed/atom.xml": _resp(text=feed_xml)})
+    agent = _agent(extraction={"method": "feed_adapter", "feed_url": "https://x.de/feed/atom.xml"})
+
+    results = [r async for r in feed_adapter_handler(agent, client)]
+
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/objekte/haus-tutzing"
 
 
 @pytest.mark.asyncio

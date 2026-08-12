@@ -111,9 +111,21 @@ class AgentSiteSource(SourceAdapter):
         # statt die detachte Instanz zu mutieren.
         for agent in agents:
             since_last_check = agent.last_checked and datetime.utcnow() - agent.last_checked
-            if since_last_check is not None and since_last_check < MIN_RECRAWL_INTERVAL:
+            # Finding 4: der Höflichkeits-Guard darf einen Agent, der noch NIE
+            # erfolgreich geharvestet wurde (last_nonempty_at is None), nicht
+            # bremsen — sonst wartet der Selbsttest aus Phase 2a ("optimistische
+            # Klassifikation braucht Validierung vor Aktivierung") bis zu
+            # MIN_RECRAWL_INTERVAL, obwohl app.agent_onboarding last_checked
+            # schon beim Onboarding selbst setzt (vor jedem Harvest-Versuch).
+            if (
+                since_last_check is not None
+                and since_last_check < MIN_RECRAWL_INTERVAL
+                and agent.last_nonempty_at is not None
+            ):
                 # Höflichkeits-Guard: unabhängig vom Poll-Intervall max. ~1x/Tag
-                # pro Agent (siehe Modul-Docstring "Crawl-Frequenz-Guard").
+                # pro Agent (siehe Modul-Docstring "Crawl-Frequenz-Guard") —
+                # gilt nur für Agents, die schon mindestens einmal erfolgreich
+                # geharvestet wurden.
                 log.debug("agents_adapter.recrawl_too_soon", agent_id=agent.id)
                 continue
 
@@ -198,4 +210,15 @@ class AgentSiteSource(SourceAdapter):
                     agent_name=agent.name,
                     error=str(e),
                 )
+                # Finding 2b: last_checked auch hier schreiben — ohne das
+                # bleibt es für einen dauerhaft fehlschlagenden Agent
+                # eingefroren, MIN_RECRAWL_INTERVAL greift dann nie, der Agent
+                # wird bei jedem Poll-Zyklus erneut (und unhöflich oft)
+                # angefasst. coverage_status bleibt bewusst unverändert — hier
+                # ist unklar, ob der Fehler transient oder rezeptbedingt ist.
+                with db_module.SessionLocal() as session:
+                    db_agent = session.get(Agent, agent.id)
+                    if db_agent is not None:
+                        db_agent.last_checked = datetime.utcnow()
+                        session.commit()
                 continue

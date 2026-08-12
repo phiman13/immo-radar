@@ -143,7 +143,7 @@ async def test_fetch_marks_robots_disallowed_and_persists_reason(session, monkey
 @pytest.mark.asyncio
 async def test_fetch_isolates_a_failing_agent_from_the_rest(session, monkeypatch):
     """Spec §7: 'Ein fehlschlagender Makler bricht nie den Gesamtlauf ab.'"""
-    _make_agent(session, name="Broken Makler")
+    broken_id = _make_agent(session, name="Broken Makler")
     ok_id = _make_agent(session, name="OK Makler", listing_url="https://ok.example.de/angebote/")
 
     call_count = {"n": 0}
@@ -170,6 +170,13 @@ async def test_fetch_isolates_a_failing_agent_from_the_rest(session, monkeypatch
     assert call_count["n"] == 2
     assert len(results) == 1
     assert results[0].source_id == f"agent-{ok_id}"
+    # Finding 2b: last_checked wird jetzt auch im Fehlerfall geschrieben,
+    # damit MIN_RECRAWL_INTERVAL für dauerhaft fehlschlagende Agents greift
+    # statt sie bei jedem Poll-Zyklus erneut (unhöflich) anzufassen.
+    with session() as s:
+        broken = s.get(Agent, broken_id)
+        assert broken.last_checked is not None
+        assert broken.coverage_status == "auto-harvested"
 
 
 @pytest.mark.asyncio
@@ -205,9 +212,15 @@ async def test_fetch_isolates_an_is_allowed_exception_from_the_rest(session, mon
     assert results[0].source_id == f"agent-{ok_id}"
     with session() as s:
         broken_agent = s.get(Agent, broken_id)
-        # Kein DB-Write erwartet — die Exception fliegt vor dem Commit; nur
-        # die Isolation (kein Abbruch des Gesamtlaufs) ist hier relevant.
+        # is_allowed() wird INNERHALB desselben try/except aufgerufen wie der
+        # Handler (fetch() hat nur einen try/except-Block) -- die Exception
+        # landet also im selben Fehlerpfad wie Finding 2b und last_checked
+        # WIRD jetzt geschrieben (vorher: kein DB-Write, weil der Fehlerpfad
+        # last_checked gar nicht setzte). coverage_status bleibt unverändert
+        # -- nur die Isolation (kein Abbruch des Gesamtlaufs) und der
+        # Crawl-Frequenz-Beleg sind hier relevant.
         assert broken_agent.coverage_status == "auto-harvested"
+        assert broken_agent.last_checked is not None
 
 
 def test_registry_includes_agents_source_additively():
@@ -379,8 +392,17 @@ async def test_fetch_skips_agent_recrawled_too_recently(session, monkeypatch):
     """UX-Entscheidung (Nutzer-Rückfrage zur Crawl-Frequenz): Makler-Sites
     werden unabhängig vom gewählten Poll-Intervall max. ~1x/Tag pro Agent neu
     gecrawlt. Ein last_checked von vor 2 Stunden ist zu frisch -- der Handler
-    darf gar nicht erst aufgerufen werden."""
-    _make_agent(session, last_checked=datetime.utcnow() - timedelta(hours=2))
+    darf gar nicht erst aufgerufen werden.
+
+    last_nonempty_at muss hier gesetzt sein (Finding 4): der Guard greift nur
+    für Agents, die schon mindestens einmal erfolgreich geharvestet wurden --
+    ohne last_nonempty_at würde dieser Test den Skip-Pfad gar nicht mehr
+    exercisen."""
+    _make_agent(
+        session,
+        last_checked=datetime.utcnow() - timedelta(hours=2),
+        last_nonempty_at=datetime.utcnow() - timedelta(days=1),
+    )
 
     call_count = {"n": 0}
 
@@ -397,6 +419,36 @@ async def test_fetch_skips_agent_recrawled_too_recently(session, monkeypatch):
 
     assert results == []
     assert call_count["n"] == 0
+
+
+@pytest.mark.asyncio
+async def test_fetch_crawls_freshly_onboarded_agent_despite_recent_last_checked(session, monkeypatch):
+    """Finding 4: app.agent_onboarding setzt last_checked schon beim
+    Onboarding, bevor je ein Harvest gelaufen ist. Ein Agent, der noch NIE
+    erfolgreich geharvestet wurde (last_nonempty_at ist None), muss trotz
+    frischem last_checked sofort gecrawlt werden -- sonst wartet der
+    Selbsttest aus Phase 2a bis zu MIN_RECRAWL_INTERVAL (20 Std.)."""
+    _make_agent(
+        session,
+        last_checked=datetime.utcnow() - timedelta(minutes=5),
+        last_nonempty_at=None,
+    )
+
+    call_count = {"n": 0}
+
+    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+        call_count["n"] += 1
+        yield RawListing(source="agents", source_id="x", url="https://x", title="x", price_eur=450000)
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    async with adapter:
+        results = [raw async for raw in adapter.fetch()]
+
+    assert call_count["n"] == 1
+    assert len(results) == 1
 
 
 @pytest.mark.asyncio

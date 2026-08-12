@@ -20,9 +20,10 @@ app.agent_field_extract-Modul-Docstring für die Dedup-Begründung."""
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import re
 from collections.abc import AsyncIterator
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -38,8 +39,16 @@ DETAIL_FETCH_DELAY_SECONDS = 0.5
 
 
 def _source_id(agent_id: int, url: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", url.lower()).strip("-")[-64:]
-    return f"agent-{agent_id}-{slug}"
+    """Hash-basiert statt truncated Slug (Review-Fund, Finding 6): eine
+    64-Zeichen-Slug-Tail-Truncation kann bei zwei URLs mit langem gemeinsamem
+    Suffix (z.B. .../kaufen/exklusive-seevilla-...-tutzing/ vs.
+    .../verkauft/exklusive-seevilla-...-tutzing/) kollidieren. Da
+    RawListing.address für Agent-Listings immer None ist (siehe
+    app.agent_field_extract-Modul-Docstring), ist source_id die GESAMTE
+    Dedup-Identität — eine Kollision hier kollabiert zwei echte Objekte auf
+    einen Hash."""
+    digest = hashlib.sha256(url.encode()).hexdigest()[:16]
+    return f"agent-{agent_id}-{digest}"
 
 
 async def _fetch_detail_listing(agent: Agent, client: httpx.AsyncClient, url: str) -> RawListing | None:
@@ -96,6 +105,7 @@ async def crawl_and_extract(agent: Agent, client: httpx.AsyncClient) -> AsyncIte
 
 
 async def _discover_sitemap_object_urls(client: httpx.AsyncClient, sitemap_url: str) -> list[str]:
+    host = urlparse(sitemap_url).netloc
     try:
         r = await client.get(sitemap_url)
         r.raise_for_status()
@@ -103,17 +113,26 @@ async def _discover_sitemap_object_urls(client: httpx.AsyncClient, sitemap_url: 
         log.warning("agent_handlers.sitemap_fetch_failed", url=sitemap_url, error=str(e))
         return []
 
-    locs = re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", r.text)
-    subs = [u for u in locs if u.endswith(".xml") and SITEMAP_OBJECT_RE.search(u)]
-    obj_urls: set[str] = {u for u in locs if DETAIL_RE.search(u)}
-    for sub in subs[:3]:
+    # <loc>-Werte gegen die jeweils abgerufene Sitemap-URL absolutieren (wie
+    # Finding 1 für Feed-Links) BEVOR der Host-Vergleich läuft — sonst würde
+    # ein relativer <loc>-Eintrag durch urlparse(u).netloc == "" fälschlich
+    # als "off-host" verworfen statt korrekt aufgelöst zu werden.
+    locs = [urljoin(sitemap_url, u) for u in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", r.text)]
+    subs = [
+        u for u in locs if u.endswith(".xml") and SITEMAP_OBJECT_RE.search(u) and urlparse(u).netloc == host
+    ]
+    obj_urls: set[str] = {u for u in locs if DETAIL_RE.search(u) and urlparse(u).netloc == host}
+    for i, sub in enumerate(subs[:3]):
+        if i > 0:
+            await asyncio.sleep(DETAIL_FETCH_DELAY_SECONDS)
         try:
             sr = await client.get(sub)
             sr.raise_for_status()
         except Exception as e:
             log.warning("agent_handlers.sub_sitemap_fetch_failed", url=sub, error=str(e))
             continue
-        obj_urls.update(u for u in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sr.text) if DETAIL_RE.search(u))
+        sub_locs = [urljoin(sub, u) for u in re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", sr.text)]
+        obj_urls.update(u for u in sub_locs if DETAIL_RE.search(u) and urlparse(u).netloc == host)
     return sorted(obj_urls)
 
 
@@ -165,6 +184,7 @@ async def structured_data_handler(agent: Agent, client: httpx.AsyncClient) -> As
         log.warning("agent_handlers.structured_listing_fetch_failed", agent_id=agent.id, error=str(e))
         return
 
+    listing_host = urlparse(agent.listing_url).netloc
     nodes = extract_jsonld_nodes(r.text)
     for node in nodes[:MAX_DETAIL_PAGES_PER_AGENT]:
         jsonld_fields = fields_from_jsonld(node)
@@ -172,6 +192,13 @@ async def structured_data_handler(agent: Agent, client: httpx.AsyncClient) -> As
         if not url:
             continue
         url = urljoin(agent.listing_url, url)
+        if urlparse(url).netloc != listing_host:
+            # Finding 3: robots.txt wird nur einmal für agent.listing_url
+            # geprüft (agents_adapter.py, vor Handler-Dispatch) — ein
+            # JSON-LD-"url", das absolut auf einen anderen Host zeigt, würde
+            # sonst Content abrufen, dessen robots.txt nie konsultiert wurde.
+            log.warning("agent_handlers.structured_url_off_host", agent_id=agent.id, url=url)
+            continue
 
         text = ""
         detail_html = ""
@@ -229,12 +256,13 @@ async def feed_adapter_handler(agent: Agent, client: httpx.AsyncClient) -> Async
 
     items = parse_feed_items(r.text)[:MAX_DETAIL_PAGES_PER_AGENT]
     for item in items:
+        link = urljoin(feed_url, item["link"])
         blob = f"{item['title']} {item['description']}"
         fields = extract_fields("", blob)
         yield RawListing(
             source="agents",
-            source_id=_source_id(agent.id, item["link"]),
-            url=item["link"],
+            source_id=_source_id(agent.id, link),
+            url=link,
             title=item["title"] or fields["title"],
             description=item["description"][:2000] or None,
             price_eur=fields["price_eur"],

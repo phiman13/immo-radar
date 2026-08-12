@@ -135,6 +135,47 @@ def test_fields_from_jsonld_parses_freetext_address_string():
     assert fields["city"] == "Tutzing"
 
 
+def test_fields_from_jsonld_ignores_malformed_name_list_instead_of_raising():
+    """Finding 2a: manche Generatoren liefern "name" als Liste statt String —
+    RawListing.title ist ein pydantic-str-Feld ohne automatische Koerzierung,
+    ein ungeprüfter Wert würde die Konstruktion crashen und den gesamten
+    Harvest-Lauf des Agents stillschweigend verwerfen."""
+    node = {
+        "@type": "RealEstateListing",
+        "name": ["Villa", "am See"],
+        "url": "https://x.de/objekte/villa-am-see",
+        "offers": {"price": 1200000},
+    }
+    fields = fields_from_jsonld(node)
+    assert fields["title"] is None
+    assert fields["url"] == "https://x.de/objekte/villa-am-see"
+    assert fields["price_eur"] == 1200000
+
+
+def test_fields_from_jsonld_ignores_malformed_url_object_instead_of_raising():
+    node = {
+        "@type": "RealEstateListing",
+        "name": "Villa am See",
+        "url": {"@id": "https://x.de/objekte/villa-am-see"},
+        "offers": {"price": 1200000},
+    }
+    fields = fields_from_jsonld(node)
+    assert fields["url"] is None
+    assert fields["title"] == "Villa am See"
+    assert fields["price_eur"] == 1200000
+
+
+def test_fields_from_jsonld_coerces_numeric_postal_code():
+    node = {
+        "@type": "House",
+        "name": "Haus",
+        "address": {"postalCode": 82327, "addressLocality": "Tutzing"},
+    }
+    fields = fields_from_jsonld(node)
+    assert fields["plz"] == "82327"
+    assert fields["city"] == "Tutzing"
+
+
 def test_merge_fields_prefers_primary_and_fills_gaps():
     primary = {"title": "Villa am See", "price_eur": None, "qm": 180.0}
     fallback = {"title": "Fallback-Titel", "price_eur": 999000, "qm": 200.0}

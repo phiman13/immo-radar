@@ -191,14 +191,18 @@ def fields_from_jsonld(node: dict) -> dict:
     plz = None
     city = None
     if isinstance(address, dict):
-        plz = address.get("postalCode") or None
-        city = address.get("addressLocality") or None
+        postal_code = address.get("postalCode")
+        plz = str(postal_code) if isinstance(postal_code, (str, int, float)) and postal_code != "" else None
+        locality = address.get("addressLocality")
+        city = locality if isinstance(locality, str) and locality else None
     elif isinstance(address, str):
         plz, city = extract_plz_city(address)
 
+    name = node.get("name")
+    url = node.get("url")
     return {
-        "title": node.get("name"),
-        "url": node.get("url"),
+        "title": name if isinstance(name, str) else None,
+        "url": url if isinstance(url, str) else None,
         "price_eur": price_eur,
         "qm": qm,
         "rooms": rooms,
