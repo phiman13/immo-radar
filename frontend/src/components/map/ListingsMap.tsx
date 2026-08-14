@@ -3,8 +3,11 @@ import L from 'leaflet'
 import { Listing } from '../../types'
 import { formatPrice } from '../../lib/formatters'
 
+// HER-809: Key war 'neu', tatsächlicher Backend-Status-Wert ist 'new'
+// (siehe types.ts STATUS_LABELS) -- neue Objekte fielen auf DEFAULT_COLOR
+// zurück, optisch nicht von 'gesehen' unterscheidbar.
 const STATUS_COLORS: Record<string, string> = {
-  neu: '#22c55e',
+  new: '#22c55e',
   interessant: '#22c55e',
   vielleicht: '#f59e0b',
   gesehen: '#94a3b8',
