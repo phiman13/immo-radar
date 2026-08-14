@@ -223,7 +223,9 @@ async def test_fetch_isolates_an_is_allowed_exception_from_the_rest(session, mon
         assert broken_agent.last_checked is not None
 
 
-def test_registry_includes_agents_source_additively():
+def test_registry_includes_agents_source_additively(session):
+    """`session`-Fixture nötig seit HER-805: get_all_adapters() fragt jetzt
+    die `sources`-Tabelle nach deaktivierten Quellen ab."""
     from app.sources import REGISTRY, get_all_adapters
     from app.sources.agents_adapter import AgentSiteSource
     from app.sources.kleinanzeigen import KleinanzeigenSource
