@@ -55,6 +55,19 @@ def test_extract_plz_city_returns_none_none_without_plz():
     assert extract_plz_city("Schönes Haus mit Garten") == (None, None)
 
 
+def test_extract_plz_city_does_not_swallow_a_following_capitalized_word():
+    """Regression: auf einer ganzen Detailseite (statt eines isolierten
+    Kartentext-Snippets) folgt auf PLZ+Ort oft direkt ein weiteres,
+    grossgeschriebenes Wort (deutsche Substantivgrossschreibung) -- z.B.
+    "82327 Tutzing Immobilie" oder "82346 Andechs Flächenaufstellung". Der
+    frühere "optional zweites Grossbuchstaben-Wort"-Teil der Regex nahm das
+    fälschlich als Teil des Ortsnamens mit (real beobachtet in Produktion,
+    siehe docs/STATUS.md 2026-08-12/14)."""
+    assert extract_plz_city("82327 Tutzing Immobilie") == ("82327", "Tutzing")
+    assert extract_plz_city("82319 Starnberg Etage") == ("82319", "Starnberg")
+    assert extract_plz_city("82346 Andechs Flächenaufstellung") == ("82346", "Andechs")
+
+
 def test_extract_property_type_detects_doppelhaushaelfte_before_haus():
     assert extract_property_type("Gepflegte Doppelhaushälfte") == PropertyType.DOPPELHAUSHAELFTE
 
@@ -82,6 +95,22 @@ def test_extract_title_falls_back_to_text_snippet():
 
 def test_extract_title_returns_placeholder_when_nothing_found():
     assert extract_title("<html><body></body></html>", "") == "Makler-Objekt"
+
+
+def test_extract_title_decodes_html_entities_and_normalizes_whitespace_from_h1():
+    """Regression: reale Makler-Templates liefern <h1>-Inhalte mit
+    HTML-Entities (&#8211; als Gedankenstrich, &amp;) und eingebetteten
+    Zeilenumbrüchen -- beides landete bisher roh im Titel (real beobachtet
+    in Produktion, siehe docs/STATUS.md 2026-08-12/14)."""
+    html_source = "<html><body><h1>VERKAUFT &#8211;\r\nTRAUMBLICK &amp; RUHE</h1></body></html>"
+    assert extract_title(html_source) == "VERKAUFT – TRAUMBLICK & RUHE"
+
+
+def test_extract_title_decodes_html_entities_from_og_title():
+    html_source = (
+        '<html><head><meta property="og:title" content="Haus &amp; Garten in Tutzing"></head></html>'
+    )
+    assert extract_title(html_source) == "Haus & Garten in Tutzing"
 
 
 def test_extract_fields_bundles_all_extractions():

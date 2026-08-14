@@ -34,11 +34,20 @@ _LABELED_PRICE_RE = re.compile(r"(?:Kaufpreis|Preis)\b[^0-9€]{0,40}([\d.]{4,})
 _PRICE_RE = re.compile(r"([\d.]{4,})\s*(?:€|EUR)")
 _QM_RE = re.compile(r"([\d.,]+)\s*m²")
 _ROOMS_RE = re.compile(r"([\d,]+)\s*Zi(?:mmer)?\b", re.I)
-_PLZ_ORT_RE = re.compile(r"\b(\d{5})\s+([A-ZÄÖÜ][a-zäöüß\-]+(?:\s+[A-ZÄÖÜ][a-zäöüß\-]+)?)")
+# Bewusst NUR ein Wort nach der PLZ: auf einer ganzen Detailseite (statt
+# eines isolierten Kartentext-Snippets) folgt auf PLZ+Ort oft direkt ein
+# weiteres grossgeschriebenes Wort (deutsche Substantivgrossschreibung, z.B.
+# "82327 Tutzing Immobilie") -- ein optionaler zweiter Match-Teil würde das
+# fälschlich in den Ortsnamen ziehen (real beobachtet in Produktion). Die
+# tatsächlichen mehrteiligen Ortsnamen im Suchgebiet (app.pipeline.
+# LOCATION_ALLOWLIST_RE, z.B. "Berg (Starnberger See)", "St. Heinrich") haben
+# ohnehin abweichende Trenner, die dieses simple Muster nie sauber trifft.
+_PLZ_ORT_RE = re.compile(r"\b(\d{5})\s+([A-ZÄÖÜ][a-zäöüß\-]+)")
 
 _TITLE_TAG_RE = re.compile(r"<h1[^>]*>(.*?)</h1>", re.I | re.S)
 _TAG_STRIP_RE = re.compile(r"<[^>]+>")
 _OG_TITLE_RE = re.compile(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']', re.I)
+_WHITESPACE_RE = re.compile(r"\s+")
 
 
 def extract_price(text: str) -> int | None:
@@ -100,15 +109,20 @@ def extract_property_type(text: str) -> PropertyType:
     return PropertyType.UNKNOWN
 
 
-def extract_title(html: str, fallback_text: str = "") -> str:
-    m = _TITLE_TAG_RE.search(html)
+def extract_title(html_source: str, fallback_text: str = "") -> str:
+    """`html_source` bewusst nicht `html` genannt -- das Modul importiert
+    `html` für `html.unescape()`, ein gleichnamiger Parameter würde diesen
+    Import innerhalb der Funktion verdecken."""
+    m = _TITLE_TAG_RE.search(html_source)
     if m:
-        candidate = _TAG_STRIP_RE.sub("", m.group(1)).strip()
+        candidate = _WHITESPACE_RE.sub(" ", html.unescape(_TAG_STRIP_RE.sub("", m.group(1)))).strip()
         if len(candidate) > 4:
             return candidate[:200]
-    m = _OG_TITLE_RE.search(html)
-    if m and len(m.group(1).strip()) > 4:
-        return m.group(1).strip()[:200]
+    m = _OG_TITLE_RE.search(html_source)
+    if m:
+        candidate = _WHITESPACE_RE.sub(" ", html.unescape(m.group(1))).strip()
+        if len(candidate) > 4:
+            return candidate[:200]
     snippets = [s.strip() for s in re.split(r"[\n.|]", fallback_text) if 15 < len(s.strip()) < 120]
     return (snippets[0] if snippets else "Makler-Objekt")[:200]
 
