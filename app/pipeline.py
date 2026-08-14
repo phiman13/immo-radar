@@ -5,13 +5,12 @@ from datetime import datetime
 
 from sqlalchemy import select
 
-from app.config import settings
 from app.db import FetchRun, Listing, ListingHistory, SessionLocal
 from app.geocoding import geocode
 from app.logging_setup import log
 from app.models import RawListing
 from app.scoring.lage import in_search_area
-from app.settings_service import get_setting
+from app.settings_service import get_property_type_list, get_setting
 from app.sources import get_all_adapters
 
 # Tutzing + 10km — explicit allowlist of cities/PLZs that count as "in scope".
@@ -93,16 +92,16 @@ def _matches_profile(raw: RawListing, session) -> bool:
         if not in_search_area(raw.lat, raw.lon, get_setting("search_locations")):
             return False
     if raw.price_eur is not None:
-        if raw.price_eur < settings.price_min or raw.price_eur > settings.price_max:
+        if raw.price_eur < get_setting("price_min") or raw.price_eur > get_setting("price_max"):
             return False
     if raw.qm is not None:
-        if raw.qm < settings.qm_min or raw.qm > settings.qm_max:
+        if raw.qm < get_setting("qm_min") or raw.qm > get_setting("qm_max"):
             return False
-    if raw.rooms is not None and raw.rooms < settings.rooms_min:
+    if raw.rooms is not None and raw.rooms < get_setting("rooms_min"):
         return False
-    if raw.year_built is not None and raw.year_built < settings.year_built_min:
+    if raw.year_built is not None and raw.year_built < get_setting("year_built_min"):
         return False
-    if raw.property_type.value not in settings.property_type_list and raw.property_type.value != "unknown":
+    if raw.property_type.value not in get_property_type_list() and raw.property_type.value != "unknown":
         return False
     return True
 

@@ -82,6 +82,14 @@ def set_setting(key: str, value: Any) -> None:
         session.commit()
 
 
+def get_property_type_list() -> list[str]:
+    """DB-persistentes Äquivalent zu app.config.Settings.property_type_list —
+    dieselbe Split/Strip/Lower-Logik, aber auf get_setting("property_types")
+    statt dem statischen env_settings-Objekt."""
+    raw = get_setting("property_types")
+    return [p.strip().lower() for p in raw.split(",") if p.strip()]
+
+
 def get_all_settings() -> dict[str, Any]:
     """Return all known settings with their current values."""
     return {key: get_setting(key) for key in _DEFAULTS}

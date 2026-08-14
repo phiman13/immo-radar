@@ -49,6 +49,7 @@ async def score_listing(
 
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
+    from app.settings_service import get_property_type_list as _get_property_type_list  # noqa: PLC0415
     from app.settings_service import get_setting as _get_setting  # noqa: PLC0415
 
     search_locs = _get_setting("search_locations")
@@ -59,13 +60,13 @@ async def score_listing(
     prefs_str = ", ".join(prefs) if prefs else "keine angegeben"
 
     prompt = _PROMPT.format(
-        price_min=settings.price_min,
-        price_max=settings.price_max,
-        qm_min=settings.qm_min,
-        qm_max=settings.qm_max,
-        rooms_min=settings.rooms_min,
-        types=", ".join(settings.property_type_list),
-        year_built_min=settings.year_built_min,
+        price_min=_get_setting("price_min"),
+        price_max=_get_setting("price_max"),
+        qm_min=_get_setting("qm_min"),
+        qm_max=_get_setting("qm_max"),
+        rooms_min=_get_setting("rooms_min"),
+        types=", ".join(_get_property_type_list()),
+        year_built_min=_get_setting("year_built_min"),
         locations=locs_str,
         preferences=prefs_str,
         title=listing.title or "—",

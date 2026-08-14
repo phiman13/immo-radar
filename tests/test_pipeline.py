@@ -96,6 +96,40 @@ def test_matches_profile_rejects_without_geocoding_when_no_location_text(session
         mock_geocode.assert_not_called()
 
 
+def test_matches_profile_uses_db_persisted_price_range_not_static_config(session):
+    """Regression: _matches_profile las Preis/Fläche/Zimmer/Baujahr/Objektart
+    bisher aus dem STATISCHEN app.config.settings-Objekt (.env-Werte beim
+    Prozessstart), nicht aus den DB-persistenten Dashboard-Settings, die
+    settings_service.set_setting() schreibt -- eine Preisrahmen-Änderung im
+    Dashboard hatte dadurch NULL Effekt auf die tatsächliche Filterung (real
+    beobachtet in Produktion: price_max im Dashboard auf 1.8 Mio. gesetzt,
+    Pipeline filterte weiterhin gegen den alten .env-Wert 1.1 Mio.,
+    siehe docs/STATUS.md 2026-08-14). Ein Preis, der die DB-Grenze
+    unterschreitet, aber über einem absichtlich ANDEREN, engeren
+    .env-Default läge, darf nur durchkommen, wenn tatsächlich der
+    DB-Wert gilt."""
+    set_setting("price_min", 500_000)
+    set_setting("price_max", 3_000_000)
+    set_setting("qm_min", 90)
+    set_setting("qm_max", 500)
+    set_setting("rooms_min", 2.0)
+    set_setting("year_built_min", 1900)
+    set_setting("property_types", "haus,villa")
+
+    raw = _raw(price_eur=2_500_000, qm=300, rooms=4, property_type=PropertyType.HAUS)
+    with session() as s, patch("app.pipeline.geocode", return_value=(47.9095, 11.2783, 0.6)):
+        assert _matches_profile(raw, s) is True
+
+
+def test_matches_profile_rejects_price_above_db_persisted_max(session):
+    set_setting("price_min", 500_000)
+    set_setting("price_max", 900_000)
+
+    raw = _raw(price_eur=2_500_000)
+    with session() as s, patch("app.pipeline.geocode", return_value=(47.9095, 11.2783, 0.6)):
+        assert _matches_profile(raw, s) is False
+
+
 def test_upsert_persists_geocoding_metadata(session):
     raw = _raw()
     raw.lat, raw.lon = 47.9095, 11.2783
@@ -254,7 +288,7 @@ async def test_run_source_survives_duplicate_address_before_first_upsert(session
     Session-Pfad von geocode(): der Cache-Eintrag wird sofort sichtbar, der
     zweite Treffer ist ein echter Cache-HIT (belegt durch `len(calls) == 1`)."""
     monkeypatch.setattr(pipeline_module, "SessionLocal", session)
-    monkeypatch.setattr(pipeline_module.settings, "price_max", 1_000_000)
+    set_setting("price_max", 1_000_000)
     set_setting("search_locations", TUTZING_LOCATIONS)
 
     calls: list[str] = []
