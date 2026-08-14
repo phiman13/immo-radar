@@ -12,19 +12,12 @@ Scoring + APScheduler) · React 18 + Vite Dashboard.
 
 **Wiederbelebt.** War 2026-06-29 archiviert, lokale Weiterarbeit lief seither durch
 (Probe/Scraper-Feature-Arbeit bis 2026-08-05). 2026-08-06 zurück in `targets.txt` +
-Linear-Projekt entarchiviert, HER-577/578 zurück auf Todo. **VPS-Deployment weiterhin
-abgeräumt** (Stand 2026-06-29, noch nicht neu aufgesetzt):
-- Docker-Container + Image entfernt, `/opt/immo-radar` gelöscht
-- Caddy-Vhost `immo.herrlich.dev` entfernt
-- DB-Backup: `~/Downloads/immo-radar-db-backup-2026-06-29.sqlite`
-
-## Wiederinbetriebnahme
-
-```bash
-# 1. Caddy-Vhost in /etc/caddy/Caddyfile eintragen (immo.herrlich.dev → :8001, basicauth)
-# 2. Deploy
-bash scripts/deploy.sh
-```
+Linear-Projekt entarchiviert, HER-577/578 zurück auf Todo. **VPS-Deployment wieder live**
+(neu aufgesetzt und deployed 2026-08-12, Fix-Redeploys seither via `scripts/deploy.sh`):
+Container `web`/`worker` laufen, Caddy-Vhost `immo.herrlich.dev` aktiv.
+`poll_enabled` ist aktuell bewusst **deaktiviert** (manuelle End-to-End-Verifikation der
+Makler-Vollabdeckung lief kontrolliert, ohne Scheduler-Interferenz) — vor Wiedereinschalten
+mit Nutzer abstimmen.
 
 ## Offener Backlog
 
@@ -44,12 +37,28 @@ zweistufiger Selbsttest (Spec §7) und struktureller Crawl-Frequenz-Guard
 `MIN_RECRAWL_INTERVAL`, der Makler-Sites unabhängig vom gewählten
 Poll-Intervall auf max. ~1×/Tag begrenzt) sind abgeschlossen. HER-726
 (feed_adapter-`listing_url`-Ausnahme im Coverage-Gate) ist mit Phase 2b
-gefixt. Phase 2 ist in vier Teilpläne aufgeteilt. Nächster Schritt: Phase 2c
-(Change-Gate-Fingerprint für „nur neue Objekte", Zwei-Läufe-Zähler für echte
-Rezept-Bruch-Erkennung, Playwright-Rendering für JS-Shells/403-Sites — alle
-drei in Phase 2b bewusst zurückgestellt, siehe Self-Review-Notizen im
-Phase-2b-Plan). Bekannte Vorbedingung vor Phase 3/Discovery bleibt HER-725
-(Domain-Validierung/SSRF-Guard auf `verified_domain`).
+gefixt. Phase 2 ist in vier Teilpläne aufgeteilt.
+
+**Produktiv end-to-end verifiziert (2026-08-12/14):** alle 19 vom Nutzer benannten
+Referenz-Makler onboarded (16 `auto-harvested`, 3 korrekt als nicht automatisierbar
+geflaggt), echte Listings landen nachweislich im Dashboard. Dabei gefundener und
+gefixter Produktionsbug: `pipeline.run_source()` hält für den gesamten Harvest-Lauf
+eine offene SQLite-Schreibtransaktion — `AgentSiteSource` schrieb Agent-Status
+(`last_checked` etc.) bisher über eine zweite, eigene Session und blockierte
+zuverlässig mit „database is locked". Fix: `AgentSiteSource` nutzt jetzt dieselbe,
+vom Aufrufer gereichte Session (`SourceAdapter.session`, Commit bleibt beim Aufrufer)
+statt einen zweiten Schreiber zu öffnen — exakt das Muster, das `geocode()` für den
+Geocoding-Cache bereits etabliert hatte. Regressionstest reproduziert den Lock
+deterministisch ohne den Fix.
+
+Nächster Schritt: Phase 2c (Change-Gate-Fingerprint für „nur neue Objekte",
+Zwei-Läufe-Zähler für echte Rezept-Bruch-Erkennung, Playwright-Rendering für
+JS-Shells/403-Sites — alle drei in Phase 2b bewusst zurückgestellt, siehe
+Self-Review-Notizen im Phase-2b-Plan) sowie kleinere Extraktions-Präzisionslücken
+im Feld-Extraktor (unvollständiges HTML-Entity-Decoding, zu gierige
+city-Erkennung bei manchen Vendor-Templates). Bekannte Vorbedingung vor
+Phase 3/Discovery bleibt HER-725 (Domain-Validierung/SSRF-Guard auf
+`verified_domain`).
 
 ## Branch-Map
 
