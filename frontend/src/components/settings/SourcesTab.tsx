@@ -65,7 +65,7 @@ function AnalyzeFlow({ onAdded }: { onAdded: () => void }) {
 
   if (state === 'saved') return (
     <div className="text-sm text-[--accent] flex items-center gap-2">
-      <CheckCircle size={16} weight="fill" /> Quelle gespeichert als Vorschlag.
+      <CheckCircle size={16} weight="fill" /> Als Vorschlag gespeichert — wird noch nicht automatisch durchsucht.
       <button
         onClick={() => { setState('idle'); setUrl(''); setResult(null); setName('') }}
         className="ml-2 text-[--muted] underline text-xs"
@@ -288,21 +288,35 @@ export function SourcesTab() {
                   </span>
                 )}
                 {source.source_type === 'suggested' && (
-                  <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-[--border] text-[--muted]">Vorschlag</span>
+                  <span
+                    className="ml-2 px-1.5 py-0.5 rounded text-xs bg-[--border] text-[--muted]"
+                    title="Noch nicht angebunden — wird derzeit nicht automatisch durchsucht"
+                  >
+                    Vorschlag, noch nicht aktiv
+                  </span>
                 )}
               </td>
               <td className="py-3" style={{ color: 'var(--muted)' }}>
                 {source.source_type === 'blocked'
                   ? <span className="text-xs" title="Bot-Schutz — scraping nicht möglich">–</span>
-                  : source.last_run ? formatTimeAgo(source.last_run) : '–'
+                  : source.source_type === 'suggested'
+                    ? <span className="text-xs">–</span>
+                    : source.last_run ? formatTimeAgo(source.last_run) : '–'
                 }
               </td>
               <td className="py-3 text-right font-mono text-xs" style={{ color: 'var(--fg)' }}>
-                {source.source_type === 'blocked' ? '–' : source.listing_count}
+                {source.source_type === 'blocked' || source.source_type === 'suggested' ? '–' : source.listing_count}
               </td>
               <td className="py-3 text-right">
                 {source.source_type === 'blocked' ? (
                   <Lock size={16} style={{ color: 'var(--muted)' }} className="ml-auto" />
+                ) : source.source_type === 'suggested' ? (
+                  <Lock
+                    size={16}
+                    style={{ color: 'var(--muted)' }}
+                    className="ml-auto"
+                    aria-label="Noch nicht angebunden"
+                  />
                 ) : (
                   <button
                     onClick={() => toggleMut.mutate({ id: source.id, enabled: !source.enabled })}
@@ -324,7 +338,10 @@ export function SourcesTab() {
 
       {/* --- Neue Quelle hinzufügen --- */}
       <div className="mt-8 border-t border-[--border] pt-6">
-        <h3 className="text-sm font-semibold text-[--fg] mb-4">Neue Quelle hinzufügen</h3>
+        <h3 className="text-sm font-semibold text-[--fg] mb-1">Neue Quelle hinzufügen</h3>
+        <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>
+          Speichert einen Vorschlag zur späteren manuellen Anbindung — noch keine automatische Suche.
+        </p>
         <AnalyzeFlow onAdded={() => queryClient.invalidateQueries({ queryKey: ['sources'] })} />
         <div className="flex items-center gap-3 my-5">
           <div className="flex-1 h-px bg-[--border]" />
