@@ -5,12 +5,17 @@ import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.config import settings
 from app.enrich import enrich_pending as _enrich_pending
 from app.logging_setup import log
 from app.notify.telegram import notify_new_listing
 from app.pipeline import run_all
 from app.settings_service import get_setting
+
+# job_id -> DB-Setting-Key, das dessen Poll-Intervall steuert.
+_INTERVAL_JOBS: dict[str, str] = {
+    "poll_and_notify": "poll_interval_minutes",
+    "enrich_pending": "detail_fetch_interval_minutes",
+}
 
 
 async def enrich_pending() -> None:
@@ -54,19 +59,48 @@ async def poll_and_notify() -> None:
                 log.error("scheduler.notify_failed", id=listing.id, error=str(e))
 
 
+def reconcile_intervals(scheduler: AsyncIOScheduler) -> None:
+    """DB-persistente Intervall-Settings ändern sich laut CLAUDE.md "ohne
+    Container-Restart" -- APScheduler's IntervalTrigger liest sein Intervall
+    aber nur einmal bei add_job()/reschedule_job(), nicht dynamisch pro Tick.
+    Eine Dashboard-Intervalländerung hatte dadurch real NULL Effekt bis zum
+    nächsten Container-Neustart (siehe docs/STATUS.md 2026-08-14). Dieser
+    Watchdog-Job vergleicht das DB-Intervall gegen das aktuell aktive und
+    rescheduled bei Abweichung -- läuft selbst auf einem festen, kurzen
+    Intervall (siehe build_scheduler()), das bewusst NICHT DB-konfigurierbar
+    ist, sonst müsste er sich selbst reschedulen."""
+    for job_id, setting_key in _INTERVAL_JOBS.items():
+        job = scheduler.get_job(job_id)
+        if job is None:
+            continue
+        desired = get_setting(setting_key)
+        current = job.trigger.interval.total_seconds() / 60
+        if abs(desired - current) >= 1:
+            log.info("scheduler.interval_changed", job_id=job_id, old_minutes=current, new_minutes=desired)
+            scheduler.reschedule_job(job_id, trigger=IntervalTrigger(minutes=desired))
+
+
 def build_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="Europe/Berlin")
     scheduler.add_job(
         poll_and_notify,
-        trigger=IntervalTrigger(minutes=settings.poll_interval_minutes),
+        trigger=IntervalTrigger(minutes=get_setting("poll_interval_minutes")),
         id="poll_and_notify",
         max_instances=1,
         coalesce=True,
     )
     scheduler.add_job(
         enrich_pending,  # local wrapper that checks enrich_enabled
-        trigger=IntervalTrigger(minutes=settings.detail_fetch_interval_minutes),
+        trigger=IntervalTrigger(minutes=get_setting("detail_fetch_interval_minutes")),
         id="enrich_pending",
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.add_job(
+        reconcile_intervals,
+        args=[scheduler],
+        trigger=IntervalTrigger(minutes=1),
+        id="reconcile_intervals",
         max_instances=1,
         coalesce=True,
     )
@@ -76,7 +110,7 @@ def build_scheduler() -> AsyncIOScheduler:
 async def run_forever() -> None:
     sched = build_scheduler()
     sched.start()
-    log.info("scheduler.started", interval_min=settings.poll_interval_minutes)
+    log.info("scheduler.started", interval_min=get_setting("poll_interval_minutes"))
     # Run once immediately
     await poll_and_notify()
     while True:
