@@ -140,9 +140,16 @@ export function DetailPanel({ listing, onClose, onStatusChange }: DetailPanelPro
                 <ListingMiniMap lat={listing.lat} lon={listing.lon} />
               )}
 
-              {/* AI Score + Reasoning */}
+              {/* Lage-Score (regelbasiert) + KI-Match-Score + Reasoning */}
+              {/* HER-810: ai_score wurde bisher nirgends angezeigt -- dieser
+                  Badge zeigte den kostenlosen, regelbasierten lage_score
+                  unter dem Label "KI-Bewertung", der eigentliche
+                  kostenpflichtige AI-Match-Score war unsichtbar. */}
               <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'var(--bg)' }}>
-                <ScoreBadge score={listing.lage_score} />
+                <div className="flex flex-col gap-2 shrink-0">
+                  <ScoreBadge score={listing.lage_score} label="Lage" />
+                  <ScoreBadge score={listing.ai_score} label="KI" />
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium mb-1" style={{ color: 'var(--fg)' }}>KI-Bewertung</p>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
