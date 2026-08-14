@@ -37,6 +37,36 @@ from app.models import PropertyType, RawListing
 MAX_DETAIL_PAGES_PER_AGENT = 40
 DETAIL_FETCH_DELAY_SECONDS = 0.5
 
+_CONTACT_MARKER_RE = re.compile(r"contact|kontakt", re.I)
+
+
+def _strip_contact_blocks(html: str) -> str:
+    """HER-812: Detailseiten enthalten fast immer auch die Kontaktadresse der
+    Agentur (Footer, Kontakt-Widget, Impressum-Block) — extract_plz_city()
+    nimmt den ERSTEN PLZ+Ort-Treffer im Gesamttext, und die Büroadresse steht
+    im HTML meist VOR der eigentlichen Objektadresse. Real beobachtet
+    2026-08-14: fünf verschiedene Objekte auf ubi-immobilien.de landeten
+    dadurch alle mit identischen Koordinaten in der DB (Büroadresse statt
+    Objektstandort) — eine KI-Bewertung deckte den Fall auf, bei dem das
+    tatsächliche Objekt nachweislich in Murnau lag, nicht in Tutzing.
+
+    Entfernt <footer>/<address>-Elemente sowie Elemente, deren class/id
+    "contact"/"kontakt" enthält, VOR der Text-Extraktion — generalisierbare
+    CMS-Konventionen (verifiziert an einer echten Site), keine
+    ortsspezifische Namensliste wie das inzwischen entfernte
+    LOCATION_ALLOWLIST_RE (HER-807)."""
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup.find_all(["footer", "address"]):
+        tag.decompose()
+    for tag in soup.find_all(True):
+        if tag.decomposed:
+            continue
+        classes = " ".join(tag.get("class") or [])
+        tag_id = tag.get("id") or ""
+        if _CONTACT_MARKER_RE.search(classes) or _CONTACT_MARKER_RE.search(tag_id):
+            tag.decompose()
+    return str(soup)
+
 
 def _source_id(agent_id: int, url: str) -> str:
     """Hash-basiert statt truncated Slug (Review-Fund, Finding 6): eine
@@ -59,8 +89,9 @@ async def _fetch_detail_listing(agent: Agent, client: httpx.AsyncClient, url: st
         log.warning("agent_handlers.detail_fetch_failed", agent_id=agent.id, url=url, error=str(e))
         return None
 
-    text = BeautifulSoup(r.text, "html.parser").get_text(" ", strip=True)
-    fields = extract_fields(r.text, text)
+    html = _strip_contact_blocks(r.text)
+    text = BeautifulSoup(html, "html.parser").get_text(" ", strip=True)
+    fields = extract_fields(html, text)
     return RawListing(
         source="agents",
         source_id=_source_id(agent.id, url),
@@ -205,7 +236,7 @@ async def structured_data_handler(agent: Agent, client: httpx.AsyncClient) -> As
         try:
             dr = await client.get(url)
             dr.raise_for_status()
-            detail_html = dr.text
+            detail_html = _strip_contact_blocks(dr.text)
             text = BeautifulSoup(detail_html, "html.parser").get_text(" ", strip=True)
         except Exception as e:
             log.warning(

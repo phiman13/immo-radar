@@ -11,6 +11,7 @@ import pytest
 from app.db import Agent
 from app.sources.agent_handlers import (
     _source_id,
+    _strip_contact_blocks,
     crawl_and_extract,
     feed_adapter_handler,
     sitemap_objekte_handler,
@@ -493,3 +494,68 @@ async def test_feed_adapter_handler_returns_nothing_without_feed_url():
     results = [r async for r in feed_adapter_handler(agent, client)]
 
     assert results == []
+
+
+def test_strip_contact_blocks_removes_footer_address_and_kontakt_class():
+    """HER-812, real beobachtet 2026-08-14 (ubi-immobilien.de): 'contact'
+    kommt zweimal auf einer Detailseite vor -- beide Male als Büroadresse der
+    Agentur (c-contact-person__address, c-module-contact__data), NIE als
+    Objektadresse. extract_plz_city() nimmt den ERSTEN PLZ+Ort-Treffer im
+    Gesamttext -- ohne Entfernung dieser Blöcke gewinnt die Büroadresse
+    IMMER gegen eine später im Fließtext stehende echte Objektadresse."""
+    html = """
+    <html><body>
+      <h1>Traumvilla am See</h1>
+      <p>Das Objekt liegt in 12345 Musterstadt, gehobene Wohnlage.</p>
+      <footer>Impressum: 82327 Tutzing</footer>
+      <address>Maklerbüro Beispiel, 82327 Tutzing</address>
+      <div class="c-contact-person__address">Hauptstraße 42, 82327 Tutzing</div>
+      <div id="kontakt-widget">Rufen Sie uns an: 82327 Tutzing</div>
+    </body></html>
+    """
+    stripped = _strip_contact_blocks(html)
+
+    assert "12345 Musterstadt" in stripped
+    assert "Traumvilla" in stripped
+    assert "82327 Tutzing" not in stripped
+
+
+@pytest.mark.asyncio
+async def test_crawl_and_extract_prefers_object_address_over_agency_contact_address():
+    """Regression HER-812: Objektadresse (12345 Musterstadt) muss gewinnen,
+    obwohl die Agentur-Kontaktadresse (82327 Tutzing) zuerst im rohen HTML
+    steht -- vor dem Fix hätte extract_plz_city() die Büroadresse
+    gefunden."""
+    # find_detail_links() erkennt eine "Gruppe" erst ab 3 gleichförmigen
+    # Links (app.agent_cascade_detect) -- zwei bedeutungslose Füll-Links
+    # nötig, damit der interessante Link überhaupt als Objekt-URL erkannt wird.
+    listing_html = """
+    <html><body>
+      <a href="/immobilien/traumvilla-am-see-mit-grossem-garten">A</a>
+      <a href="/immobilien/wohnung-starnberg-zentral-mit-balkon">B</a>
+      <a href="/immobilien/haus-poecking-mit-grossem-grundstueck">C</a>
+    </body></html>
+    """
+    filler_html = "<html><body><h1>Sonstiges Objekt</h1></body></html>"
+    detail_html = """
+    <html><body>
+      <div class="c-module-contact__data">Maklerbüro Beispiel GmbH<br>Hauptstraße 42<br>82327 Tutzing</div>
+      <h1>Traumvilla am See</h1>
+      <p>Kaufpreis: 900.000 € · 200 m² · Lage: 12345 Musterstadt</p>
+    </body></html>
+    """
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        "https://x.de/immobilien/traumvilla-am-see-mit-grossem-garten": _resp(text=detail_html),
+        "https://x.de/immobilien/wohnung-starnberg-zentral-mit-balkon": _resp(text=filler_html),
+        "https://x.de/immobilien/haus-poecking-mit-grossem-grundstueck": _resp(text=filler_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/")
+
+    results = [r async for r in crawl_and_extract(agent, client)]
+
+    assert len(results) == 3
+    traumvilla = next(r for r in results if r.title == "Traumvilla am See")
+    assert traumvilla.plz == "12345"
+    assert traumvilla.city == "Musterstadt"
