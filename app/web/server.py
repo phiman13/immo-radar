@@ -38,6 +38,14 @@ _dist_dir = BASE_DIR / "static" / "dist"
 if _dist_dir.exists():
     app.mount("/assets", StaticFiles(directory=str(_dist_dir / "assets")), name="spa-assets")
 
+# HER-820: index.html referenziert bei jedem Build neu gehashte /assets/*-
+# Dateien; ohne explizites no-cache kann ein Browser (heuristisches Caching
+# via Last-Modified/ETag) nach einem Deploy ein altes index.html
+# weiterverwenden, das auf inzwischen gelöschte Asset-Hashes zeigt (404).
+# Die gehashten Assets selbst bleiben unbefristet cachebar -- ihr Dateiname
+# ändert sich ja bei jeder inhaltlichen Änderung.
+_SPA_INDEX_HEADERS = {"Cache-Control": "no-cache"}
+
 
 @app.on_event("startup")
 def _startup() -> None:
@@ -53,7 +61,7 @@ async def index(
     # Serve SPA if built
     spa_index = BASE_DIR / "static" / "dist" / "index.html"
     if spa_index.exists():
-        return FileResponse(str(spa_index))
+        return FileResponse(str(spa_index), headers=_SPA_INDEX_HEADERS)
     # Fallback: legacy Jinja2 dashboard
     with SessionLocal() as session:
         q = select(Listing).where(Listing.is_active.is_(True))
@@ -121,5 +129,5 @@ async def spa_fallback(full_path: str):
         raise HTTPException(status_code=404)
     spa_index = BASE_DIR / "static" / "dist" / "index.html"
     if spa_index.exists():
-        return FileResponse(str(spa_index))
+        return FileResponse(str(spa_index), headers=_SPA_INDEX_HEADERS)
     return JSONResponse({"status": "API running, SPA not built yet"}, status_code=200)
