@@ -14,10 +14,9 @@ Scoring + APScheduler) · React 18 + Vite Dashboard.
 (Probe/Scraper-Feature-Arbeit bis 2026-08-05). 2026-08-06 zurück in `targets.txt` +
 Linear-Projekt entarchiviert, HER-577/578 zurück auf Todo. **VPS-Deployment wieder live**
 (neu aufgesetzt und deployed 2026-08-12, Fix-Redeploys seither via `scripts/deploy.sh`):
-Container `web`/`worker` laufen, Caddy-Vhost `immo.herrlich.dev` aktiv.
-`poll_enabled` ist aktuell bewusst **deaktiviert** (manuelle End-to-End-Verifikation der
-Makler-Vollabdeckung lief kontrolliert, ohne Scheduler-Interferenz) — vor Wiedereinschalten
-mit Nutzer abstimmen.
+Container `web`/`worker` laufen, Caddy-Vhost `immo.herrlich.dev` aktiv. `poll_enabled`
+ist seit 2026-08-14 wieder **aktiv** (12-Std.-Intervall) — Scheduler crawlt automatisch,
+`enrich_enabled` lief bereits durchgehend.
 
 ## Offener Backlog
 
@@ -50,6 +49,21 @@ vom Aufrufer gereichte Session (`SourceAdapter.session`, Commit bleibt beim Aufr
 statt einen zweiten Schreiber zu öffnen — exakt das Muster, das `geocode()` für den
 Geocoding-Cache bereits etabliert hatte. Regressionstest reproduziert den Lock
 deterministisch ohne den Fix.
+
+**Zwei weitere Produktionsbugs derselben Fehlerklasse gefunden und gefixt
+(2026-08-14):** `pipeline._matches_profile()` und `scoring/ai_match.py` lasen
+Preis-/Flächen-/Zimmer-/Baujahr-/Objektart-Filter aus der statischen
+`app.config.settings` (.env-Wert bei Prozessstart) statt aus den
+DB-persistenten Dashboard-Settings — eine Preisrahmen-Änderung im Dashboard
+hatte dadurch **keinen** Effekt auf die tatsächliche Filterung. Fix: beide
+nutzen jetzt `settings_service.get_setting()`/neuen Helper
+`get_property_type_list()`. Derselbe Bug fand sich auch in
+`scheduler.build_scheduler()` (Poll-/Enrich-Intervall aus `.env` statt DB) —
+zusätzlich behoben durch einen `reconcile_intervals()`-Watchdog-Job, der
+Intervalländerungen im Dashboard ohne Container-Neustart übernimmt (vorher
+entgegen der CLAUDE.md-Doku nötig gewesen). Alle drei Fixes durch
+Regressionstests abgesichert, die den Bug live am unveränderten Code
+reproduzieren.
 
 Nächster Schritt: Phase 2c (Change-Gate-Fingerprint für „nur neue Objekte",
 Zwei-Läufe-Zähler für echte Rezept-Bruch-Erkennung, Playwright-Rendering für
