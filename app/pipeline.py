@@ -13,26 +13,6 @@ from app.scoring.lage import in_search_area
 from app.settings_service import get_property_type_list, get_setting
 from app.sources import get_all_adapters
 
-# Tutzing + 10km — explicit allowlist of cities/PLZs that count as "in scope".
-# Core (5km): Tutzing, Feldafing, Pöcking, Bernried, Berg, Seeshaupt
-# Extended (10km): Starnberg, Iffeldorf, Andechs (Herrsching), Weilheim-area edges
-LOCATION_ALLOWLIST_RE = re.compile(
-    r"\b("
-    # core PLZs
-    r"82327|82340|82343|82347|82335|82393|"
-    # 10km extended PLZs
-    r"82319|82389|82407|82362|82211|82418|82394|82211|"
-    # core cities + Ortsteile
-    r"Tutzing|Feldafing|Pöcking|Poecking|Bernried|Possenhofen|"
-    r"Garatshausen|Diemendorf|Kampberg|Oberzeismering|Unterzeismering|Deixlfurt|Traubing|"
-    r"Berg\s*\(|Berg/|Aufkirchen|Kempfenhausen|Allmannshausen|Assenhausen|Mörlbach|"
-    r"Seeshaupt|St\.\s*Heinrich|Magnetsried|"
-    # 10km extended cities
-    r"Starnberg|Iffeldorf|Andechs|Herrsching|Pähl|Wielenbach"
-    r")\b",
-    re.IGNORECASE,
-)
-
 # Hard reject: commercial / service / non-housing junk that gets mixed in
 JUNK_RE = re.compile(
     r"\b(coworking|büroetage|büroflache|bürofl(ä|ae)che|gewerbeflache|gewerbefl(ä|ae)che|"
@@ -44,11 +24,20 @@ JUNK_RE = re.compile(
 
 
 def _location_ok(raw: RawListing) -> bool:
+    """Reine Leerprüfung: ohne jeden Orts-/Adresshinweis lohnt sich kein
+    Geocoding-Call. Die eigentliche, präzise Regionsprüfung übernimmt
+    unten in_search_area() anhand der geokodierten Koordinaten gegen die
+    DB-persistenten search_locations.
+
+    HER-807: hier stand früher ein hartcodierter Städte-/PLZ-Regex-
+    Vorfilter (nur Tutzing + fest definierte ~10-km-Umgebung), unabhängig
+    von den search_locations, die das Dashboard tatsächlich pflegt. Ein
+    im UI hinzugefügter Suchort außerhalb dieser Liste wurde dadurch schon
+    hier verworfen, bevor der korrekt UI-gesteuerte Radius-Check überhaupt
+    lief — die Mehrfach-Standort-Funktion war für alles außerhalb des
+    ursprünglichen Tutzing-Gebiets faktisch wirkungslos."""
     haystack = " ".join(filter(None, [raw.address, raw.title, raw.city, raw.plz]))
-    if not haystack.strip():
-        # No location info at all → reject (safer than letting Aachen-style junk through)
-        return False
-    return bool(LOCATION_ALLOWLIST_RE.search(haystack))
+    return bool(haystack.strip())
 
 
 def _is_junk(raw: RawListing) -> bool:

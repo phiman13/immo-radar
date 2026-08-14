@@ -6,12 +6,14 @@ hier als geteilte, direkt testbare Funktionen.
 
 Zwei bewusste Abweichungen von den Portal-Adaptern:
 
-1. Bewusst OHNE deren hartkodierte Tutzing-Ortsnamen-Fallback-Liste: der
-   Makler-Kreis ist laut Spec §3 bewusst weit gefasst (auch Münchner Makler
-   mit Seeobjekten) — der Regionsfilter läuft bereits auf Pipeline-Ebene
-   (app/pipeline.py LOCATION_ALLOWLIST_RE); ein zweiter, engerer Filter hier
-   würde Objekte außerhalb der hartkodierten Liste schon vor dem
-   Pipeline-Filter unsichtbar machen.
+1. Bewusst OHNE eine eigene hartkodierte Tutzing-Ortsnamen-Fallback-Liste:
+   der Makler-Kreis ist laut Spec §3 bewusst weit gefasst (auch Münchner
+   Makler mit Seeobjekten) — der Regionsfilter läuft bereits auf
+   Pipeline-Ebene (app/pipeline.py in_search_area(), geokodiert gegen die
+   DB-persistenten search_locations, seit HER-807 ohne zusätzlichen
+   hartkodierten Städte-Vorfilter); ein zweiter, engerer Filter hier würde
+   Objekte außerhalb einer festen Liste schon vor dem Pipeline-Filter
+   unsichtbar machen.
 2. Liefert PLZ/Ort GETRENNT (extract_plz_city / die "plz"/"city"-Keys in
    extract_fields), NIE einen kombinierten "address"-String. Grund:
    RawListing.dedup_hash() (app/models.py) nutzt "address" als primäres
@@ -39,9 +41,9 @@ _ROOMS_RE = re.compile(r"([\d,]+)\s*Zi(?:mmer)?\b", re.I)
 # weiteres grossgeschriebenes Wort (deutsche Substantivgrossschreibung, z.B.
 # "82327 Tutzing Immobilie") -- ein optionaler zweiter Match-Teil würde das
 # fälschlich in den Ortsnamen ziehen (real beobachtet in Produktion). Die
-# tatsächlichen mehrteiligen Ortsnamen im Suchgebiet (app.pipeline.
-# LOCATION_ALLOWLIST_RE, z.B. "Berg (Starnberger See)", "St. Heinrich") haben
-# ohnehin abweichende Trenner, die dieses simple Muster nie sauber trifft.
+# tatsächlichen mehrteiligen Ortsnamen im Suchgebiet (z.B. "Berg
+# (Starnberger See)", "St. Heinrich") haben ohnehin abweichende Trenner,
+# die dieses simple Muster nie sauber trifft.
 _PLZ_ORT_RE = re.compile(r"\b(\d{5})\s+([A-ZÄÖÜ][a-zäöüß\-]+)")
 
 _TITLE_TAG_RE = re.compile(r"<h1[^>]*>(.*?)</h1>", re.I | re.S)

@@ -20,8 +20,9 @@ class KleinanzeigenSource(SourceAdapter):
     requires_browser = True
 
     # PLZ 82327 prefix — kleinanzeigen sometimes ignores location filters and
-    # returns nationwide results, so the pipeline-level LOCATION_ALLOWLIST_RE
-    # is the real safety net. We hit two categories: Wohnung kaufen + Haus kaufen.
+    # returns nationwide results, so the pipeline-level in_search_area()
+    # geocoded radius check is the real safety net. We hit two categories:
+    # Wohnung kaufen + Haus kaufen.
     SEARCH_URLS = [
         "https://www.kleinanzeigen.de/s-haus-kaufen/82327/c208",
         "https://www.kleinanzeigen.de/s-wohnung-kaufen/82327/c196",

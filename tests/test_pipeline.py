@@ -88,12 +88,30 @@ def test_matches_profile_falls_back_to_regex_on_geocode_failure(session):
 
 
 def test_matches_profile_rejects_without_geocoding_when_no_location_text(session):
-    """Der Regex-Vorfilter spart die Geocoding-Anfrage, wenn gar kein
-    Ortstext vorhanden ist — unverändertes Verhalten von _location_ok."""
-    raw = _raw(address=None, city=None, plz=None, title="Haus")
+    """_location_ok() spart den Geocoding-Call, wenn wirklich gar kein Orts-/
+    Adresshinweis vorhanden ist (HER-807: seit dem Wegfall des hartkodierten
+    Städte-/PLZ-Regex-Vorfilters ist das die einzige verbleibende
+    Vorprüfung — Text mit unbekanntem Ortsnamen wird jetzt bewusst NICHT
+    mehr hier verworfen, sondern korrekt an in_search_area() weitergereicht,
+    siehe test_matches_profile_geocodes_even_unrecognized_location_text)."""
+    raw = _raw(address=None, city=None, plz=None, title="")
     with session() as s, patch("app.pipeline.geocode") as mock_geocode:
         assert _matches_profile(raw, s) is False
         mock_geocode.assert_not_called()
+
+
+def test_matches_profile_geocodes_even_unrecognized_location_text(session):
+    """Regression HER-807: ein früherer hartkodierter Städte-/PLZ-Regex
+    verwarf Objekte mit Ortstext außerhalb einer festen Tutzing-Liste schon
+    VOR dem Geocoding — unabhängig davon, was der Nutzer als Suchgebiet
+    konfiguriert hatte. "Musterstadt" ist in keiner hartkodierten Liste,
+    muss aber trotzdem bis zum echten, DB-gesteuerten Radius-Check
+    durchgereicht werden."""
+    set_setting("search_locations", TUTZING_LOCATIONS)
+    raw = _raw(address=None, city="Musterstadt", plz="99999", title="Haus in Musterstadt")
+    with session() as s, patch("app.pipeline.geocode", return_value=(47.9095, 11.2783, 0.6)) as mock_geocode:
+        assert _matches_profile(raw, s) is True
+        mock_geocode.assert_called_once()
 
 
 def test_matches_profile_uses_db_persisted_price_range_not_static_config(session):
