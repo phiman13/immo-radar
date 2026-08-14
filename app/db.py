@@ -203,7 +203,13 @@ def _ensure_db_dir() -> None:
 
 
 _ensure_db_dir()
-engine = create_engine(f"sqlite:///{settings.db_path}", echo=False, future=True)
+# connect_args timeout: SQLite gibt einem Schreiber ohne dieses Flag sofort
+# "database is locked" statt kurz zu warten, sobald sich Lese-/Schreibzugriffe
+# zwischen web- und worker-Container (oder mehreren kurzen Commits innerhalb
+# eines Laufs, wie beim Makler-Harvest) auch nur für Sekundenbruchteile
+# überschneiden. 30s Wartezeit statt Sofort-Fehler behebt das ohne
+# Schema-/Verhaltensänderung.
+engine = create_engine(f"sqlite:///{settings.db_path}", echo=False, future=True, connect_args={"timeout": 30})
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
