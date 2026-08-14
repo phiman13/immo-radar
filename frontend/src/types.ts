@@ -65,6 +65,9 @@ export interface AppSettings {
   qm_max: number
   rooms_min: number
   year_built_min: number | null
+  // Wire-Format ist ein Comma-String (app.settings_service: cast=str) --
+  // api/settings.ts::parseSettings() wandelt das bereits vor Ankunft im
+  // Component-Layer in ein Array um (siehe dortiger RawSettings-Typ).
   property_types: string[]
   score_threshold: number
   preferences: string[]

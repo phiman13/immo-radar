@@ -5,7 +5,19 @@ import type { AppSettings } from '../../types'
 import { cn } from '../../lib/cn'
 import { MultiLocationPicker, type SearchLocation } from '../map/MultiLocationPicker'
 
-const PROPERTY_TYPES = ['Wohnung', 'Haus', 'Doppelhaushälfte', 'Reihenhaus', 'Grundstück']
+// Anzeige-Label -> Backend-Enum-Wert (app.models.PropertyType, lowercase/
+// ASCII). HER-808: die Chips glichen bisher die deutschen UI-Labels direkt
+// (mit Umlauten/Großschreibung) gegen s.property_types ab -- das matcht die
+// tatsächlichen Backend-Werte nie, kein Chip zeigte je "aktiv", ein Klick
+// hängte das falsch geschriebene Label als zusätzlichen, nie wieder
+// entfernbaren Eintrag an.
+const PROPERTY_TYPES: { label: string; value: string }[] = [
+  { label: 'Wohnung', value: 'wohnung' },
+  { label: 'Haus', value: 'haus' },
+  { label: 'Doppelhaushälfte', value: 'doppelhaushaelfte' },
+  { label: 'Reihenhaus', value: 'reihenhaus' },
+  { label: 'Grundstück', value: 'grundstueck' },
+]
 const PREFERENCE_CHIPS = ['Balkon', 'Terrasse', 'Garten', 'Garage/Stellplatz', 'Keller', 'Aufzug', 'Einbauküche', 'Barrierefrei']
 
 function useSetting<K extends keyof AppSettings>(key: K) {
@@ -140,17 +152,17 @@ export function SearchProfileTab() {
 
       <Row label="Objekttypen" hint="Nur diese Typen berücksichtigen">
         <div className="flex flex-wrap gap-2 max-w-xs justify-end">
-          {PROPERTY_TYPES.map((pt) => {
-            const active = (s.property_types ?? []).includes(pt)
+          {PROPERTY_TYPES.map(({ label, value }) => {
+            const current = s.property_types ?? []
+            const active = current.includes(value)
             return (
               <button
-                key={pt}
+                key={value}
                 type="button"
                 onClick={() => {
-                  const current = s.property_types ?? []
                   const next = active
-                    ? current.filter((t) => t !== pt)
-                    : [...current, pt]
+                    ? current.filter((t) => t !== value)
+                    : [...current, value]
                   propertyTypesMut.mutate(next)
                 }}
                 className={cn(
@@ -161,7 +173,7 @@ export function SearchProfileTab() {
                 )}
                 style={active ? {} : { color: 'var(--muted)' }}
               >
-                {pt}
+                {label}
               </button>
             )
           })}
