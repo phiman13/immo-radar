@@ -137,16 +137,27 @@ export function FilterBar({ sources }: Props) {
         </select>
 
         {/* Portal */}
-        {sources.length > 0 && (
-          <select
-            value={filter.portal}
-            onChange={e => setFilter({ portal: e.target.value })}
-            className="px-2 py-1 rounded border border-[--border] bg-white text-xs focus:outline-none focus:border-[--accent] text-[--fg]"
-          >
-            <option value="">Alle Portale</option>
-            {sources.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-          </select>
-        )}
+        {/* HER-811/HER-815: nur echte, aktive Quellen (nicht 'blocked'/
+            'suggested' -- die liefern nie Listings, siehe HER-805/HER-806)
+            und mit Anzeigename statt technischem Namen. 'agents' (die
+            19-Makler-Sammelquelle) hat keine eigene sources-Zeile, ist aber
+            ein echter Listing.source-Wert -- als fester Zusatzeintrag
+            ergänzt, damit sich auch danach filtern lässt. */}
+        {(() => {
+          const activeSources = sources.filter((s) => s.source_type === 'builtin')
+          if (activeSources.length === 0) return null
+          return (
+            <select
+              value={filter.portal}
+              onChange={e => setFilter({ portal: e.target.value })}
+              className="px-2 py-1 rounded border border-[--border] bg-white text-xs focus:outline-none focus:border-[--accent] text-[--fg]"
+            >
+              <option value="">Alle Portale</option>
+              {activeSources.map(s => <option key={s.id} value={s.name}>{s.display_name}</option>)}
+              <option value="agents">Makler-Websites</option>
+            </select>
+          )
+        })()}
 
         {/* Reset */}
         {hasActiveFilters && (
