@@ -35,7 +35,14 @@ Agent höchstens alle MIN_RECRAWL_INTERVAL neu gecrawlt wird — unabhängig vom
 gewählten poll_interval_minutes (Dashboard-Presets: 6 Std. bis 3 Tage). Die
 schnellste UI-Option (6 Std.) würde ohne diesen Guard Makler-Sites 4x
 häufiger crawlen als Spec §3 "Täglich" vorsieht. Portal-Quellen sind davon
-nicht betroffen und folgen weiterhin exakt dem gewählten Intervall."""
+nicht betroffen und folgen weiterhin exakt dem gewählten Intervall.
+
+Agent-Status-Writes (last_checked/coverage_status/…) laufen über
+AgentSiteSource._write_agent(), das self.session (von pipeline.run_source()
+gesetzt, solange dessen Transaktion offen ist) wiederverwendet statt eine
+zweite, konkurrierende SQLite-Schreib-Session zu öffnen — sonst blockiert die
+für die gesamte Laufzeit des Harvest-Laufs offene Aufrufer-Transaktion jeden
+Schreibversuch hier ("database is locked", real reproduziert 2026-08-12)."""
 
 from __future__ import annotations
 
@@ -98,6 +105,32 @@ class AgentSiteSource(SourceAdapter):
 
     name = "agents"
 
+    def _write_agent(self, agent_id: int, **fields: object) -> None:
+        """Schreibt Statusfelder auf eine Agent-Zeile.
+
+        Läuft fetch() innerhalb einer offenen Aufrufer-Transaktion
+        (self.session von pipeline.run_source() gesetzt), wird DIESE Session
+        wiederverwendet und nur geflusht, nicht committet — der Aufrufer
+        besitzt Commit/Rollback. Eine zweite, separat committende Session
+        würde für die gesamte Laufzeit der offenen Aufrufer-Transaktion
+        blockieren (derselbe Lock-Mechanismus, den geocode()'s Session-Reuse
+        für den Geocoding-Cache bereits löst — siehe SourceAdapter.session).
+        Ohne Aufrufer-Session (Standalone-Nutzung, Tests) öffnet/committet die
+        Methode wie bisher selbst."""
+        if self.session is not None:
+            db_agent = self.session.get(Agent, agent_id)
+            if db_agent is not None:
+                for key, value in fields.items():
+                    setattr(db_agent, key, value)
+                self.session.flush()
+            return
+        with db_module.SessionLocal() as session:
+            db_agent = session.get(Agent, agent_id)
+            if db_agent is not None:
+                for key, value in fields.items():
+                    setattr(db_agent, key, value)
+                session.commit()
+
     async def fetch(self) -> AsyncIterator[RawListing]:
         assert self.client is not None
         with db_module.SessionLocal() as session:
@@ -149,13 +182,12 @@ class AgentSiteSource(SourceAdapter):
                 robots_check_url = agent.listing_url or feed_url
                 if not await is_allowed(self.client, robots_check_url):
                     log.info("agents_adapter.robots_disallowed", agent_id=agent.id, url=robots_check_url)
-                    with db_module.SessionLocal() as session:
-                        db_agent = session.get(Agent, agent.id)
-                        if db_agent is not None:
-                            db_agent.coverage_status = "robots-disallowed"
-                            db_agent.coverage_reason = f"robots.txt verbietet Zugriff auf {robots_check_url}"
-                            db_agent.last_checked = datetime.utcnow()
-                            session.commit()
+                    self._write_agent(
+                        agent.id,
+                        coverage_status="robots-disallowed",
+                        coverage_reason=f"robots.txt verbietet Zugriff auf {robots_check_url}",
+                        last_checked=datetime.utcnow(),
+                    )
                     continue
 
                 harvested = [raw async for raw in handler(agent, self.client)]
@@ -167,17 +199,16 @@ class AgentSiteSource(SourceAdapter):
                         # Phase-2a-Klassifikation war falsch, sofort
                         # zurückstufen (Spec §7: Selbsttest vor Aktivierung).
                         log.info("agents_adapter.self_test_failed", agent_id=agent.id, count=len(harvested))
-                        with db_module.SessionLocal() as session:
-                            db_agent = session.get(Agent, agent.id)
-                            if db_agent is not None:
-                                db_agent.coverage_status = "needs-manual-watch"
-                                db_agent.coverage_reason = (
-                                    f"Selbsttest fehlgeschlagen: Handler {method_name!r} lieferte "
-                                    "keine verwertbaren Objekte (Titel, Detail-Link und mind. ein "
-                                    "Sachattribut nötig)."
-                                )
-                                db_agent.last_checked = now
-                                session.commit()
+                        self._write_agent(
+                            agent.id,
+                            coverage_status="needs-manual-watch",
+                            coverage_reason=(
+                                f"Selbsttest fehlgeschlagen: Handler {method_name!r} lieferte "
+                                "keine verwertbaren Objekte (Titel, Detail-Link und mind. ein "
+                                "Sachattribut nötig)."
+                            ),
+                            last_checked=now,
+                        )
                     else:
                         # War zuvor erfolgreich -> ein einzelner leerer Lauf
                         # ist noch kein Rezept-Bruch (Spec §7: Bruch erst nach
@@ -186,20 +217,15 @@ class AgentSiteSource(SourceAdapter):
                         # Nur last_checked aktualisieren, Status bleibt
                         # auto-harvested.
                         log.info("agents_adapter.empty_run_after_prior_success", agent_id=agent.id)
-                        with db_module.SessionLocal() as session:
-                            db_agent = session.get(Agent, agent.id)
-                            if db_agent is not None:
-                                db_agent.last_checked = now
-                                session.commit()
+                        self._write_agent(agent.id, last_checked=now)
                     continue
 
-                with db_module.SessionLocal() as session:
-                    db_agent = session.get(Agent, agent.id)
-                    if db_agent is not None:
-                        db_agent.last_checked = now
-                        db_agent.last_nonempty_at = now
-                        db_agent.last_listing_count = len(harvested)
-                        session.commit()
+                self._write_agent(
+                    agent.id,
+                    last_checked=now,
+                    last_nonempty_at=now,
+                    last_listing_count=len(harvested),
+                )
 
                 for raw in harvested:
                     yield raw
@@ -216,9 +242,5 @@ class AgentSiteSource(SourceAdapter):
                 # wird bei jedem Poll-Zyklus erneut (und unhöflich oft)
                 # angefasst. coverage_status bleibt bewusst unverändert — hier
                 # ist unklar, ob der Fehler transient oder rezeptbedingt ist.
-                with db_module.SessionLocal() as session:
-                    db_agent = session.get(Agent, agent.id)
-                    if db_agent is not None:
-                        db_agent.last_checked = datetime.utcnow()
-                        session.commit()
+                self._write_agent(agent.id, last_checked=datetime.utcnow())
                 continue

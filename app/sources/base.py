@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
 import httpx
+from sqlalchemy.orm import Session
 
 from app.models import RawListing
 from app.robots import USER_AGENT
@@ -22,6 +23,14 @@ class SourceAdapter(ABC):
 
     def __init__(self) -> None:
         self.client: httpx.AsyncClient | None = None
+        # Von pipeline.run_source() gesetzt, solange dessen Schreib-Transaktion
+        # offen ist. Adapter, die während fetch() selbst in die DB schreiben
+        # (z.B. AgentSiteSource), MÜSSEN diese Session wiederverwenden statt
+        # eine eigene zu öffnen — SQLite erlaubt nur einen Schreiber, ein
+        # zweiter blockiert für die gesamte Laufzeit der offenen Transaktion
+        # (derselbe Mechanismus, den geocode()'s Session-Reuse schon für den
+        # Geocoding-Cache löst). Adapter ohne eigene DB-Writes ignorieren das.
+        self.session: Session | None = None
 
     async def __aenter__(self) -> SourceAdapter:
         self.client = httpx.AsyncClient(

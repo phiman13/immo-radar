@@ -12,7 +12,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import app.db as db_module
-from app.db import Agent, Base
+from app.db import Agent, Base, FetchRun
 from app.models import PropertyType, RawListing
 from app.sources.agents_adapter import EXTRACTION_METHODS, AgentSiteSource
 
@@ -357,6 +357,55 @@ async def test_fetch_writes_last_checked_and_last_nonempty_at_on_success(session
         assert agent.last_checked is not None
         assert agent.last_nonempty_at is not None
         assert agent.last_listing_count == 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_reuses_caller_session_instead_of_opening_a_second_writer(session, monkeypatch):
+    """Regression gegen den SQLite-Write-Lock-Deadlock (real reproduziert
+    2026-08-12 in Produktion, siehe Modul-Docstring von agents_adapter.py).
+
+    pipeline.run_source() hält während des gesamten fetch()-Laufs eine
+    offene, bereits geflushte Schreib-Transaktion (session.add(run) +
+    flush()). Schreibt AgentSiteSource intern über eine ZWEITE, eigene
+    Session, blockiert das mit 'database is locked' -- SQLite erlaubt nur
+    einen Schreiber. self.session (von run_source() gesetzt) muss deshalb
+    wiederverwendet werden, exakt wie geocode() es für den Geocoding-Cache
+    bereits tut (tests/test_pipeline.py::
+    test_run_source_survives_geocode_cache_miss_inside_open_transaction).
+
+    Die Test-Engine hat bewusst KEIN connect_args={'timeout': ...} (wie die
+    Produktions-Engine in app/db.py) -- ein echter zweiter Schreiber würde
+    hier sofort mit OperationalError scheitern statt erst nach 30s zu warten,
+    was den Test schnell und deterministisch macht."""
+    agent_id = _make_agent(session)
+
+    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+        yield RawListing(
+            source="agents", source_id="x", url="https://example.de/x", title="OK", price_eur=450000
+        )
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
+
+    adapter = AgentSiteSource()
+    with session() as outer:
+        # Simuliert exakt den Zustand von pipeline.run_source(): eine offene,
+        # geflushte (aber nicht committete) Schreib-Transaktion.
+        outer.add(FetchRun(source="agents"))
+        outer.flush()
+        adapter.session = outer
+
+        async with adapter:
+            results = [raw async for raw in adapter.fetch()]
+
+        assert len(results) == 1
+        # Sichtbar innerhalb DERSELBEN, noch offenen Transaktion -- kein
+        # zweiter Schreiber, kein Lock.
+        agent = outer.get(Agent, agent_id)
+        assert agent.last_checked is not None
+        assert agent.last_nonempty_at is not None
+        assert agent.last_listing_count == 1
+        outer.commit()
 
 
 @pytest.mark.asyncio

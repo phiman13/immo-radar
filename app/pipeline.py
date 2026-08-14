@@ -195,6 +195,12 @@ async def run_source(adapter) -> tuple[int, int, list[Listing]]:
     with SessionLocal() as session:
         session.add(run)
         session.flush()
+        # Adapter mit eigenen DB-Writes während fetch() (z.B. AgentSiteSource)
+        # bekommen hier dieselbe offene Transaktion gereicht, statt selbst
+        # einen zweiten SQLite-Schreiber zu öffnen — der stünde für die
+        # gesamte Laufzeit dieses with-Blocks gegen die hier bereits
+        # reservierte Schreib-Sperre an ("database is locked").
+        adapter.session = session
         try:
             async with adapter:
                 async for raw in adapter.fetch():
@@ -210,6 +216,8 @@ async def run_source(adapter) -> tuple[int, int, list[Listing]]:
             log.error("pipeline.source_failed", source=adapter.name, error=str(e))
             run.error = str(e)[:1000]
             session.rollback()
+        finally:
+            adapter.session = None
 
         run.finished_at = datetime.utcnow()
         run.listings_found = found
