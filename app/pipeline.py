@@ -68,7 +68,15 @@ def _resolve_location(raw: RawListing, session) -> None:
         raw.geocode_confidence = importance
         raw.region_match_reason = "geocoded"
     else:
-        raw.region_match_reason = "geocode-failed-regex-fallback"
+        # HER-807: hieß früher "geocode-failed-regex-fallback" -- der
+        # damalige hartkodierte Regionsfilter griff bei einem Geocoding-
+        # Fehlschlag als einziges verbleibendes Ortssignal. Seit dessen
+        # Wegfall gibt es in diesem Zweig KEINE Regionsprüfung mehr; ein
+        # Objekt mit Ortstext, das sich nicht geokodieren lässt, wird nur
+        # noch über Preis/Fläche/Zimmer/Objektart/Junk-Filter aussortiert.
+        # Bewusst in Kauf genommen (Nominatim-Fehlschläge sind selten) statt
+        # erneut einen hartkodierten Namensfilter einzuführen.
+        raw.region_match_reason = "geocode-failed"
 
 
 def _matches_profile(raw: RawListing, session) -> bool:

@@ -57,10 +57,9 @@ def test_matches_profile_accepts_geocoded_object_in_area(session):
 
 def test_matches_profile_rejects_geocoded_object_outside_area(session):
     """Regression für den historischen Bug: früher gab in_search_area() ohne
-    lat/lon immer True zurück, egal wo das Objekt tatsächlich lag. Der
-    Regex-Vorfilter matcht hier zwar ("Starnberg" im Titel erwähnt), die
-    echten geocodierten Koordinaten (München) müssen den Regionsfilter
-    trotzdem greifen lassen."""
+    lat/lon immer True zurück, egal wo das Objekt tatsächlich lag. "Starnberg"
+    im Titel darf hier nicht durchrutschen — die echten geocodierten
+    Koordinaten (München) müssen den Regionsfilter greifen lassen."""
     set_setting("search_locations", TUTZING_LOCATIONS)
     raw = _raw(
         address="Marienplatz 1, 80331 München",
@@ -79,12 +78,17 @@ def test_matches_profile_uses_source_coordinates_without_geocoding(session):
     assert raw.region_match_reason == "coordinates-from-source"
 
 
-def test_matches_profile_falls_back_to_regex_on_geocode_failure(session):
+def test_matches_profile_accepts_without_region_check_on_geocode_failure(session):
+    """HER-807: seit dem Wegfall des hartkodierten Regionsfilters gibt es bei
+    einem Geocoding-Fehlschlag KEINE Regionsprüfung mehr -- das Objekt wird
+    nur noch über die übrigen Filter (Preis/Fläche/Zimmer/Objektart/Junk)
+    beurteilt. Bewusste Design-Entscheidung, siehe Kommentar in
+    _resolve_location()."""
     set_setting("search_locations", TUTZING_LOCATIONS)
     raw = _raw()
     with session() as s, patch("app.pipeline.geocode", return_value=(None, None, None)):
         assert _matches_profile(raw, s) is True
-    assert raw.region_match_reason == "geocode-failed-regex-fallback"
+    assert raw.region_match_reason == "geocode-failed"
 
 
 def test_matches_profile_rejects_without_geocoding_when_no_location_text(session):
@@ -161,14 +165,14 @@ def test_upsert_persists_geocoding_metadata(session):
         assert listing.geocode_confidence == 0.6
         assert listing.region_match_reason == "geocoded"
 
-    raw.region_match_reason = "geocode-failed-regex-fallback"
+    raw.region_match_reason = "geocode-failed"
     raw.geocode_confidence = None
 
     with session() as s:
         listing, is_new = _upsert(s, raw)
         s.commit()
         assert is_new is False
-        assert listing.region_match_reason == "geocode-failed-regex-fallback"
+        assert listing.region_match_reason == "geocode-failed"
         assert listing.geocode_confidence is None
 
 
@@ -193,7 +197,7 @@ def test_upsert_keeps_good_coordinates_when_regeocoding_fails(session):
     failed.lat = None
     failed.lon = None
     failed.geocode_confidence = None
-    failed.region_match_reason = "geocode-failed-regex-fallback"
+    failed.region_match_reason = "geocode-failed"
 
     with session() as s:
         listing, is_new = _upsert(s, failed)
@@ -202,7 +206,7 @@ def test_upsert_keeps_good_coordinates_when_regeocoding_fails(session):
         assert listing.lat == 47.9095
         assert listing.lon == 11.2783
         assert listing.geocode_confidence == 0.6
-        assert listing.region_match_reason == "geocode-failed-regex-fallback"
+        assert listing.region_match_reason == "geocode-failed"
 
     with session() as s:
         persisted = s.query(Listing).one()
