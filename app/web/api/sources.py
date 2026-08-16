@@ -269,23 +269,30 @@ class DiscoverResult(BaseModel):
     error: str | None
 
 
+def _known_source_names() -> list[str]:
+    """HER-817: Referenzliste für den Discover-Prompt zur Laufzeit aus der
+    DB ableiten statt hartzucodieren -- die alte, feste 8-Einträge-Liste
+    kannte weder später manuell hinzugefügte 'suggested'-Quellen noch die 19
+    per Vollabdeckung-Kaskade onboarded Makler (agents-Tabelle). Claude
+    konnte dadurch bereits bekannte Quellen erneut vorschlagen."""
+    with db_module.SessionLocal() as session:
+        source_names = [s.display_name for s in session.query(db_module.Source).all()]
+        agent_names = [a.name for a in session.query(db_module.Agent).all()]
+    return sorted(set(source_names) | set(agent_names))
+
+
 @router.post("/discover", response_model=DiscoverResult)
 async def discover_sources() -> DiscoverResult:
     from app.config import settings as _settings  # noqa: PLC0415
 
     anthropic_client = Anthropic(api_key=_settings.anthropic_api_key)
+    known = _known_source_names()
+    known_list = "\n".join(f"- {name}" for name in known) if known else "(noch keine)"
     prompt = (
         "Schlage Immobilien-Portale und Makler-Websites für die Region"
         " Tutzing / Starnberger See (Bayern, Deutschland) vor,"
         " die noch NICHT in dieser Liste sind:\n"
-        "- ImmoScout24 (immoscout24.de)\n"
-        "- Immowelt (immowelt.de)\n"
-        "- Kleinanzeigen (kleinanzeigen.de)\n"
-        "- BS Immo (bsimmo.de)\n"
-        "- Riedel Immobilien\n"
-        "- Starnberg Immo\n"
-        "- Sparkasse Immobilien\n"
-        "- Tutzing24\n\n"
+        f"{known_list}\n\n"
         "Antworte NUR mit einem JSON-Array (kein Markdown):\n"
         "[\n"
         '  {"name": "<Anzeigename>", "url": "<URL>", "description": "<1 Satz warum relevant>"},\n'
