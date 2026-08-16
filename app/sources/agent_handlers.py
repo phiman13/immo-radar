@@ -23,6 +23,7 @@ import asyncio
 import hashlib
 import re
 from collections.abc import AsyncIterator
+from datetime import datetime, timedelta
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -36,6 +37,12 @@ from app.models import PropertyType, RawListing
 
 MAX_DETAIL_PAGES_PER_AGENT = 40
 DETAIL_FETCH_DELAY_SECONDS = 0.5
+
+# Change-Gate-Fingerprint (Vollabdeckung-Spec Phase 2c §3): eine bereits
+# bekannte Detailseite wird erst nach REFRESH_WINDOW erneut abgerufen, damit
+# Preis-/Status-Änderungen (ListingHistory in app.pipeline._upsert()) nicht
+# einfrieren, aber der tägliche Crawl nicht jedes Mal alle Objekte neu holt.
+REFRESH_WINDOW = timedelta(days=7)
 
 _CONTACT_MARKER_RE = re.compile(r"contact|kontakt", re.I)
 
@@ -107,7 +114,34 @@ async def _fetch_detail_listing(agent: Agent, client: httpx.AsyncClient, url: st
     )
 
 
-async def crawl_and_extract(agent: Agent, client: httpx.AsyncClient) -> AsyncIterator[RawListing]:
+def _urls_to_fetch(all_urls: list[str], known_urls: dict[str, datetime], now: datetime) -> list[str]:
+    """Change-Gate-Fingerprint (Vollabdeckung-Spec Phase 2c §3): liefert nur
+    URLs, die noch nie gesehen wurden ODER deren letzte Bestätigung länger
+    als REFRESH_WINDOW zurückliegt. Canary-Regel: wären es 0 (weil alle
+    bekannten URLs frisch sind), wird stattdessen die am längsten nicht
+    bestätigte bekannte URL erzwungen -- sonst liefert der Handler in einem
+    "alles frisch"-Lauf 0 Objekte, und der Selbsttest in
+    app.sources.agents_adapter._passes_self_test() würde fälschlich einen
+    Rezept-Bruch auslösen, obwohl nur das Change-Gate gegriffen hat. Das gilt
+    AUCH bei nur einer einzigen bekannten URL: app.sources.agents_adapter
+    Task 5 (Zwei-Läufe-Zähler) erhöht consecutive_empty_runs bei JEDEM leeren
+    Lauf unabhängig von der Ursache und stuft nach zwei Läufen zurück --
+    ein Single-Listing-Agent ohne Canary-Erzwingung würde dadurch nach dem
+    zweiten "alles frisch"-Lauf fälschlich auf needs-manual-watch
+    zurückgestuft, obwohl sein einziges Objekt weiterhin online ist."""
+    due = [url for url in all_urls if url not in known_urls or (now - known_urls[url]) >= REFRESH_WINDOW]
+    if due:
+        return due
+    known_among_all = [url for url in all_urls if url in known_urls]
+    if not known_among_all:
+        return []
+    oldest = min(known_among_all, key=lambda u: known_urls[u])
+    return [oldest]
+
+
+async def crawl_and_extract(
+    agent: Agent, client: httpx.AsyncClient, known_urls: dict[str, datetime] | None = None
+) -> AsyncIterator[RawListing]:
     """Handler für alle `vendor:<x>`-Method-Keys UND `detail_links` (Scope-
     Entscheidung Phase 2b): Phase 0 lieferte nur Vendor-Fingerprints, keine
     Vendor-spezifischen Selektoren — `vendor:<x>` bleibt deshalb nur ein
@@ -167,7 +201,9 @@ async def _discover_sitemap_object_urls(client: httpx.AsyncClient, sitemap_url: 
     return sorted(obj_urls)
 
 
-async def sitemap_objekte_handler(agent: Agent, client: httpx.AsyncClient) -> AsyncIterator[RawListing]:
+async def sitemap_objekte_handler(
+    agent: Agent, client: httpx.AsyncClient, known_urls: dict[str, datetime] | None = None
+) -> AsyncIterator[RawListing]:
     """Handler für `sitemap_objekte`: die in extraction['sitemap_url']
     festgehaltene Sitemap wird erneut abgerufen (der Onboarding-Probe hat sie
     nur klassifiziert, nicht für den Harvest behalten), Objekt-URLs per
@@ -198,7 +234,9 @@ _EMPTY_REGEX_FIELDS = {
 }
 
 
-async def structured_data_handler(agent: Agent, client: httpx.AsyncClient) -> AsyncIterator[RawListing]:
+async def structured_data_handler(
+    agent: Agent, client: httpx.AsyncClient, known_urls: dict[str, datetime] | None = None
+) -> AsyncIterator[RawListing]:
     """Handler für `structured_data`: JSON-LD-Knoten zuerst (reichhaltiger —
     schema.org-Felder statt Freitext-Regex), Regex-Extraktion aus dem
     Fließtext nur als Lückenfüller (merge_fields). Fehlt einem Knoten die
@@ -266,7 +304,9 @@ async def structured_data_handler(agent: Agent, client: httpx.AsyncClient) -> As
         await asyncio.sleep(DETAIL_FETCH_DELAY_SECONDS)
 
 
-async def feed_adapter_handler(agent: Agent, client: httpx.AsyncClient) -> AsyncIterator[RawListing]:
+async def feed_adapter_handler(
+    agent: Agent, client: httpx.AsyncClient, known_urls: dict[str, datetime] | None = None
+) -> AsyncIterator[RawListing]:
     """Handler für `feed_adapter`: Objekte kommen direkt aus den Feed-Items
     (Titel/Link/Beschreibung), kein zusätzlicher Detailseiten-Abruf nötig —
     der Feed selbst trägt bereits genug Text für die generische

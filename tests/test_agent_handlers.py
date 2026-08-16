@@ -4,14 +4,17 @@ Konvention, siehe tests/test_agent_probe.py) — kein respx."""
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.db import Agent
 from app.sources.agent_handlers import (
+    REFRESH_WINDOW,
     _source_id,
     _strip_contact_blocks,
+    _urls_to_fetch,
     crawl_and_extract,
     feed_adapter_handler,
     sitemap_objekte_handler,
@@ -559,3 +562,56 @@ async def test_crawl_and_extract_prefers_object_address_over_agency_contact_addr
     traumvilla = next(r for r in results if r.title == "Traumvilla am See")
     assert traumvilla.plz == "12345"
     assert traumvilla.city == "Musterstadt"
+
+
+def test_urls_to_fetch_includes_new_urls_not_in_known_urls():
+    now = datetime(2026, 8, 16, 12, 0, 0)
+    result = _urls_to_fetch(["https://x.de/a", "https://x.de/b"], {}, now)
+    assert result == ["https://x.de/a", "https://x.de/b"]
+
+
+def test_urls_to_fetch_canary_forces_sole_fresh_known_url():
+    # Brief-Abweichung (dokumentiert in task-1-report.md): der Brief listet
+    # diesen Fall unter "skips_fresh_known_urls" mit erwartetem `== []`, was
+    # der eigenen Canary-Regel im selben Brief widerspricht -- bei genau
+    # einer bekannten URL insgesamt greift die Canary-Regel identisch zum
+    # Mehrfach-Fall (siehe test_urls_to_fetch_canary_forces_oldest_known_url_
+    # when_all_fresh unten), sonst würde app.sources.agents_adapter Task 5
+    # (Zwei-Läufe-Zähler) einen Single-Listing-Agent nach zwei "alles
+    # frisch"-Läufen fälschlich auf needs-manual-watch zurückstufen.
+    now = datetime(2026, 8, 16, 12, 0, 0)
+    known = {"https://x.de/a": now - timedelta(days=1)}
+    result = _urls_to_fetch(["https://x.de/a"], known, now)
+    assert result == ["https://x.de/a"]
+
+
+def test_urls_to_fetch_refetches_stale_known_urls():
+    now = datetime(2026, 8, 16, 12, 0, 0)
+    known = {"https://x.de/a": now - REFRESH_WINDOW - timedelta(hours=1)}
+    result = _urls_to_fetch(["https://x.de/a"], known, now)
+    assert result == ["https://x.de/a"]
+
+
+def test_urls_to_fetch_mixes_new_and_stale_but_omits_fresh():
+    now = datetime(2026, 8, 16, 12, 0, 0)
+    known = {
+        "https://x.de/fresh": now - timedelta(days=1),
+        "https://x.de/stale": now - REFRESH_WINDOW - timedelta(hours=1),
+    }
+    result = _urls_to_fetch(["https://x.de/fresh", "https://x.de/stale", "https://x.de/new"], known, now)
+    assert result == ["https://x.de/stale", "https://x.de/new"]
+
+
+def test_urls_to_fetch_canary_forces_oldest_known_url_when_all_fresh():
+    now = datetime(2026, 8, 16, 12, 0, 0)
+    known = {
+        "https://x.de/a": now - timedelta(days=1),
+        "https://x.de/b": now - timedelta(hours=2),
+    }
+    result = _urls_to_fetch(["https://x.de/a", "https://x.de/b"], known, now)
+    assert result == ["https://x.de/a"]
+
+
+def test_urls_to_fetch_returns_empty_when_no_urls_discovered_at_all():
+    now = datetime(2026, 8, 16, 12, 0, 0)
+    assert _urls_to_fetch([], {}, now) == []

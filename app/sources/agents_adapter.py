@@ -61,7 +61,9 @@ from app.robots import is_allowed
 from app.sources import agent_handlers
 from app.sources.base import SourceAdapter
 
-ExtractionMethod = Callable[[Agent, httpx.AsyncClient], AsyncIterator[RawListing]]
+ExtractionMethod = Callable[
+    [Agent, httpx.AsyncClient, "dict[str, datetime] | None"], AsyncIterator[RawListing]
+]
 
 # Höflichkeits-Guard (Spec §3/§8): unabhängig vom gewählten poll_interval_minutes
 # wird ein einzelner Agent höchstens alle 20 Stunden neu gecrawlt (etwas unter
