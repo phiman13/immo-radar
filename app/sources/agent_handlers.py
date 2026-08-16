@@ -270,6 +270,10 @@ async def structured_data_handler(
             log.warning("agent_handlers.structured_url_off_host", agent_id=agent.id, url=url)
             continue
 
+        known = known_urls or {}
+        if url in known and (datetime.utcnow() - known[url]) < REFRESH_WINDOW:
+            continue
+
         text = ""
         detail_html = ""
         try:
@@ -337,6 +341,9 @@ async def feed_adapter_handler(
             # anderen Host auflöst, würde sonst Content abrufen, dessen
             # robots.txt nie konsultiert wurde.
             log.warning("agent_handlers.feed_link_off_host", agent_id=agent.id, url=link)
+            continue
+        known = known_urls or {}
+        if link in known and (datetime.utcnow() - known[link]) < REFRESH_WINDOW:
             continue
         blob = f"{item['title']} {item['description']}"
         fields = extract_fields("", blob)

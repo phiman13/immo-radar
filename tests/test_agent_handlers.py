@@ -747,3 +747,78 @@ async def test_crawl_and_extract_never_requests_fresh_known_url():
 
     requested_urls = {c.args[0] for c in client.get.call_args_list}
     assert "https://x.de/immobilien/villa-am-see-tutzing" not in requested_urls
+
+
+@pytest.mark.asyncio
+async def test_structured_data_handler_skips_detail_fetch_for_fresh_known_url():
+    listing_html = """
+    <html><body>
+    <script type="application/ld+json">
+    {"@type": "Product", "name": "Altbauwohnung", "url": "https://x.de/objekt/1",
+     "offers": {"price": "399000"}, "floorSize": {"value": "95"}}
+    </script>
+    </body></html>
+    """
+    routes = {"https://x.de/immobilien/": _resp(text=listing_html)}
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/", extraction={"method": "structured_data"})
+    now = datetime.utcnow()
+    known_urls = {"https://x.de/objekt/1": now - timedelta(hours=1)}
+
+    results = [r async for r in structured_data_handler(agent, client, known_urls)]
+
+    assert results == []
+    assert "https://x.de/objekt/1" not in {c.args[0] for c in client.get.await_args_list}
+
+
+@pytest.mark.asyncio
+async def test_feed_adapter_handler_skips_detail_fetch_for_fresh_known_url():
+    feed_xml = """<?xml version="1.0"?>
+    <rss><channel>
+      <item>
+        <title>Reihenhaus Tutzing 450.000 € 140 m²</title>
+        <link>https://x.de/feed-item/1</link>
+        <description>Schönes Reihenhaus</description>
+      </item>
+    </channel></rss>"""
+    routes = {"https://x.de/feed.xml": _resp(text=feed_xml)}
+    client = _routed_client(routes)
+    agent = _agent(extraction={"method": "feed_adapter", "feed_url": "https://x.de/feed.xml"})
+    now = datetime.utcnow()
+    known_urls = {"https://x.de/feed-item/1": now - timedelta(hours=1)}
+
+    results = [r async for r in feed_adapter_handler(agent, client, known_urls)]
+
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_feed_adapter_handler_still_yields_other_fresh_feed_item_when_one_is_skipped():
+    """Diskriminierender Test (Ergänzung zum Brief): der Brief-Test oben hat
+    nur ein einziges Feed-Item -- results == [] wäre auch dann wahr, wenn der
+    Handler aus einem völlig anderen Grund (z.B. kaputtem XML-Parsing) nichts
+    liefert, unabhängig vom Change-Gate. Hier gibt es zwei Items, ein
+    bekanntes/frisches und ein neues -- nur das Change-Gate kann erklären,
+    dass GENAU das bekannte Item fehlt, während das neue durchkommt."""
+    feed_xml = """<?xml version="1.0"?>
+    <rss><channel>
+      <item>
+        <title>Reihenhaus Tutzing 450.000 € 140 m²</title>
+        <link>https://x.de/feed-item/1</link>
+        <description>Schönes Reihenhaus</description>
+      </item>
+      <item>
+        <title>Neubau Starnberg 600.000 € 160 m²</title>
+        <link>https://x.de/feed-item/2</link>
+        <description>Neuer Neubau</description>
+      </item>
+    </channel></rss>"""
+    routes = {"https://x.de/feed.xml": _resp(text=feed_xml)}
+    client = _routed_client(routes)
+    agent = _agent(extraction={"method": "feed_adapter", "feed_url": "https://x.de/feed.xml"})
+    now = datetime.utcnow()
+    known_urls = {"https://x.de/feed-item/1": now - timedelta(hours=1)}
+
+    results = [r async for r in feed_adapter_handler(agent, client, known_urls)]
+
+    assert {r.url for r in results} == {"https://x.de/feed-item/2"}
