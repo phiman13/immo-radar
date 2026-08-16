@@ -12,7 +12,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.web.server as server_module
-from app.web.auth import require_auth
 
 
 @pytest.fixture()
@@ -25,7 +24,6 @@ def spa_client(test_db, monkeypatch, tmp_path):
     (fake_dist / "index.html").write_text("<html><body>SPA</body></html>")
     monkeypatch.setattr(server_module, "BASE_DIR", tmp_path)
 
-    server_module.app.dependency_overrides[require_auth] = lambda: "testuser"
     with TestClient(server_module.app, raise_server_exceptions=True) as c:
         yield c
     server_module.app.dependency_overrides.clear()

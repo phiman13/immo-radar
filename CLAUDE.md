@@ -33,7 +33,6 @@ app/
   web/
     server.py     FastAPI — SPA servieren + API-Routing
     api/          listings.py, settings.py, sources.py, system.py, telegram.py
-    auth.py       HTTP-Basic (intern, Caddy ist primäre Auth-Schicht)
 frontend/
   src/            React 18 + Vite + TypeScript + Tailwind CSS v3
   dist/           → app/web/static/dist/ (via npm run build)
@@ -113,7 +112,7 @@ Frontend: React 18 · Vite 5 · TypeScript 5 · Tailwind CSS v3 · TanStack Quer
 - Docker-Image enthält Chromium → ~1 GB, Build dauert länger
 - `.env` nie committen — Telegram-Token + Dashboard-Passwort drin
 - `scripts/deploy.sh` nutzt rsync + SSH direkt auf 89.167.67.26
-- Auth liegt bei Caddy (basicauth), FastAPI-interne `require_auth` ist nur für Legacy-Routes aktiv
+- Auth liegt ausschließlich bei Caddy (basicauth) — kein FastAPI-interner Auth-Layer mehr seit Entfernung der Legacy-Jinja2-Routen (HER-816)
 - Frontend-Build (npm run build im Dockerfile) gibt den Build in `app/web/static/dist/` aus — FastAPI serviert ihn als Static Files
 - **Zwei Docker-Container**: `web` (FastAPI + SPA) und `worker` (APScheduler + Pipeline) — Scheduler-State nur im `worker` erreichbar
 - **DB-persistente Settings**: `settings_service.py` liest/schreibt Suchprofil (Radius, Budget, Zimmer, Objekttypen, Präferenzen, Baujahr, Orte) und Mechanic-Settings (Intervalle, Enrich-Toggle) in SQLite

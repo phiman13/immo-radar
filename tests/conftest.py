@@ -42,13 +42,14 @@ def client(test_db):
     """FastAPI TestClient wired to the test DB.
 
     - Patches db_module globals before the app is imported into the client.
-    - Overrides require_auth so tests don't need Basic-Auth headers.
     - Uses TestClient as context manager to trigger startup/shutdown events.
-    """
-    from app.web.auth import require_auth
-    from app.web.server import app
 
-    app.dependency_overrides[require_auth] = lambda: "testuser"
+    HER-816: kein require_auth-Override mehr nötig -- die Legacy-Jinja2-
+    Routen (die einzigen mit einem FastAPI-internen Auth-Check) sind
+    entfernt. Auth läuft ausschließlich über Caddy basicauth (siehe
+    CLAUDE.md), außerhalb des von TestClient erreichten Layers.
+    """
+    from app.web.server import app
 
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c
