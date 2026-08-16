@@ -81,6 +81,11 @@ export function SystemPage() {
             Scheduler {status?.scheduler_running ? 'aktiv' : 'inaktiv'}
           </p>
         </div>
+        {status && !status.jobs_available && (
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>
+            Job-Zeitpläne sind nur im Worker-Prozess einsehbar, nicht über dieses Dashboard.
+          </p>
+        )}
         {status?.jobs.map((job) => (
           <div key={job.id} className="flex justify-between text-xs" style={{ color: 'var(--muted)' }}>
             <span>{job.id}</span>

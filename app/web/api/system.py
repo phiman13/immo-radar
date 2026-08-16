@@ -24,6 +24,12 @@ class JobInfo(BaseModel):
 class SystemStatus(BaseModel):
     scheduler_running: bool
     jobs: list[JobInfo]
+    # HER-813: der Scheduler läuft architekturbedingt nur im worker-Container
+    # -- die API wird aber vom web-Container bedient, request.app.state.scheduler
+    # ist dort IMMER None. `jobs` blieb dadurch für Nutzer der API immer leer,
+    # ununterscheidbar von "keine Jobs konfiguriert". Dieses Flag macht den
+    # Unterschied zwischen "leer" und "hier nicht einsehbar" explizit.
+    jobs_available: bool
     listing_counts: dict[str, int]
 
 
@@ -35,6 +41,7 @@ def get_status(request: Request) -> SystemStatus:
 
     running = False
     jobs = []
+    jobs_available = scheduler is not None
     if scheduler is not None:
         running = scheduler.running
         for job in scheduler.get_jobs():
@@ -63,6 +70,7 @@ def get_status(request: Request) -> SystemStatus:
     return SystemStatus(
         scheduler_running=running,
         jobs=jobs,
+        jobs_available=jobs_available,
         listing_counts=listing_counts,
     )
 

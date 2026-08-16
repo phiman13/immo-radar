@@ -36,12 +36,19 @@ export function formatDaysOnMarket(firstSeenAt: string): string {
   return `seit ${days} Tagen`
 }
 
+// HER-813: wird sowohl für Vergangenheits- (run.started_at, source.last_run)
+// als auch Zukunfts-Zeitstempel (job.next_run) verwendet. Die alte, nur auf
+// Vergangenheit ausgelegte Version lieferte für JEDEN Zukunfts-Zeitstempel
+// "gerade eben" (negative Minutenzahl < 1), egal ob der nächste Lauf in
+// 1 Minute oder 12 Stunden anstand.
 export function formatTimeAgo(isoDate: string): string {
-  const mins = Math.floor((Date.now() - parseUTC(isoDate).getTime()) / 60_000)
+  const diffMs = Date.now() - parseUTC(isoDate).getTime()
+  const future = diffMs < 0
+  const mins = Math.floor(Math.abs(diffMs) / 60_000)
   if (mins < 1) return 'gerade eben'
-  if (mins < 60) return `vor ${mins} Min.`
+  if (mins < 60) return future ? `in ${mins} Min.` : `vor ${mins} Min.`
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `vor ${hours} Std.`
+  if (hours < 24) return future ? `in ${hours} Std.` : `vor ${hours} Std.`
   const days = Math.floor(hours / 24)
-  return `vor ${days} Tagen`
+  return future ? `in ${days} Tagen` : `vor ${days} Tagen`
 }

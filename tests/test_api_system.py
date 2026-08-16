@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
+from types import SimpleNamespace
+
 import app.db as db_module
 from app.db import Listing
 
@@ -65,3 +68,25 @@ def test_system_status_graceful_no_scheduler(client):
     data = resp.json()
     assert data["scheduler_running"] is False
     assert data["jobs"] == []
+    # HER-813: der web-Container hat nie einen In-Process-Scheduler --
+    # jobs_available muss das explizit von "keine Jobs konfiguriert"
+    # unterscheiden, sonst wirkt eine leere Jobliste wie ein Bug.
+    assert data["jobs_available"] is False
+
+
+def test_system_status_reports_jobs_available_when_scheduler_present(client):
+    """HER-813: läuft die API (wie im worker-Container) MIT In-Process-
+    Scheduler, muss jobs_available korrekt True sein und echte Jobdaten
+    durchgereicht werden."""
+    fake_job = SimpleNamespace(id="poll_and_notify", next_run_time=datetime(2026, 1, 1, 12, 0, 0))
+    fake_scheduler = SimpleNamespace(running=True, get_jobs=lambda: [fake_job])
+    client.app.state.scheduler = fake_scheduler
+    try:
+        resp = client.get("/api/system/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["jobs_available"] is True
+        assert data["scheduler_running"] is True
+        assert data["jobs"] == [{"id": "poll_and_notify", "next_run": "2026-01-01T12:00:00"}]
+    finally:
+        del client.app.state.scheduler

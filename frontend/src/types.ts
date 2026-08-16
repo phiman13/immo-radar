@@ -81,6 +81,10 @@ export interface JobInfo {
 export interface SystemStatus {
   scheduler_running: boolean
   jobs: JobInfo[]
+  // HER-813: Scheduler läuft nur im worker-Container, die API wird vom
+  // web-Container bedient -- jobs ist dort strukturell immer []. Dieses
+  // Flag unterscheidet "keine Jobs konfiguriert" von "hier nicht einsehbar".
+  jobs_available: boolean
   listing_counts: Record<string, number>
 }
 
