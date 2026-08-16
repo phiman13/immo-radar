@@ -18,11 +18,14 @@ weitergereicht wird.
   klassifikationsbasierte `auto-harvested`-Einstufung aus Phase 2a
   (app.agent_onboarding) sofort auf `needs-manual-watch` zurückgestuft
   ("Selbsttest vor Aktivierung").
-- War der Makler zuvor erfolgreich, wird ein einzelner leerer Lauf NICHT als
-  Rezept-Bruch gewertet (Spec §7 verlangt zwei aufeinanderfolgende leere
-  Läufe) — nur `last_checked` wird aktualisiert, `coverage_status` bleibt
-  `auto-harvested`. Der Zwei-Läufe-Zähler für echte Bruch-Erkennung ist
-  Change-Gate-Arbeit (Phase 2c).
+- War der Makler zuvor erfolgreich, zählt `consecutive_empty_runs` (Phase 2c)
+  aufeinanderfolgende Läufe ohne Selbsttest-Erfolg. Erst beim ZWEITEN Lauf in
+  Folge (Spec §7) erfolgt der Downgrade auf `needs-manual-watch`; der erste
+  Fehlschlag aktualisiert nur `last_checked` + den Zähler. Zwei Fälle werden
+  im Log unterschieden: Handler lieferte 0 Objekte (Fall a, `log.info`,
+  vermutlich transient) vs. Handler lieferte Objekte, aber keins bestand den
+  Selbsttest (Fall b, `log.warning`, vermutlich echter Rezept-Bruch, z.B.
+  Website-Relaunch).
 Auf dem Erfolgspfad werden `last_checked`/`last_nonempty_at`/
 `last_listing_count` geschrieben — vorher waren diese Spalten nur auf den
 Fehlerpfaden gepflegt, für funktionierende Agents also tot.
@@ -222,6 +225,7 @@ class AgentSiteSource(SourceAdapter):
                         # Nie zuvor erfolgreich -> die optimistische
                         # Phase-2a-Klassifikation war falsch, sofort
                         # zurückstufen (Spec §7: Selbsttest vor Aktivierung).
+                        # Kein Streak nötig -- Erstaktivierungs-Selbsttest.
                         log.info("agents_adapter.self_test_failed", agent_id=agent.id, count=len(harvested))
                         self._write_agent(
                             agent.id,
@@ -233,15 +237,52 @@ class AgentSiteSource(SourceAdapter):
                             ),
                             last_checked=now,
                         )
+                        continue
+
+                    # War zuvor erfolgreich -> Zwei-Läufe-Zähler (Phase 2c,
+                    # Spec §4): ein einzelner leerer/selbsttest-untauglicher
+                    # Lauf ist noch kein Rezept-Bruch (Spec §7: Bruch erst
+                    # nach ZWEI aufeinanderfolgenden Läufen).
+                    empty_runs = (agent.consecutive_empty_runs or 0) + 1
+                    if len(harvested) == 0:
+                        # Fall (a): Handler lieferte 0 Objekte -- vermutlich
+                        # transienter Netzwerkfehler oder Blockade.
+                        log.info(
+                            "agents_adapter.empty_run_case_a_zero_objects",
+                            agent_id=agent.id,
+                            consecutive_empty_runs=empty_runs,
+                        )
+                        case_reason = "Handler lieferte 0 Objekte"
                     else:
-                        # War zuvor erfolgreich -> ein einzelner leerer Lauf
-                        # ist noch kein Rezept-Bruch (Spec §7: Bruch erst nach
-                        # ZWEI aufeinanderfolgenden leeren Läufen — die dafür
-                        # nötige Zähl-Logik ist Change-Gate-Arbeit, Phase 2c).
-                        # Nur last_checked aktualisieren, Status bleibt
-                        # auto-harvested.
-                        log.info("agents_adapter.empty_run_after_prior_success", agent_id=agent.id)
-                        self._write_agent(agent.id, last_checked=now)
+                        # Fall (b): Handler lieferte N>0 Objekte, aber keins
+                        # bestand den Selbsttest -- vermutlich echter
+                        # Rezept-Bruch (z.B. Website-Relaunch entfernte
+                        # Preis/Fläche aus dem Markup). Höheres Log-Level als
+                        # Fall (a), wie im Phase-2b-Plan als Grundlage für
+                        # diesen Zähler vorgezeichnet.
+                        log.warning(
+                            "agents_adapter.empty_run_case_b_all_failed_self_test",
+                            agent_id=agent.id,
+                            count=len(harvested),
+                            consecutive_empty_runs=empty_runs,
+                        )
+                        case_reason = (
+                            f"Handler lieferte {len(harvested)} Objekte, keins bestand den Selbsttest"
+                        )
+
+                    if empty_runs >= 2:
+                        self._write_agent(
+                            agent.id,
+                            coverage_status="needs-manual-watch",
+                            coverage_reason=(
+                                f"Zwei aufeinanderfolgende Läufe ohne Selbsttest-Erfolg. "
+                                f"Letzter Lauf: {case_reason}."
+                            ),
+                            consecutive_empty_runs=empty_runs,
+                            last_checked=now,
+                        )
+                    else:
+                        self._write_agent(agent.id, consecutive_empty_runs=empty_runs, last_checked=now)
                     continue
 
                 self._write_agent(
@@ -249,6 +290,7 @@ class AgentSiteSource(SourceAdapter):
                     last_checked=now,
                     last_nonempty_at=now,
                     last_listing_count=len(harvested),
+                    consecutive_empty_runs=0,
                 )
 
                 for raw in harvested:

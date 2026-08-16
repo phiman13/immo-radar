@@ -179,6 +179,7 @@ class Agent(Base):
     last_checked: Mapped[datetime | None] = mapped_column(DateTime, default=None)
     last_nonempty_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
     last_listing_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    consecutive_empty_runs: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     next_review_due: Mapped[datetime | None] = mapped_column(DateTime, default=None)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -221,6 +222,7 @@ def init_db() -> None:
             "ALTER TABLE sources ADD COLUMN source_type TEXT DEFAULT 'builtin'",
             "ALTER TABLE listings ADD COLUMN geocode_confidence REAL",
             "ALTER TABLE listings ADD COLUMN region_match_reason TEXT",
+            "ALTER TABLE agents ADD COLUMN consecutive_empty_runs INTEGER DEFAULT 0",
             (
                 "CREATE TABLE IF NOT EXISTS api_usage "
                 "(id INTEGER PRIMARY KEY, ts DATETIME, model TEXT, "

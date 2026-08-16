@@ -672,3 +672,108 @@ def test_known_urls_for_agent_reads_from_open_caller_session(session):
 
         assert known_urls == {"https://x.de/objekt/open-session": known_seen_at}
         outer.commit()
+
+
+@pytest.mark.asyncio
+async def test_fetch_increments_counter_on_first_empty_run_after_success(session, monkeypatch):
+    agent_id = _make_agent(session, last_nonempty_at=datetime.utcnow() - timedelta(days=1))
+
+    async def empty_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
+        return
+        yield  # pragma: no cover
+
+    EXTRACTION_METHODS["fake"] = empty_method
+    client = AsyncMock()
+    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+
+    source = AgentSiteSource()
+    source.client = client
+    [_ async for _ in source.fetch()]
+
+    with session() as s:
+        agent = s.get(Agent, agent_id)
+        assert agent.consecutive_empty_runs == 1
+        assert agent.coverage_status == "auto-harvested"
+
+
+@pytest.mark.asyncio
+async def test_fetch_downgrades_after_two_consecutive_empty_runs(session, monkeypatch):
+    agent_id = _make_agent(
+        session, last_nonempty_at=datetime.utcnow() - timedelta(days=2), consecutive_empty_runs=1
+    )
+
+    async def empty_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
+        return
+        yield  # pragma: no cover
+
+    EXTRACTION_METHODS["fake"] = empty_method
+    client = AsyncMock()
+    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+
+    source = AgentSiteSource()
+    source.client = client
+    [_ async for _ in source.fetch()]
+
+    with session() as s:
+        agent = s.get(Agent, agent_id)
+        assert agent.consecutive_empty_runs == 2
+        assert agent.coverage_status == "needs-manual-watch"
+        assert "zwei" in agent.coverage_reason.lower()
+
+
+@pytest.mark.asyncio
+async def test_fetch_resets_counter_on_success_after_prior_empty_run(session, monkeypatch):
+    agent_id = _make_agent(
+        session, last_nonempty_at=datetime.utcnow() - timedelta(days=2), consecutive_empty_runs=1
+    )
+
+    async def success_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
+        yield RawListing(
+            source="agents",
+            source_id=f"agent-{agent.id}-1",
+            url="https://x.de/objekt/1",
+            title="Villa",
+            price_eur=500000,
+        )
+
+    EXTRACTION_METHODS["fake"] = success_method
+    client = AsyncMock()
+    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+
+    source = AgentSiteSource()
+    source.client = client
+    [_ async for _ in source.fetch()]
+
+    with session() as s:
+        agent = s.get(Agent, agent_id)
+        assert agent.consecutive_empty_runs == 0
+
+
+@pytest.mark.asyncio
+async def test_fetch_distinguishes_case_b_zero_objects_all_failing_self_test(session, monkeypatch, caplog):
+    agent_id = _make_agent(
+        session, last_nonempty_at=datetime.utcnow() - timedelta(days=1), consecutive_empty_runs=0
+    )
+
+    async def half_broken_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
+        yield RawListing(
+            source="agents",
+            source_id=f"agent-{agent.id}-1",
+            url="https://x.de/objekt/1",
+            title="Objekt ohne Preis oder Fläche",
+        )
+
+    EXTRACTION_METHODS["fake"] = half_broken_method
+    client = AsyncMock()
+    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+
+    import logging
+
+    caplog.set_level(logging.WARNING)
+    source = AgentSiteSource()
+    source.client = client
+    [_ async for _ in source.fetch()]
+
+    with session() as s:
+        agent = s.get(Agent, agent_id)
+        assert agent.consecutive_empty_runs == 1
