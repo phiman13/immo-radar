@@ -159,8 +159,8 @@ async def crawl_and_extract(
         log.warning("agent_handlers.listing_fetch_failed", agent_id=agent.id, error=str(e))
         return
 
-    _, urls = find_detail_links(r.text, agent.listing_url, limit=None)
-    urls = urls[:MAX_DETAIL_PAGES_PER_AGENT]
+    _, discovered_urls = find_detail_links(r.text, agent.listing_url, limit=None)
+    urls = _urls_to_fetch(discovered_urls, known_urls or {}, datetime.utcnow())[:MAX_DETAIL_PAGES_PER_AGENT]
 
     for url in urls:
         listing = await _fetch_detail_listing(agent, client, url)
@@ -215,7 +215,8 @@ async def sitemap_objekte_handler(
         log.warning("agent_handlers.sitemap_no_url", agent_id=agent.id)
         return
 
-    urls = (await _discover_sitemap_object_urls(client, sitemap_url))[:MAX_DETAIL_PAGES_PER_AGENT]
+    discovered_urls = await _discover_sitemap_object_urls(client, sitemap_url)
+    urls = _urls_to_fetch(discovered_urls, known_urls or {}, datetime.utcnow())[:MAX_DETAIL_PAGES_PER_AGENT]
     for url in urls:
         listing = await _fetch_detail_listing(agent, client, url)
         if listing is not None:

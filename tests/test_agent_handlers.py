@@ -615,3 +615,135 @@ def test_urls_to_fetch_canary_forces_oldest_known_url_when_all_fresh():
 def test_urls_to_fetch_returns_empty_when_no_urls_discovered_at_all():
     now = datetime(2026, 8, 16, 12, 0, 0)
     assert _urls_to_fetch([], {}, now) == []
+
+
+@pytest.mark.asyncio
+async def test_crawl_and_extract_skips_fresh_known_url():
+    listing_html = """
+    <html><body>
+      <a href="/immobilien/villa-am-see-tutzing">A</a>
+      <a href="/immobilien/wohnung-starnberg-zentral">B</a>
+      <a href="/immobilien/haus-poecking-mit-garten">C</a>
+    </body></html>
+    """
+    detail_html = (
+        "<html><body><h1>Villa am See</h1>"
+        "<p>Kaufpreis: 450.000 € 180 m² 6 Zimmer 82327 Tutzing</p></body></html>"
+    )
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        "https://x.de/immobilien/wohnung-starnberg-zentral": _resp(text=detail_html),
+        "https://x.de/immobilien/haus-poecking-mit-garten": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/")
+    now = datetime.utcnow()
+    known_urls = {"https://x.de/immobilien/villa-am-see-tutzing": now - timedelta(days=1)}
+
+    results = [r async for r in crawl_and_extract(agent, client, known_urls)]
+
+    urls_fetched = {r.url for r in results}
+    assert "https://x.de/immobilien/villa-am-see-tutzing" not in urls_fetched
+    assert urls_fetched == {
+        "https://x.de/immobilien/wohnung-starnberg-zentral",
+        "https://x.de/immobilien/haus-poecking-mit-garten",
+    }
+
+
+@pytest.mark.asyncio
+async def test_crawl_and_extract_refetches_stale_known_url():
+    listing_html = """
+    <html><body>
+      <a href="/immobilien/villa-am-see-tutzing">A</a>
+      <a href="/immobilien/wohnung-starnberg-zentral">B</a>
+      <a href="/immobilien/haus-poecking-mit-garten">C</a>
+    </body></html>
+    """
+    detail_html = (
+        "<html><body><h1>Villa am See</h1>"
+        "<p>Kaufpreis: 450.000 € 180 m² 6 Zimmer 82327 Tutzing</p></body></html>"
+    )
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        "https://x.de/immobilien/villa-am-see-tutzing": _resp(text=detail_html),
+        "https://x.de/immobilien/wohnung-starnberg-zentral": _resp(text=detail_html),
+        "https://x.de/immobilien/haus-poecking-mit-garten": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/")
+    now = datetime.utcnow()
+    known_urls = {
+        "https://x.de/immobilien/villa-am-see-tutzing": now - timedelta(days=30),
+    }
+
+    results = [r async for r in crawl_and_extract(agent, client, known_urls)]
+
+    assert {r.url for r in results} == {
+        "https://x.de/immobilien/villa-am-see-tutzing",
+        "https://x.de/immobilien/wohnung-starnberg-zentral",
+        "https://x.de/immobilien/haus-poecking-mit-garten",
+    }
+
+
+@pytest.mark.asyncio
+async def test_sitemap_objekte_handler_skips_fresh_known_url():
+    sitemap_xml = """<?xml version="1.0"?>
+    <urlset>
+      <url><loc>https://x.de/immobilien/villa-am-see-tutzing</loc></url>
+      <url><loc>https://x.de/immobilien/wohnung-starnberg-zentral</loc></url>
+    </urlset>"""
+    detail_html = (
+        "<html><body><h1>Villa am See</h1>"
+        "<p>Kaufpreis: 450.000 € 180 m² 6 Zimmer 82327 Tutzing</p></body></html>"
+    )
+    routes = {
+        "https://x.de/sitemap.xml": _resp(text=sitemap_xml),
+        "https://x.de/immobilien/wohnung-starnberg-zentral": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(extraction={"method": "sitemap_objekte", "sitemap_url": "https://x.de/sitemap.xml"})
+    now = datetime.utcnow()
+    known_urls = {"https://x.de/immobilien/villa-am-see-tutzing": now - timedelta(hours=1)}
+
+    results = [r async for r in sitemap_objekte_handler(agent, client, known_urls)]
+
+    assert {r.url for r in results} == {"https://x.de/immobilien/wohnung-starnberg-zentral"}
+
+
+@pytest.mark.asyncio
+async def test_crawl_and_extract_never_requests_fresh_known_url():
+    """Diskriminierender Test (Ergänzung zum Brief): anders als
+    test_crawl_and_extract_skips_fresh_known_url fehlt hier NICHT die Route
+    für die frische bekannte URL -- sie ist absichtlich vorhanden. Ohne
+    Change-Gate würde sie also erfolgreich abgerufen UND in den Ergebnissen
+    landen; der Brief-Test oben kann das nicht unterscheiden, weil dort ein
+    404 (fehlende Route) das Fehlen aus den Ergebnissen bereits erklärt,
+    unabhängig davon, ob das Change-Gate greift. Hier wird stattdessen
+    direkt geprüft, dass client.get() NIE mit der frischen URL aufgerufen
+    wird."""
+    listing_html = """
+    <html><body>
+      <a href="/immobilien/villa-am-see-tutzing">A</a>
+      <a href="/immobilien/wohnung-starnberg-zentral">B</a>
+      <a href="/immobilien/haus-poecking-mit-garten">C</a>
+    </body></html>
+    """
+    detail_html = (
+        "<html><body><h1>Villa am See</h1>"
+        "<p>Kaufpreis: 450.000 € 180 m² 6 Zimmer 82327 Tutzing</p></body></html>"
+    )
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        "https://x.de/immobilien/villa-am-see-tutzing": _resp(text=detail_html),
+        "https://x.de/immobilien/wohnung-starnberg-zentral": _resp(text=detail_html),
+        "https://x.de/immobilien/haus-poecking-mit-garten": _resp(text=detail_html),
+    }
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/")
+    now = datetime.utcnow()
+    known_urls = {"https://x.de/immobilien/villa-am-see-tutzing": now - timedelta(days=1)}
+
+    [r async for r in crawl_and_extract(agent, client, known_urls)]
+
+    requested_urls = {c.args[0] for c in client.get.call_args_list}
+    assert "https://x.de/immobilien/villa-am-see-tutzing" not in requested_urls
