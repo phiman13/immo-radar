@@ -637,3 +637,38 @@ def test_known_urls_for_agent_returns_naive_datetimes_compatible_with_urls_to_fe
     # ist ausschließlich, dass die Subtraktion nicht mit TypeError abbricht.)
     due = _urls_to_fetch(list(known_urls.keys()), known_urls, datetime.utcnow())
     assert due == ["https://x.de/objekt/naive"]
+
+
+def test_known_urls_for_agent_reads_from_open_caller_session(session):
+    """Alle bisherigen _known_urls_for_agent()-Tests riefen die Methode auf
+    einem AgentSiteSource() mit self.session is None auf -- der kurzlebige
+    Session-Zweig. Der Produktionspfad (pipeline.run_source() setzt
+    self.session auf eine offene, noch nicht committete Schreibtransaktion,
+    siehe _write_agent()-Docstring / das 2026-08-12-Lock-Fix) hat bisher
+    keinen eigenen Test. Hier: Listing wird in derselben offenen, geflushten
+    (nicht committeten) Transaktion angelegt, die adapter.session zugewiesen
+    wird -- _known_urls_for_agent() muss sie aus GENAU dieser Session lesen,
+    ohne einen zweiten Schreiber/Leser zu öffnen (der auf den Lock warten
+    würde)."""
+    agent_id = _make_agent(session, id=1)
+    known_seen_at = datetime.utcnow() - timedelta(hours=3)
+
+    source = AgentSiteSource()
+    with session() as outer:
+        outer.add(
+            Listing(
+                dedup_hash="hash-open-session",
+                source="agents",
+                source_id=f"agent-{agent_id}-open",
+                url="https://x.de/objekt/open-session",
+                title="Testobjekt",
+                last_seen_at=known_seen_at,
+            )
+        )
+        outer.flush()
+        source.session = outer
+
+        known_urls = source._known_urls_for_agent(agent_id)
+
+        assert known_urls == {"https://x.de/objekt/open-session": known_seen_at}
+        outer.commit()
