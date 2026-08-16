@@ -77,12 +77,16 @@ die in Phase 2b zurückgestellten Extraktions-Präzisionslücken (HTML-Entity-
 Decoding, gierige city-Erkennung, Makler-Büroadresse statt Objektadresse)
 mit erledigt.
 
+**HER-725 (SSRF-Guard auf `verified_domain`) gefixt (2026-08-16):** die
+bekannte Vorbedingung vor Phase 3/Discovery ist erfüllt — `app.agent_probe`
+validiert jede Domain (strikte Hostname-Whitelist, keine IP-Literale, keine
+reservierten/internen TLDs) vor jedem Netzwerk-Call.
+
 Nächster Schritt: Phase 2c (Change-Gate-Fingerprint für „nur neue Objekte",
 Zwei-Läufe-Zähler für echte Rezept-Bruch-Erkennung, Playwright-Rendering für
 JS-Shells/403-Sites — alle drei in Phase 2b bewusst zurückgestellt, siehe
-Self-Review-Notizen im Phase-2b-Plan). Bekannte Vorbedingung vor
-Phase 3/Discovery bleibt HER-725 (Domain-Validierung/SSRF-Guard auf
-`verified_domain`).
+Self-Review-Notizen im Phase-2b-Plan) oder Phase 3 (Discovery), deren
+Vorbedingung jetzt erfüllt ist.
 
 ## Branch-Map
 
