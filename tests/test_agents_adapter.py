@@ -719,6 +719,7 @@ async def test_fetch_downgrades_after_two_consecutive_empty_runs(session, monkey
         assert agent.consecutive_empty_runs == 2
         assert agent.coverage_status == "needs-manual-watch"
         assert "zwei" in agent.coverage_reason.lower()
+        assert "Handler lieferte 0 Objekte" in agent.coverage_reason
 
 
 @pytest.mark.asyncio
@@ -750,9 +751,9 @@ async def test_fetch_resets_counter_on_success_after_prior_empty_run(session, mo
 
 
 @pytest.mark.asyncio
-async def test_fetch_distinguishes_case_b_zero_objects_all_failing_self_test(session, monkeypatch, caplog):
+async def test_fetch_downgrades_with_case_b_reason_after_two_failing_runs_with_objects(session, monkeypatch):
     agent_id = _make_agent(
-        session, last_nonempty_at=datetime.utcnow() - timedelta(days=1), consecutive_empty_runs=0
+        session, last_nonempty_at=datetime.utcnow() - timedelta(days=1), consecutive_empty_runs=1
     )
 
     async def half_broken_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
@@ -767,13 +768,12 @@ async def test_fetch_distinguishes_case_b_zero_objects_all_failing_self_test(ses
     client = AsyncMock()
     monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
 
-    import logging
-
-    caplog.set_level(logging.WARNING)
     source = AgentSiteSource()
     source.client = client
     [_ async for _ in source.fetch()]
 
     with session() as s:
         agent = s.get(Agent, agent_id)
-        assert agent.consecutive_empty_runs == 1
+        assert agent.coverage_status == "needs-manual-watch"
+        assert agent.consecutive_empty_runs == 2
+        assert "Handler lieferte 1 Objekte, keins bestand den Selbsttest" in agent.coverage_reason
