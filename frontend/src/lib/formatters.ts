@@ -21,7 +21,7 @@ export function formatSqm(qm: number | null): string {
 
 export function formatRooms(rooms: number | null): string {
   if (rooms == null) return '–'
-  return rooms % 1 === 0 ? `${rooms} Zi.` : `${rooms} Zi.`
+  return `${rooms} Zi.`
 }
 
 // Backend stores UTC-naive timestamps (no 'Z') — append 'Z' so browser parses as UTC

@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 import { useDebounce } from '../../hooks/useDebounce'
 
 export interface SearchLocation {
@@ -41,13 +44,17 @@ export function MultiLocationPicker({ locations, onChange }: Props) {
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
-    // Fix Vite marker icons (same pattern as LocationPicker)
+    // Fix Vite marker icons: Leaflet's default _getIconUrl assumes a
+    // classic (non-bundled) asset layout. HER-818: vorher von unpkg.com
+    // geladen (externe CDN-Abhängigkeit) -- jetzt aus dem bereits
+    // installierten leaflet-Paket gebündelt, kein Netzwerk-Roundtrip zu
+    // einem Drittanbieter mehr nötig.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (L.Icon.Default.prototype as any)._getIconUrl
     L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconRetinaUrl: markerIcon2x,
+      iconUrl: markerIcon,
+      shadowUrl: markerShadow,
     })
 
     const initialCenter: L.LatLngExpression = locations.length > 0

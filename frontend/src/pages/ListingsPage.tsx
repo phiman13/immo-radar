@@ -22,8 +22,8 @@ export function ListingsPage() {
     queryFn: () =>
       fetchListings({
         status: filter.status || undefined,
-        portal: filter.portal || filter.source || undefined,
-        min_score: filter.minScore || (filter.min_score ?? undefined),
+        portal: filter.portal || undefined,
+        min_score: filter.minScore || undefined,
         price_min: filter.priceMin,
         price_max: filter.priceMax,
         qm_min: filter.qmMin,

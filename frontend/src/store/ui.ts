@@ -15,8 +15,6 @@ interface UIState {
 
 const DEFAULT_FILTER: ListingsFilter = {
   status: '',
-  source: '',
-  min_score: null,
   portal: '',
   minScore: 0,
   priceMin: null,

@@ -100,8 +100,6 @@ export interface FetchRun {
 
 export interface ListingsFilter {
   status: string
-  source: string
-  min_score: number | null
   portal: string
   minScore: number
   priceMin: number | null
@@ -111,8 +109,6 @@ export interface ListingsFilter {
   roomsMin: number | null
   sort: 'date_desc' | 'price_asc' | 'price_desc' | 'score_desc' | 'ppm_asc' | 'ppm_desc'
 }
-
-export type ViewMode = 'grid'
 
 export type ListingStatus = 'new' | 'interessant' | 'vielleicht' | 'gesehen' | 'abgelehnt'
 
