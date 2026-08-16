@@ -65,12 +65,22 @@ entgegen der CLAUDE.md-Doku nötig gewesen). Alle drei Fixes durch
 Regressionstests abgesichert, die den Bug live am unveränderten Code
 reproduzieren.
 
+**UI-Funktionsprüfung abgeschlossen (2026-08-14/16, HER-804 + 15 Sub-Issues,
+alle Done):** vollständige funktionale Prüfung des Dashboards (Code-Lektüre
+aller Frontend-Dateien + Backend-Module, echter Klick-Durchlauf gegen
+Produktion) fand 4 Blocker (u.a. Quellen-„Aktiv"-Schalter ohne Wirkung,
+Objekttyp-Filter-Bug, hartkodierter Regionsfilter überstimmte die
+Suchgebiet-UI), 5 Major- und 6 Minor/Kosmetik-Befunde. Alle gefixt, per
+Regressionstest abgesichert und live auf Produktion verifiziert — Details
+und Belege je Ticket in Linear (HER-805 bis HER-818, HER-820). Dabei auch
+die in Phase 2b zurückgestellten Extraktions-Präzisionslücken (HTML-Entity-
+Decoding, gierige city-Erkennung, Makler-Büroadresse statt Objektadresse)
+mit erledigt.
+
 Nächster Schritt: Phase 2c (Change-Gate-Fingerprint für „nur neue Objekte",
 Zwei-Läufe-Zähler für echte Rezept-Bruch-Erkennung, Playwright-Rendering für
 JS-Shells/403-Sites — alle drei in Phase 2b bewusst zurückgestellt, siehe
-Self-Review-Notizen im Phase-2b-Plan) sowie kleinere Extraktions-Präzisionslücken
-im Feld-Extraktor (unvollständiges HTML-Entity-Decoding, zu gierige
-city-Erkennung bei manchen Vendor-Templates). Bekannte Vorbedingung vor
+Self-Review-Notizen im Phase-2b-Plan). Bekannte Vorbedingung vor
 Phase 3/Discovery bleibt HER-725 (Domain-Validierung/SSRF-Guard auf
 `verified_domain`).
 
