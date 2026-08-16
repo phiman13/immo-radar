@@ -11,6 +11,7 @@ trotzdem weiter, weil es einmalig gegen vom Nutzer geprüfte Domains lief."""
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import re
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
@@ -29,6 +30,42 @@ from app.agent_cascade_detect import (
     find_detail_links,
 )
 from app.robots import USER_AGENT
+
+# HER-725: probe_agent() baut daraus eine Netzwerk-Ziel-URL (f"https://{domain}/").
+# Aktuell wird Agent.verified_domain nur manuell gesetzt (vertrauenswürdig) --
+# sobald Phase 3 (Discovery) dieses Feld aus Websuche-Ergebnissen befüllt, ist
+# der Wert nicht mehr vertrauenswürdig, und ein Wert wie "169.254.169.254"
+# (Cloud-Metadata) oder "localhost:8001" (das eigene Dashboard) würde den
+# Worker-Container gegen sich selbst oder das VPS-interne Netz probieren
+# lassen. Erzwingt einen plausiblen, öffentlich adressierbaren Hostnamen --
+# strikt als Whitelist (nur Buchstaben/Ziffern/Bindestrich/Punkt, mindestens
+# ein Label-Trenner), keine IP-Literale, keine reservierten/internen TLDs.
+_HOSTNAME_RE = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))+$")
+_RESERVED_TLD_RE = re.compile(r"\.(local|localhost|internal|test|invalid|example|onion)$", re.I)
+
+
+def validate_domain(domain: str) -> None:
+    """Raised ValueError, wenn `domain` kein plausibler, öffentlich
+    routbarer Hostname ist -- statt zu proben (Ticket-Vorgabe HER-725)."""
+    if not isinstance(domain, str) or not domain.strip():
+        raise ValueError(f"invalid domain: {domain!r}")
+    candidate = domain.strip().rstrip(".")
+
+    # IP-Literale explizit verbieten (auch öffentliche): ein Makler wird
+    # immer über einen echten Domainnamen erreicht, nie über eine nackte IP.
+    # Deckt ohne Sonderfall-Logik private/loopback/link-local/reservierte
+    # Adressen ab (u.a. 127.0.0.1, 169.254.169.254, 10.0.0.0/8).
+    try:
+        ipaddress.ip_address(candidate)
+    except ValueError:
+        pass
+    else:
+        raise ValueError(f"domain darf keine IP-Adresse sein: {domain!r}")
+
+    if not _HOSTNAME_RE.match(candidate):
+        raise ValueError(f"kein gültiger Hostname: {domain!r}")
+    if _RESERVED_TLD_RE.search(candidate):
+        raise ValueError(f"reservierte/interne TLD nicht erlaubt: {domain!r}")
 
 
 async def fetch(client: httpx.AsyncClient, url: str) -> httpx.Response | None:
@@ -118,7 +155,11 @@ async def probe_agent(domain: str, client: httpx.AsyncClient) -> dict:
 
     `client` muss bereits einen höflichen User-Agent tragen (siehe
     app.sources.base.SourceAdapter — derselbe String wie app.robots.USER_AGENT,
-    damit robots.can_fetch() und der tatsächliche Abruf nicht auseinanderlaufen)."""
+    damit robots.can_fetch() und der tatsächliche Abruf nicht auseinanderlaufen).
+
+    Raises ValueError (HER-725), wenn `domain` kein plausibler, öffentlich
+    routbarer Hostname ist -- SSRF-Guard, bevor daraus eine Ziel-URL gebaut wird."""
+    validate_domain(domain)
     out: dict = {"domain": domain, "reachable": False}
     root = f"https://{domain}/"
     r = await fetch(client, root)

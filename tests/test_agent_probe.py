@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.agent_probe import classify_stage, probe_agent
+from app.agent_probe import classify_stage, probe_agent, validate_domain
 
 
 def _resp(status_code=200, text="", url=None):
@@ -164,3 +164,68 @@ def test_classify_stage_falls_back_to_js_shell():
         "signals": {"prices": 0},
     }
     assert classify_stage(row) == "7-js-shell/unklar"
+
+
+# --- HER-725: SSRF-Guard auf verified_domain -------------------------------
+#
+# Aktuell wird Agent.verified_domain nur manuell gesetzt (vertrauenswürdig),
+# aber Phase 3 (Discovery) wird dieses Feld künftig aus Websuche-Ergebnissen
+# befüllen -- ab dann ist der Wert nicht mehr vertrauenswürdig. probe_agent()
+# baut daraus direkt eine Netzwerk-Ziel-URL (f"https://{domain}/"); ohne
+# Guard könnte ein Wert wie "169.254.169.254" (Cloud-Metadata) oder
+# "localhost:8001" (das eigene Dashboard) den Worker-Container gegen sich
+# selbst oder das VPS-interne Netz probieren lassen.
+
+
+@pytest.mark.parametrize(
+    "domain",
+    [
+        "loeger-immobilien.de",
+        "www.ubi-immobilien.de",
+        "immobilien.vr-starnberg-zugspitze.de",
+        "sub.domain.example.co.uk",
+    ],
+)
+def test_validate_domain_accepts_real_looking_hostnames(domain):
+    validate_domain(domain)  # darf nicht raisen
+
+
+@pytest.mark.parametrize(
+    "domain",
+    [
+        "127.0.0.1",
+        "169.254.169.254",  # Cloud-Metadata-Endpoint
+        "10.0.0.5",
+        "192.168.1.1",
+        "::1",
+        "localhost",
+        "foo.localhost",
+        "bar.internal",
+        "baz.local",
+        "app.test",
+        "example.example",
+        "site.onion",
+        "localhost:8001",
+        "a.de@internal",
+        "http://a.de",
+        "a..de",
+        "-a.de",
+        "a.de-",
+        "",
+        "   ",
+    ],
+)
+def test_validate_domain_rejects_ssrf_adjacent_and_malformed_values(domain):
+    with pytest.raises(ValueError):
+        validate_domain(domain)
+
+
+@pytest.mark.asyncio
+async def test_probe_agent_raises_instead_of_probing_an_ip_literal():
+    client = AsyncMock()
+    client.get = AsyncMock(side_effect=AssertionError("darf nie aufgerufen werden"))
+
+    with pytest.raises(ValueError):
+        await probe_agent("169.254.169.254", client)
+
+    client.get.assert_not_called()
