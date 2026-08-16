@@ -750,7 +750,15 @@ async def test_crawl_and_extract_never_requests_fresh_known_url():
 
 
 @pytest.mark.asyncio
-async def test_structured_data_handler_skips_detail_fetch_for_fresh_known_url():
+async def test_structured_data_handler_canary_forces_sole_fresh_known_url():
+    """Angepasst nach Selbst-Review Task 3: structured_data_handler nutzt jetzt
+    denselben _urls_to_fetch()-Helfer wie crawl_and_extract/
+    sitemap_objekte_handler -- bei GENAU einer bekannten+frischen URL und
+    keiner weiteren fälligen URL erzwingt die Canary-Regel den Abruf trotzdem
+    (identisch zu test_urls_to_fetch_canary_forces_sole_fresh_known_url),
+    sonst würde ein Single-Listing-Agent nach zwei "alles frisch"-Läufen
+    fälschlich auf needs-manual-watch zurückgestuft (Zwei-Läufe-Zähler,
+    app.sources.agents_adapter Task 5)."""
     listing_html = """
     <html><body>
     <script type="application/ld+json">
@@ -759,7 +767,14 @@ async def test_structured_data_handler_skips_detail_fetch_for_fresh_known_url():
     </script>
     </body></html>
     """
-    routes = {"https://x.de/immobilien/": _resp(text=listing_html)}
+    detail_html = (
+        "<html><body><h1>Altbauwohnung</h1>"
+        "<p>Kaufpreis: 399.000 € 95 m² 3 Zimmer 82327 Tutzing</p></body></html>"
+    )
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        "https://x.de/objekt/1": _resp(text=detail_html),
+    }
     client = _routed_client(routes)
     agent = _agent(listing_url="https://x.de/immobilien/", extraction={"method": "structured_data"})
     now = datetime.utcnow()
@@ -767,12 +782,58 @@ async def test_structured_data_handler_skips_detail_fetch_for_fresh_known_url():
 
     results = [r async for r in structured_data_handler(agent, client, known_urls)]
 
-    assert results == []
-    assert "https://x.de/objekt/1" not in {c.args[0] for c in client.get.await_args_list}
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/objekt/1"
 
 
 @pytest.mark.asyncio
-async def test_feed_adapter_handler_skips_detail_fetch_for_fresh_known_url():
+async def test_structured_data_handler_canary_forces_oldest_known_url_when_all_fresh():
+    """Ergänzender Test (Concern aus dem Selbst-Review): MEHRERE bekannte+
+    frische URLs, KEINE neue/überfällige -- die Canary-Regel darf hier nicht
+    alle 0 unterdrücken und auch nicht alle durchlassen, sondern muss genau
+    die älteste bekannte URL erzwingen (identisch zu
+    test_urls_to_fetch_canary_forces_oldest_known_url_when_all_fresh)."""
+    listing_html = """
+    <html><body>
+    <script type="application/ld+json">
+    {"@type": "Product", "name": "Altbauwohnung", "url": "https://x.de/objekt/1",
+     "offers": {"price": "399000"}, "floorSize": {"value": "95"}}
+    </script>
+    <script type="application/ld+json">
+    {"@type": "Product", "name": "Neubauwohnung", "url": "https://x.de/objekt/2",
+     "offers": {"price": "450000"}, "floorSize": {"value": "110"}}
+    </script>
+    </body></html>
+    """
+    detail_html_1 = (
+        "<html><body><h1>Altbauwohnung</h1>"
+        "<p>Kaufpreis: 399.000 € 95 m² 3 Zimmer 82327 Tutzing</p></body></html>"
+    )
+    routes = {
+        "https://x.de/immobilien/": _resp(text=listing_html),
+        "https://x.de/objekt/1": _resp(text=detail_html_1),
+    }
+    client = _routed_client(routes)
+    agent = _agent(listing_url="https://x.de/immobilien/", extraction={"method": "structured_data"})
+    now = datetime.utcnow()
+    known_urls = {
+        "https://x.de/objekt/1": now - timedelta(days=1),
+        "https://x.de/objekt/2": now - timedelta(hours=2),
+    }
+
+    results = [r async for r in structured_data_handler(agent, client, known_urls)]
+
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/objekt/1"
+
+
+@pytest.mark.asyncio
+async def test_feed_adapter_handler_canary_forces_sole_fresh_known_url():
+    """Angepasst nach Selbst-Review Task 3: feed_adapter_handler nutzt jetzt
+    denselben _urls_to_fetch()-Helfer -- bei GENAU einem bekannten+frischen
+    Item und keinem weiteren fälligen Item erzwingt die Canary-Regel den
+    Abruf trotzdem (siehe structured_data_handler-Pendant oben für die volle
+    Begründung)."""
     feed_xml = """<?xml version="1.0"?>
     <rss><channel>
       <item>
@@ -789,7 +850,41 @@ async def test_feed_adapter_handler_skips_detail_fetch_for_fresh_known_url():
 
     results = [r async for r in feed_adapter_handler(agent, client, known_urls)]
 
-    assert results == []
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/feed-item/1"
+
+
+@pytest.mark.asyncio
+async def test_feed_adapter_handler_canary_forces_oldest_known_url_when_all_fresh():
+    """Ergänzender Test (Concern aus dem Selbst-Review): MEHRERE bekannte+
+    frische Feed-Items, KEIN neues/überfälliges -- die Canary-Regel muss
+    genau das älteste bekannte Item erzwingen, nicht 0 und nicht alle."""
+    feed_xml = """<?xml version="1.0"?>
+    <rss><channel>
+      <item>
+        <title>Reihenhaus Tutzing 450.000 € 140 m²</title>
+        <link>https://x.de/feed-item/1</link>
+        <description>Schönes Reihenhaus</description>
+      </item>
+      <item>
+        <title>Neubau Starnberg 600.000 € 160 m²</title>
+        <link>https://x.de/feed-item/2</link>
+        <description>Neuer Neubau</description>
+      </item>
+    </channel></rss>"""
+    routes = {"https://x.de/feed.xml": _resp(text=feed_xml)}
+    client = _routed_client(routes)
+    agent = _agent(extraction={"method": "feed_adapter", "feed_url": "https://x.de/feed.xml"})
+    now = datetime.utcnow()
+    known_urls = {
+        "https://x.de/feed-item/1": now - timedelta(days=1),
+        "https://x.de/feed-item/2": now - timedelta(hours=2),
+    }
+
+    results = [r async for r in feed_adapter_handler(agent, client, known_urls)]
+
+    assert len(results) == 1
+    assert results[0].url == "https://x.de/feed-item/1"
 
 
 @pytest.mark.asyncio

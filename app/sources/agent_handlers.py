@@ -255,8 +255,10 @@ async def structured_data_handler(
         return
 
     listing_host = urlparse(agent.listing_url).netloc
-    nodes = extract_jsonld_nodes(r.text)
-    for node in nodes[:MAX_DETAIL_PAGES_PER_AGENT]:
+    nodes = extract_jsonld_nodes(r.text)[:MAX_DETAIL_PAGES_PER_AGENT]
+
+    resolved: list[tuple[dict, str]] = []
+    for node in nodes:
         jsonld_fields = fields_from_jsonld(node)
         url = jsonld_fields.get("url")
         if not url:
@@ -269,9 +271,17 @@ async def structured_data_handler(
             # sonst Content abrufen, dessen robots.txt nie konsultiert wurde.
             log.warning("agent_handlers.structured_url_off_host", agent_id=agent.id, url=url)
             continue
+        resolved.append((jsonld_fields, url))
 
-        known = known_urls or {}
-        if url in known and (datetime.utcnow() - known[url]) < REFRESH_WINDOW:
+    # Change-Gate via _urls_to_fetch() statt eigenem Ad-hoc-Skip (Fix nach
+    # Selbst-Review Task 3): teilt sich die Canary-Regel mit crawl_and_extract/
+    # sitemap_objekte_handler statt eine zweite, abweichende Skip-Logik zu
+    # pflegen, die die Canary-Erzwingung (Vollabdeckung-Spec Phase 2c §3) nicht
+    # kennt.
+    due_urls = set(_urls_to_fetch([url for _, url in resolved], known_urls or {}, datetime.utcnow()))
+
+    for jsonld_fields, url in resolved:
+        if url not in due_urls:
             continue
 
         text = ""
@@ -332,6 +342,8 @@ async def feed_adapter_handler(
 
     feed_host = urlparse(feed_url).netloc
     items = parse_feed_items(r.text)[:MAX_DETAIL_PAGES_PER_AGENT]
+
+    resolved: list[tuple[dict, str]] = []
     for item in items:
         link = urljoin(feed_url, item["link"])
         if urlparse(link).netloc != feed_host:
@@ -342,8 +354,14 @@ async def feed_adapter_handler(
             # robots.txt nie konsultiert wurde.
             log.warning("agent_handlers.feed_link_off_host", agent_id=agent.id, url=link)
             continue
-        known = known_urls or {}
-        if link in known and (datetime.utcnow() - known[link]) < REFRESH_WINDOW:
+        resolved.append((item, link))
+
+    # Change-Gate via _urls_to_fetch() (siehe structured_data_handler-Kommentar
+    # oben — dieselbe Begründung gilt hier analog).
+    due_urls = set(_urls_to_fetch([link for _, link in resolved], known_urls or {}, datetime.utcnow()))
+
+    for item, link in resolved:
+        if link not in due_urls:
             continue
         blob = f"{item['title']} {item['description']}"
         fields = extract_fields("", blob)
