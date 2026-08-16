@@ -54,7 +54,7 @@ from sqlalchemy import select
 
 import app.db as db_module
 from app.agent_cascade_detect import VENDORS
-from app.db import Agent
+from app.db import Agent, Listing
 from app.logging_setup import log
 from app.models import RawListing
 from app.robots import is_allowed
@@ -133,6 +133,27 @@ class AgentSiteSource(SourceAdapter):
                     setattr(db_agent, key, value)
                 session.commit()
 
+    def _known_urls_for_agent(self, agent_id: int) -> dict[str, datetime]:
+        """Change-Gate-Fingerprint (Vollabdeckung-Spec Phase 2c §3): liest
+        bestehende Listing-URLs + deren last_seen_at für diesen Agenten aus
+        der Listing-Tabelle -- kein neues Schema, jede Agent-Listing trägt
+        das schon. Nutzt self.session (offene Aufrufer-Transaktion) wenn
+        vorhanden, sonst eine kurzlebige eigene Session -- analog zu
+        _write_agent(). Der literale Bindestrich direkt nach der Agent-ID im
+        source_id-Format (f"agent-{agent_id}-{hash}", siehe
+        app.sources.agent_handlers._source_id) verhindert Präfix-Kollisionen
+        zwischen z.B. Agent 1 und Agent 12."""
+        stmt = select(Listing.url, Listing.last_seen_at).where(
+            Listing.source == "agents",
+            Listing.source_id.like(f"agent-{agent_id}-%"),
+        )
+        if self.session is not None:
+            rows = self.session.execute(stmt).all()
+            return {url: last_seen for url, last_seen in rows}
+        with db_module.SessionLocal() as session:
+            rows = session.execute(stmt).all()
+            return {url: last_seen for url, last_seen in rows}
+
     async def fetch(self) -> AsyncIterator[RawListing]:
         assert self.client is not None
         with db_module.SessionLocal() as session:
@@ -192,7 +213,8 @@ class AgentSiteSource(SourceAdapter):
                     )
                     continue
 
-                harvested = [raw async for raw in handler(agent, self.client)]
+                known_urls = self._known_urls_for_agent(agent.id)
+                harvested = [raw async for raw in handler(agent, self.client, known_urls)]
                 now = datetime.utcnow()
 
                 if not _passes_self_test(harvested):

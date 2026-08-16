@@ -12,8 +12,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import app.db as db_module
-from app.db import Agent, Base, FetchRun
+from app.db import Agent, Base, FetchRun, Listing
 from app.models import PropertyType, RawListing
+from app.sources.agent_handlers import _urls_to_fetch
 from app.sources.agents_adapter import EXTRACTION_METHODS, AgentSiteSource
 
 
@@ -53,7 +54,7 @@ def _make_agent(session, **overrides) -> int:
 async def test_fetch_yields_from_registered_method(session, monkeypatch):
     agent_id = _make_agent(session)
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(
             source="agents",
             source_id=f"agent-{agent.id}-1",
@@ -81,7 +82,7 @@ async def test_fetch_skips_agents_not_auto_harvested(session, monkeypatch):
     zählt nie als abgedeckt."""
     _make_agent(session, coverage_status="unknown")
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(source="agents", source_id="x", url="https://x", title="x")
 
     EXTRACTION_METHODS["fake"] = fake_method
@@ -122,7 +123,7 @@ async def test_fetch_skips_unregistered_method(session, monkeypatch):
 async def test_fetch_marks_robots_disallowed_and_persists_reason(session, monkeypatch):
     agent_id = _make_agent(session)
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(source="agents", source_id="x", url="https://x", title="x")
 
     EXTRACTION_METHODS["fake"] = fake_method
@@ -148,7 +149,7 @@ async def test_fetch_isolates_a_failing_agent_from_the_rest(session, monkeypatch
 
     call_count = {"n": 0}
 
-    async def flaky_method(agent, client) -> AsyncIterator[RawListing]:
+    async def flaky_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         call_count["n"] += 1
         if agent.name == "Broken Makler":
             raise RuntimeError("boom")
@@ -187,7 +188,7 @@ async def test_fetch_isolates_an_is_allowed_exception_from_the_rest(session, mon
     broken_id = _make_agent(session, name="Broken Makler", listing_url="https://broken.example.de/angebote/")
     ok_id = _make_agent(session, name="OK Makler", listing_url="https://ok.example.de/angebote/")
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(
             source="agents",
             source_id=f"agent-{agent.id}",
@@ -264,7 +265,7 @@ async def test_fetch_dispatches_feed_adapter_agent_without_listing_url(session, 
         extraction={"method": "fake", "feed_url": "https://example.de/feed/"},
     )
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(
             source="agents",
             source_id=f"agent-{agent.id}",
@@ -291,7 +292,7 @@ async def test_fetch_downgrades_agent_on_first_ever_empty_run(session, monkeypat
     verwertbaren Objekten sofort auf needs-manual-watch zurückgestuft."""
     agent_id = _make_agent(session)
 
-    async def empty_field_method(agent, client) -> AsyncIterator[RawListing]:
+    async def empty_field_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         # Titel + URL vorhanden, aber weder Preis noch Fläche -> Selbsttest
         # muss das als "nicht verwertbar" werten.
         yield RawListing(source="agents", source_id="x", url="https://example.de/x", title="Ohne Sachdaten")
@@ -316,7 +317,7 @@ async def test_fetch_passes_self_test_when_area_present_without_price(session, m
     "Preis auf Anfrage") — Fläche allein reicht als Sachattribut."""
     _make_agent(session)
 
-    async def qm_only_method(agent, client) -> AsyncIterator[RawListing]:
+    async def qm_only_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(
             source="agents", source_id="x", url="https://example.de/x", title="Preis auf Anfrage", qm=180.0
         )
@@ -339,7 +340,7 @@ async def test_fetch_writes_last_checked_and_last_nonempty_at_on_success(session
     (Advisor-Fund: waren bisher tote Spalten für funktionierende Agents)."""
     agent_id = _make_agent(session)
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(
             source="agents", source_id="x", url="https://example.de/x", title="OK", price_eur=450000
         )
@@ -381,7 +382,7 @@ async def test_fetch_reuses_caller_session_instead_of_opening_a_second_writer(se
     was den Test schnell und deterministisch macht."""
     agent_id = _make_agent(session)
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(
             source="agents", source_id="x", url="https://example.de/x", title="OK", price_eur=450000
         )
@@ -420,7 +421,7 @@ async def test_fetch_tolerates_single_empty_run_after_prior_success(session, mon
     (fetch() selektiert nur coverage_status == 'auto-harvested')."""
     agent_id = _make_agent(session, last_nonempty_at=datetime(2026, 8, 1))
 
-    async def empty_method(agent, client) -> AsyncIterator[RawListing]:
+    async def empty_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         if False:
             yield RawListing(source="agents", source_id="x", url="https://x", title="x")
 
@@ -457,7 +458,7 @@ async def test_fetch_skips_agent_recrawled_too_recently(session, monkeypatch):
 
     call_count = {"n": 0}
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         call_count["n"] += 1
         yield RawListing(source="agents", source_id="x", url="https://x", title="x", price_eur=1)
 
@@ -487,7 +488,7 @@ async def test_fetch_crawls_freshly_onboarded_agent_despite_recent_last_checked(
 
     call_count = {"n": 0}
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         call_count["n"] += 1
         yield RawListing(source="agents", source_id="x", url="https://x", title="x", price_eur=450000)
 
@@ -509,7 +510,7 @@ async def test_fetch_crawls_agent_when_last_checked_is_stale_enough(session, mon
     gecrawlt."""
     _make_agent(session, last_checked=datetime.utcnow() - timedelta(hours=25))
 
-    async def fake_method(agent, client) -> AsyncIterator[RawListing]:
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
         yield RawListing(source="agents", source_id="x", url="https://x", title="x", price_eur=450000)
 
     EXTRACTION_METHODS["fake"] = fake_method
@@ -520,3 +521,119 @@ async def test_fetch_crawls_agent_when_last_checked_is_stale_enough(session, mon
         results = [raw async for raw in adapter.fetch()]
 
     assert len(results) == 1
+
+
+def _make_listing(session, **overrides) -> None:
+    defaults = dict(
+        dedup_hash=f"hash-{overrides.get('url', 'x')}",
+        source="agents",
+        source_id="agent-1-abc123",
+        url="https://x.de/objekt/1",
+        title="Testobjekt",
+        last_seen_at=datetime.utcnow(),
+    )
+    defaults.update(overrides)
+    with session() as s:
+        s.add(Listing(**defaults))
+        s.commit()
+
+
+@pytest.mark.asyncio
+async def test_fetch_passes_known_urls_from_existing_listings_to_handler(session, monkeypatch):
+    agent_id = _make_agent(session, id=1)
+    known_seen_at = datetime.utcnow() - timedelta(days=2)
+    _make_listing(
+        session,
+        dedup_hash="hash-known",
+        source_id=f"agent-{agent_id}-known",
+        url="https://x.de/objekt/known",
+        last_seen_at=known_seen_at,
+    )
+    captured_known_urls = {}
+
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
+        captured_known_urls.update(known_urls or {})
+        return
+        yield  # pragma: no cover - macht die Funktion zum Async-Generator
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    client = AsyncMock()
+    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+
+    source = AgentSiteSource()
+    source.client = client
+    [_ async for _ in source.fetch()]
+
+    assert captured_known_urls == {"https://x.de/objekt/known": known_seen_at}
+
+
+@pytest.mark.asyncio
+async def test_fetch_does_not_leak_other_agents_listings_into_known_urls(session, monkeypatch):
+    """Regressionstest gegen den literalen Brief-Wortlaut korrigiert: Agent 1
+    UND Agent 12 nutzen denselben registrierten 'fake'-Handler und werden
+    beide gefetcht (coverage_status='auto-harvested' per _make_agent-Default).
+    Ein einziges gemeinsames captured_known_urls-Dict für beide Aufrufe hätte
+    Agent 12s korrekten Blick auf SEINE EIGENE Listing (kein Leck, sondern
+    erwartetes Verhalten) fälschlich als 'Leck aus Agent 1' gewertet und wäre
+    auch bei korrekter Implementierung rot geblieben (nachgewiesen: Lauf
+    gegen den unveränderten Brief-Test schlägt mit dem korrekten
+    Präfix-Pattern fehl). Fix: pro Agent-ID isoliert erfassen, nur Agent 1s
+    Sicht prüfen -- die Diskriminierungskraft gegen die eigentliche
+    Präfix-Kollision (Bindestrich-Bug) bleibt erhalten, siehe Task-4-Report."""
+    agent_id = _make_agent(session, id=1, name="Agent Eins")
+    _make_agent(session, id=12, name="Agent Zwölf")
+    _make_listing(
+        session,
+        dedup_hash="hash-other-agent",
+        source_id="agent-12-xyz789",
+        url="https://y.de/objekt/other",
+        last_seen_at=datetime.utcnow(),
+    )
+    captured_known_urls_by_agent = {}
+
+    async def fake_method(agent, client, known_urls=None) -> AsyncIterator[RawListing]:
+        captured_known_urls_by_agent[agent.id] = known_urls or {}
+        return
+        yield  # pragma: no cover
+
+    EXTRACTION_METHODS["fake"] = fake_method
+    client = AsyncMock()
+    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+
+    source = AgentSiteSource()
+    source.client = client
+    [_ async for _ in source.fetch()]
+
+    assert captured_known_urls_by_agent[agent_id] == {}
+
+
+def test_known_urls_for_agent_returns_naive_datetimes_compatible_with_urls_to_fetch(session):
+    """Kritischer Review-Punkt aus Task 2: _urls_to_fetch() rechnet
+    `now - known_urls[url]` mit naivem datetime.utcnow(). Käme
+    last_seen_at aware aus der DB zurück, würde JEDER Harvest-Lauf mit
+    TypeError abbrechen (nicht still ignorieren). SQLite/SQLAlchemy liefert
+    bei einer DateTime-Spalte ohne timezone=True normalerweise naive
+    Datetimes -- hier explizit verifiziert statt nur angenommen, inkl.
+    Direktlauf gegen die echte _urls_to_fetch()-Konsumentin."""
+    agent_id = _make_agent(session, id=1)
+    _make_listing(
+        session,
+        dedup_hash="hash-naive-check",
+        source_id=f"agent-{agent_id}-naive",
+        url="https://x.de/objekt/naive",
+        last_seen_at=datetime.utcnow() - timedelta(days=1),
+    )
+
+    source = AgentSiteSource()
+    known_urls = source._known_urls_for_agent(agent_id)
+
+    assert known_urls
+    for last_seen in known_urls.values():
+        assert last_seen.tzinfo is None
+
+    # Muss ohne TypeError laufen -- würde sonst jeden Harvest-Lauf abbrechen.
+    # (Canary-Regel: bei nur einer einzigen, frischen bekannten URL wird sie
+    # trotzdem erzwungen -- siehe _urls_to_fetch()-Docstring; der Punkt hier
+    # ist ausschließlich, dass die Subtraktion nicht mit TypeError abbricht.)
+    due = _urls_to_fetch(list(known_urls.keys()), known_urls, datetime.utcnow())
+    assert due == ["https://x.de/objekt/naive"]
