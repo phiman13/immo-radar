@@ -558,7 +558,7 @@ async def test_fetch_passes_known_urls_from_existing_listings_to_handler(session
 
     EXTRACTION_METHODS["fake"] = fake_method
     client = AsyncMock()
-    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
 
     source = AgentSiteSource()
     source.client = client
@@ -598,7 +598,7 @@ async def test_fetch_does_not_leak_other_agents_listings_into_known_urls(session
 
     EXTRACTION_METHODS["fake"] = fake_method
     client = AsyncMock()
-    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
 
     source = AgentSiteSource()
     source.client = client
@@ -684,7 +684,7 @@ async def test_fetch_increments_counter_on_first_empty_run_after_success(session
 
     EXTRACTION_METHODS["fake"] = empty_method
     client = AsyncMock()
-    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
 
     source = AgentSiteSource()
     source.client = client
@@ -708,7 +708,7 @@ async def test_fetch_downgrades_after_two_consecutive_empty_runs(session, monkey
 
     EXTRACTION_METHODS["fake"] = empty_method
     client = AsyncMock()
-    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
 
     source = AgentSiteSource()
     source.client = client
@@ -739,7 +739,7 @@ async def test_fetch_resets_counter_on_success_after_prior_empty_run(session, mo
 
     EXTRACTION_METHODS["fake"] = success_method
     client = AsyncMock()
-    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
 
     source = AgentSiteSource()
     source.client = client
@@ -766,7 +766,7 @@ async def test_fetch_downgrades_with_case_b_reason_after_two_failing_runs_with_o
 
     EXTRACTION_METHODS["fake"] = half_broken_method
     client = AsyncMock()
-    monkeypatch.setattr("app.robots.is_allowed", AsyncMock(return_value=True))
+    monkeypatch.setattr("app.sources.agents_adapter.is_allowed", AsyncMock(return_value=True))
 
     source = AgentSiteSource()
     source.client = client
