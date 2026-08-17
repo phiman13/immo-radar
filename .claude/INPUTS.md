@@ -1,6 +1,6 @@
 <!-- Ledger: personal-stack/docs/INPUTS.md — nicht hier editieren.
      Neue Verdikte dort eintragen, dann propagate-canon.sh.
-     Kanon-Hash: fa3b7fb1d66a · propagiert: 2026-08-17 -->
+     Kanon-Hash: 866fa0ed8fe6 · propagiert: 2026-08-17 -->
 
 # INPUTS — bewertete externe Ressourcen
 
@@ -40,7 +40,7 @@ laufen* — die gehen durch `/tooling-gate`.
 | [motion.dev](https://motion.dev) | Animations-Engine + [Beispielsammlung](https://motion.dev/examples) | Web / React | npm-Paket. Keine Anbindung nötig |
 | [anime.js](https://animejs.com) | Animations-Engine | Web / Vanilla | npm-Paket. **Alternative zu motion — nie beide in einem Bundle** |
 | [shadcn Registry-Index](https://ui.shadcn.com/r/registries.json) | Verzeichnis von ~277 Komponenten-Registries | Web / shadcn | Wird von `npx shadcn add`/`search` **automatisch** konsultiert |
-| [animata](https://animata.design/components) ([Repo](https://github.com/codse/animata)) | Handgemachte Interaktions-Animationen und Effekte | Web / React + Tailwind + Framer Motion | 2.776★, MIT. **Keine Registry** — Copy-Paste wie shadcn, Abhängigkeiten des Snippets selbst nachinstallieren. Nicht für `recipe-app` (React Native) |
+| [animata](https://animata.design/components) ([Repo](https://github.com/codse/animata)) | Handgemachte Interaktions-Animationen und Effekte, 73 Komponenten | Web / Next + React 19 + Tailwind 4 + Motion 12 | 2.776★, MIT. **Keine Registry** — Copy-Paste wie shadcn, Abhängigkeiten des Snippets selbst nachinstallieren.<br>**Achtung, wirkt mobil, ist es aber nicht** (geprüft 2026-08-17: null `react-native`-Imports, keine RN/Expo-Dependencies): Kategorien wie `fabs`, `widget`, `bento-grid`, `carousel` sind **Mobile-Muster in DOM gebaut**. Für `recipe-app` daher **Design-Vorlage, kein Code** — Muster und Interaktionsidee auf Reanimated/`View`/StyleSheet übertragen, nichts kopieren |
 | [Codrops Creative Hub](https://tympanus.net/codrops/hub/tutorials/) | Tutorials und Demos für aufwendige Web-Interaktionen | Web, alle Stacks | **Referenz, kein Import** — Technik verstehen und nachbauen, nicht Code übernehmen. Lizenz pro Demo prüfen, falls doch kopiert wird |
 
 **Zur Aktualität:** Diese Kataloge liegen bei ihren Anbietern und werden dort gepflegt. Hier
