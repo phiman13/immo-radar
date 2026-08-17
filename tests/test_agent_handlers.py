@@ -917,3 +917,122 @@ async def test_feed_adapter_handler_still_yields_other_fresh_feed_item_when_one_
     results = [r async for r in feed_adapter_handler(agent, client, known_urls)]
 
     assert {r.url for r in results} == {"https://x.de/feed-item/2"}
+
+
+@pytest.mark.asyncio
+async def test_crawl_and_extract_uses_browser_session_when_render_flag_set(monkeypatch):
+    listing_html = """
+    <html><body>
+      <a href="/immobilien/villa-am-see-tutzing">A</a>
+      <a href="/immobilien/wohnung-starnberg-zentral">B</a>
+      <a href="/immobilien/haus-poecking-mit-garten">C</a>
+    </body></html>
+    """
+    detail_html = (
+        "<html><body><h1>Villa am See</h1>"
+        "<p>Kaufpreis: 450.000 € 180 m² 6 Zimmer 82327 Tutzing</p></body></html>"
+    )
+    pages = {
+        "https://x.de/immobilien/": listing_html,
+        "https://x.de/immobilien/villa-am-see-tutzing": detail_html,
+        "https://x.de/immobilien/wohnung-starnberg-zentral": detail_html,
+        "https://x.de/immobilien/haus-poecking-mit-garten": detail_html,
+    }
+
+    async def fake_fetch(url, wait_selector=None):
+        return pages[url]
+
+    class _FakeBrowserSession:
+        async def __aenter__(self):
+            return fake_fetch
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr("app.sources.agent_handlers.browser_session", lambda: _FakeBrowserSession())
+    client = AsyncMock()  # darf für KEINEN Request benutzt werden
+    agent = _agent(
+        listing_url="https://x.de/immobilien/",
+        extraction={"method": "detail_links", "render": "browser"},
+    )
+
+    results = [r async for r in crawl_and_extract(agent, client)]
+
+    assert len(results) == 3
+    client.get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_crawl_and_extract_browser_mode_skips_a_single_failing_detail_page(monkeypatch):
+    """Analog zu test_crawl_and_extract_skips_a_single_failing_detail_page
+    (httpx-Pfad) für den render:"browser"-Zweig: browser_session().fetch()
+    fängt page.goto()-Fehler bewusst NICHT selbst ab (Task-6-Design) -- jeder
+    fetch()-Aufruf in der Handler-Schleife muss deshalb einzeln
+    try/except-umschlossen sein, sonst reißt eine einzelne tote Detailseite
+    den ganzen Harvest-Lauf für den Agent ab. Fehlt die villa-URL bewusst aus
+    `pages` -> fake_fetch wirft KeyError für genau diese URL."""
+    listing_html = """
+    <html><body>
+      <a href="/immobilien/villa-am-see-tutzing">A</a>
+      <a href="/immobilien/wohnung-starnberg-zentral">B</a>
+      <a href="/immobilien/haus-poecking-mit-garten">C</a>
+    </body></html>
+    """
+    detail_html = (
+        "<html><body><h1>Villa am See</h1>"
+        "<p>Kaufpreis: 450.000 € 180 m² 6 Zimmer 82327 Tutzing</p></body></html>"
+    )
+    pages = {
+        "https://x.de/immobilien/": listing_html,
+        "https://x.de/immobilien/wohnung-starnberg-zentral": detail_html,
+        "https://x.de/immobilien/haus-poecking-mit-garten": detail_html,
+    }
+
+    async def fake_fetch(url, wait_selector=None):
+        return pages[url]
+
+    class _FakeBrowserSession:
+        async def __aenter__(self):
+            return fake_fetch
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr("app.sources.agent_handlers.browser_session", lambda: _FakeBrowserSession())
+    client = AsyncMock()
+    agent = _agent(
+        listing_url="https://x.de/immobilien/",
+        extraction={"method": "detail_links", "render": "browser"},
+    )
+
+    results = [r async for r in crawl_and_extract(agent, client)]
+
+    assert {r.url for r in results} == {
+        "https://x.de/immobilien/wohnung-starnberg-zentral",
+        "https://x.de/immobilien/haus-poecking-mit-garten",
+    }
+
+
+@pytest.mark.asyncio
+async def test_crawl_and_extract_browser_mode_yields_nothing_when_listing_fetch_fails(monkeypatch):
+    async def fake_fetch(url, wait_selector=None):
+        raise RuntimeError("navigation timeout")
+
+    class _FakeBrowserSession:
+        async def __aenter__(self):
+            return fake_fetch
+
+        async def __aexit__(self, *exc):
+            return False
+
+    monkeypatch.setattr("app.sources.agent_handlers.browser_session", lambda: _FakeBrowserSession())
+    client = AsyncMock()
+    agent = _agent(
+        listing_url="https://x.de/immobilien/",
+        extraction={"method": "detail_links", "render": "browser"},
+    )
+
+    results = [r async for r in crawl_and_extract(agent, client)]
+
+    assert results == []
+    client.get.assert_not_called()

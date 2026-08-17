@@ -34,6 +34,7 @@ from app.agent_field_extract import extract_fields, fields_from_jsonld, merge_fi
 from app.db import Agent
 from app.logging_setup import log
 from app.models import PropertyType, RawListing
+from app.sources.browser import browser_session
 
 MAX_DETAIL_PAGES_PER_AGENT = 40
 DETAIL_FETCH_DELAY_SECONDS = 0.5
@@ -144,12 +145,60 @@ async def crawl_and_extract(
 ) -> AsyncIterator[RawListing]:
     """Handler für alle `vendor:<x>`-Method-Keys UND `detail_links` (Scope-
     Entscheidung Phase 2b): Phase 0 lieferte nur Vendor-Fingerprints, keine
-    Vendor-spezifischen Selektoren — `vendor:<x>` bleibt deshalb nur ein
+    Vendor-spezifischen Selektoren -- `vendor:<x>` bleibt deshalb nur ein
     Herkunfts-Tag im extraction-Dict, kein eigener Code-Pfad. Findet
     Objekt-URLs strukturell (find_detail_links) auf agent.listing_url, holt
-    jede Detailseite, extrahiert Felder generisch."""
+    jede Detailseite, extrahiert Felder generisch.
+
+    render:"browser" (Phase 2c, Spec §5.2): für JS-Shell-/WAF-blockierte
+    Sites (nach Go/No-Go-Probe, siehe Plan Task 7) wird sowohl die
+    Listing-Seite als auch jede Detailseite über eine gemeinsame
+    browser_session() statt httpx geholt -- ein Mischmodus wäre sinnlos,
+    WAF-Blocks greifen typischerweise auf beiden Ebenen."""
     if not agent.listing_url:
         log.warning("agent_handlers.crawl_no_listing_url", agent_id=agent.id)
+        return
+
+    use_browser = (agent.extraction or {}).get("render") == "browser"
+
+    if use_browser:
+        async with browser_session() as fetch:
+            try:
+                listing_html = await fetch(agent.listing_url)
+            except Exception as e:
+                log.warning("agent_handlers.listing_fetch_failed", agent_id=agent.id, error=str(e))
+                return
+
+            _, discovered_urls = find_detail_links(listing_html, agent.listing_url, limit=None)
+            urls = _urls_to_fetch(discovered_urls, known_urls or {}, datetime.utcnow())[
+                :MAX_DETAIL_PAGES_PER_AGENT
+            ]
+
+            for url in urls:
+                try:
+                    html = await fetch(url)
+                except Exception as e:
+                    log.warning(
+                        "agent_handlers.detail_fetch_failed", agent_id=agent.id, url=url, error=str(e)
+                    )
+                    continue
+                stripped = _strip_contact_blocks(html)
+                text = BeautifulSoup(stripped, "html.parser").get_text(" ", strip=True)
+                fields = extract_fields(stripped, text)
+                yield RawListing(
+                    source="agents",
+                    source_id=_source_id(agent.id, url),
+                    url=url,
+                    title=fields["title"],
+                    description=text[:2000],
+                    price_eur=fields["price_eur"],
+                    qm=fields["qm"],
+                    rooms=fields["rooms"],
+                    plz=fields["plz"],
+                    city=fields["city"],
+                    property_type=fields["property_type"],
+                )
+                await asyncio.sleep(DETAIL_FETCH_DELAY_SECONDS)
         return
 
     try:
