@@ -63,6 +63,43 @@ async def test_onboard_agent_sets_auto_harvested_for_vendor_stage(session, monke
 
 
 @pytest.mark.asyncio
+async def test_onboard_agent_resets_consecutive_empty_runs_on_reactivation(session, monkeypatch):
+    """Auflage 2 (finale Whole-Branch-Review Phase 2c): eine Reaktivierung
+    (z.B. via scripts/onboard_agents.py --agent-id) setzt coverage_status
+    zurück auf auto-harvested, muss aber auch consecutive_empty_runs
+    zurücksetzen -- sonst kippt ein reaktivierter Agent mit vorherigem
+    Zählerstand nach einem einzigen weiteren Fehlschlag sofort wieder auf
+    needs-manual-watch zurück, und der dokumentierte Reparaturweg ist
+    wirkungslos."""
+    agent_id = _make_agent(
+        session,
+        coverage_status="needs-manual-watch",
+        consecutive_empty_runs=2,
+    )
+    fake_row = {
+        "reachable": True,
+        "robots_allows_root": True,
+        "vendors": ["onoffice"],
+        "listing_url": "https://x.de/immobilien/",
+        "structured": {"jsonld_types": []},
+        "sitemap_object_urls": 0,
+        "detail_links": 0,
+        "signals": {"prices": 0},
+    }
+    monkeypatch.setattr("app.agent_onboarding.probe_agent", AsyncMock(return_value=fake_row))
+
+    client = AsyncMock()
+    with session() as s:
+        await onboard_agent(agent_id, client, session=s)
+        s.commit()
+
+    with session() as s:
+        agent = s.get(Agent, agent_id)
+        assert agent.coverage_status == "auto-harvested"
+        assert agent.consecutive_empty_runs == 0
+
+
+@pytest.mark.asyncio
 async def test_onboard_agent_sets_needs_manual_watch_for_js_shell(session, monkeypatch):
     agent_id = _make_agent(session)
     fake_row = {

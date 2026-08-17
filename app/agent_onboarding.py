@@ -122,6 +122,13 @@ async def _onboard(agent_id: int, client: httpx.AsyncClient, session) -> Agent:
                 agent.listing_url = listing_url
             agent.coverage_status = "auto-harvested"
             agent.coverage_reason = None
+            # Auflage 2 (finale Whole-Branch-Review Phase 2c): eine
+            # Reaktivierung muss auch den Zwei-Läufe-Zähler zurücksetzen --
+            # sonst kippt ein manuell reaktivierter Agent mit vorherigem
+            # Zählerstand nach einem einzigen weiteren Fehlschlag sofort
+            # wieder auf needs-manual-watch zurück (app.sources.agents_adapter
+            # erhöht consecutive_empty_runs bei jedem leeren Lauf).
+            agent.consecutive_empty_runs = 0
     elif stage == "robots-disallowed":
         agent.coverage_status = "robots-disallowed"
         agent.coverage_reason = "robots.txt verbietet den Zugriff auf die Startseite."
