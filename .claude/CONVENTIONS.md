@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: e6f8929aa320 · propagiert: 2026-08-08 -->
+     Kanon-Hash: bfbdfa5ce842 · propagiert: 2026-08-17 -->
 
 # Konventionen — kanonischer Kern
 
@@ -67,6 +67,10 @@
 - *(Tailwind-Projekte)* `cn()` für conditional Klassen — nie raw string
   concatenation.
 - **Asset-Reuse vor Asset-Nachbau:** Original-Assets, Tokens, Primitives, Mockups immer reusen statt nachbauen — auch UI-Mockups müssen echte Tokens nutzen, keine generischen Snippets. SVGs, Font-Offsets, Shadow-Stacks gehen beim Nachbau reproduzierbar schief.
+- **Erst nachschauen, dann bauen** *(Quellen: `personal-stack/docs/INPUTS.md` — dort stehen die freigegebenen Sammlungen, das Abgelehnte mit Grund, und was in einem Projekt schon gescheitert ist)*:
+  - **Generische UI-Komponente** (Button, Sheet, Chart, Skeleton …) → erst §1 prüfen, ob ein freigegebener Katalog sie liefert. **Domänenspezifische Komponenten sind ausgenommen** — die trägt kein Katalog.
+  - **Fähigkeits-/Workflow-Lücke** → erst `/find-skills` bzw. `npx skills find <query>` (durchsucht skills.sh live), bevor ein eigener Skill gebaut wird.
+  - **Vor jeder Library-Empfehlung an ein Projekt:** §3 des Ledgers UND `git log` des Zielprojekts prüfen. Eine Empfehlung ohne Projekt-Historie führt im Kreis — belegter Fall: `@gorhom/bottom-sheet` wurde für `recipe-app` vorgeschlagen, obwohl es dort zweimal gescheitert war.
 - **Stack-weite Rollouts:** Allowlist-, Propagation-, Skill-Install- und
   Doku-Rollouts laufen default auf **alle** Repos aus `core/targets.txt`.
   Einzelne Repos nur mit explizitem User-Hinweis ausschließen.
