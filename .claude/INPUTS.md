@@ -1,6 +1,6 @@
 <!-- Ledger: personal-stack/docs/INPUTS.md — nicht hier editieren.
      Neue Verdikte dort eintragen, dann propagate-canon.sh.
-     Kanon-Hash: e01c79cb4ae2 · propagiert: 2026-08-17 -->
+     Kanon-Hash: c81e530fb218 · propagiert: 2026-08-18 -->
 
 # INPUTS — bewertete externe Ressourcen
 
@@ -59,7 +59,20 @@ steht nur, *dass* es sie gibt — nicht ihr Inhalt. Es gibt also nichts, was ver
 | [react-native-reusables](https://reactnativereusables.com) | NativeWind **oder** Uniwind, `cva`-Varianten | **Nein** — Paradigmenwechsel für 85 Komponenten. Registry live (`/r/nativewind/<x>.json`, shadcn-Format) | ⭐ **Erste Wahl**, wenn Tailwind-Klassen gewünscht sind. 8.607★, MIT |
 | [react-native-paper](https://reactnativepaper.com) | StyleSheet + MD3-Theme, **kein** NativeWind | Technisch kompatibel, **designseitig nicht**: bringt Material Design mit; der Kanon fordert „charakterstarke, unerwartete" Gestaltung, recipe-app hat einen eigenen Look | Gut, wenn Material Design *gewollt* ist. 14.443★, MIT, von callstack |
 | [Tamagui](https://tamagui.dev) | Eigenes System + optimierender Compiler | **Nein** — größter Umbau von allen. Löst aber als einziges die Web/Native-Doppelpflege im Kern | Stark, wenn Web **und** Native von Anfang an ein Ziel sind. 14.135★, MIT, sehr aktiv |
-| [gluestack-ui](https://gluestack.io) | v2/v3 NativeWind, v1 Styled-System | **Nein** — dieselbe NativeWind-Hürde. ⚠️ **Repo ohne Lizenz-Angabe** (npm-Paket ISC) — vor Einsatz klären | Nachrangig gegenüber RNR. 5.250★ |
+| [gluestack-ui](https://gluestack.io) **v5** | NativeWind v5 / Tailwind 4, eigene CLI (`init`/`add`/`upgrade`) | **Nein** — dieselbe NativeWind-Hürde wie RNR. Das ist eine Aussage über recipe-apps Stack, **kein Qualitätsurteil** | ⭐ **Gleichwertige Alternative zu RNR**, anderer Schwerpunkt: umfangreicher, fertige Patterns statt nur Primitives, Expo-Router-first. 5.250★, **MIT** |
+
+**RNR oder gluestack — wenn die Wahl ansteht:** Beide sind aktiv, MIT und arbeiten nach dem
+Copy-Paste-Prinzip (der Code landet im Repo, du besitzt ihn). Unterschied im Zuschnitt:
+**RNR** ist die shadcn-Portierung — minimalistische Primitives, kleiner Footprint, du baust
+das Meiste selbst darauf. **gluestack v5** liefert mehr fertige Patterns und ist auf Expo
+Router zugeschnitten. Wer viel selbst gestaltet, ist mit RNR besser bedient; wer schnell
+fertige Flächen braucht, mit gluestack.
+
+**Randnotiz zu gluestack:** Es gibt zusätzlich universelle **headless** Primitives aus der
+v1-Linie (`@gluestack-ui/button`, `-modal`, `-actionsheet`, `-overlay` — Verhalten und a11y
+ohne Styling-Vorgabe, was theoretisch zu StyleSheet+Tokens passen würde). Die sind aber
+zuletzt im **März/April 2025** veröffentlicht worden, während v5 die aktive Linie ist — vor
+einem Einsatz also erst prüfen, ob sie noch gepflegt werden.
 
 **Die übertragbare Erkenntnis — wichtiger als jede der vier Bibliotheken:** Der RNR-Button
 löst Plattform-Unterschiede mit **`Platform.select({ web: … })` in *einer* Datei**.
