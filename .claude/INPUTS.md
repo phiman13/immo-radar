@@ -1,6 +1,6 @@
 <!-- Ledger: personal-stack/docs/INPUTS.md — nicht hier editieren.
      Neue Verdikte dort eintragen, dann propagate-canon.sh.
-     Kanon-Hash: 41a6467c88e7 · propagiert: 2026-08-17 -->
+     Kanon-Hash: 2d9bbab2d3bd · propagiert: 2026-08-17 -->
 
 # INPUTS — bewertete externe Ressourcen
 
@@ -40,6 +40,8 @@ laufen* — die gehen durch `/tooling-gate`.
 | [motion.dev](https://motion.dev) | Animations-Engine + [Beispielsammlung](https://motion.dev/examples) | Web / React | npm-Paket. Keine Anbindung nötig |
 | [anime.js](https://animejs.com) | Animations-Engine | Web / Vanilla | npm-Paket. **Alternative zu motion — nie beide in einem Bundle** |
 | [shadcn Registry-Index](https://ui.shadcn.com/r/registries.json) | Verzeichnis von ~277 Komponenten-Registries | Web / shadcn | Wird von `npx shadcn add`/`search` **automatisch** konsultiert |
+| [animata](https://animata.design/components) ([Repo](https://github.com/codse/animata)) | Handgemachte Interaktions-Animationen und Effekte | Web / React + Tailwind + Framer Motion | 2.776★, MIT. **Keine Registry** — Copy-Paste wie shadcn, Abhängigkeiten des Snippets selbst nachinstallieren. Nicht für `recipe-app` (React Native) |
+| [Codrops Creative Hub](https://tympanus.net/codrops/hub/tutorials/) | Tutorials und Demos für aufwendige Web-Interaktionen | Web, alle Stacks | **Referenz, kein Import** — Technik verstehen und nachbauen, nicht Code übernehmen. Lizenz pro Demo prüfen, falls doch kopiert wird |
 
 **Zur Aktualität:** Diese Kataloge liegen bei ihren Anbietern und werden dort gepflegt. Hier
 steht nur, *dass* es sie gibt — nicht ihr Inhalt. Es gibt also nichts, was veralten kann.
