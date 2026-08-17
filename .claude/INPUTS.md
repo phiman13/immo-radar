@@ -1,6 +1,6 @@
 <!-- Ledger: personal-stack/docs/INPUTS.md — nicht hier editieren.
      Neue Verdikte dort eintragen, dann propagate-canon.sh.
-     Kanon-Hash: 8f008c2144b8 · propagiert: 2026-08-17 -->
+     Kanon-Hash: 0ed4b1a7de51 · propagiert: 2026-08-17 -->
 
 # INPUTS — bewertete externe Ressourcen
 
@@ -64,7 +64,8 @@ steht nur, *dass* es sie gibt — nicht ihr Inhalt. Es gibt also nichts, was ver
 | Erweiterung | Funktion | Anmerkung |
 |---|---|---|
 | **`find-skills`** (vercel-labs, MIT) | **Der Discovery-Kanal für Skills.** `npx skills find <query>` durchsucht [skills.sh](https://skills.sh) live mit Install-Zahlen | Liegt in `~/.claude/skills/`. ⚠️ **`npx skills check` ist ein Alias für `update`** — es prüft nicht, es aktualisiert (verifiziert 2026-08-17). Nie in einem automatischen Job verwenden |
-| **`impeccable`** (pbakaus, Plugin) | UI-Design-Suite | **Offene Entscheidung, Stand 2026-08-17:** Das Plugin (v4.1.1, 16.08.) bündelt heute alles in *einen* Dach-Skill, der alle 16 früheren Einzelnamen abdeckt (`adapt`, `animate`, `audit`, `critique`, `polish` …). In `~/.claude/skills/` liegen zusätzlich die **losen Einzelkopien vom 20.05.** — der alte Stand derselben Funktionalität. Funktional geht beim Entfernen nichts verloren; der Unterschied ist die Aufrufart (direkter Name vs. Dach-Trigger). **Nicht entfernt** — Entscheidung liegt bei Philipp |
+| **`impeccable`** (pbakaus, Plugin) | UI-Design-Suite | Aktiv, v4.1.1. **Aufruf seit 2026-08-17: `/impeccable <subcommand>`** — z. B. `/impeccable critique`, `/impeccable polish`, `/impeccable audit`. Das Plugin bündelt alle früheren Einzel-Skills in einen Dach-Skill (`user-invocable`, siehe `argument-hint`). Die 16 losen Einzelkopien vom 20.05. waren veraltete Duplikate und liegen jetzt unter `~/.claude/.skills-archive-2026-08-17/` — verschoben, nicht gelöscht |
+| **`klartext`** (Eigenbau) | Entfernt KI-Sprachmuster aus deutschen und englischen Texten | Deutscher Port von `stop-slop` (MIT). Struktur-Regeln übernommen, Phrasenlisten neu für das Deutsche erhoben. Quelle: `personal-stack/skills/klartext/` |
 
 ### Geprüft und abgelehnt
 
@@ -72,7 +73,7 @@ steht nur, *dass* es sie gibt — nicht ihr Inhalt. Es gibt also nichts, was ver
 |---|---|---|---|
 | **task-observer** (one-skill-to-rule-them-all) | 2026-08-16 | nein | Live-Capture in jeder Session: Token- und Wartungs-Overhead **sicher**, Nutzen **unbewiesen**. Autonomous-Apply kollidiert mit `feedback_align_before_governance_changes`. Schwerwiegender (Fable): ein Fremd-Skill, der autonom Skills umschreibt — inkl. sich selbst — ist bei `autoUpdate: true` ohne Pinning-Möglichkeit ein Eskalationsvektor |
 | **`npx skills` als Installer** | 2026-08-16 | nein | Der Skill `find-skills` ist bereits installiert und wird genutzt (s. o.). Den *Installer* parallel zu Claude-Code-Plugins zu fahren erzeugt doppelte Installs mit unklarer Präzedenz — genau der Fall, der bei `impeccable` eingetreten ist |
-| **stop-slop** | 2026-08-16 | nein | `phrases.md` ist eine **englische** Phrasenliste; der Workspace schreibt deutsche Doku und Commits. `structures.md` (Binary Contrasts, „nicht X, sondern Y") transferiert allerdings sehr wohl — **bei Bedarf portieren statt installieren** |
+| **stop-slop** | 2026-08-16 → **portiert 2026-08-17** | nicht installiert, **Idee übernommen** | Die englischen Phrasenlisten greifen für deutsche Texte nicht, die Struktur-Regeln sehr wohl. Nach „Port, don't vendor" als eigener Skill `klartext` umgesetzt (s. o.) — deutsche Phrasenlisten neu erhoben, Struktur-Regeln übernommen, Herkunft und MIT-Lizenz im Skill genannt |
 | **@netlify/mcp** | 2026-05-31 | nein | Nur Dev-Komfort, kostet write-fähige Prod-Credential-Fläche + permanente Tools im Context. `netlify-cli` deckt ~95 % ab. Betriebsdetails: Memory `project_netlify_mcp_skip` |
 | **open-design**, **claude-mem**, **GSD**, **Everything-Claude-Code**, **Awesome-Subagents**, **codeburn** | 2026-06-01 / 2026-06-12 | quarantine / abgelehnt | Namespace-Bomben, `curl\|bash`, verdeckte Telemetrie, konzeptionelle Doppelstrukturen. Volle Begründungen: Memories `project_tooling_gate_2026_06_vetting`, `project_tooling_gate_2026_06_medium12` |
 | **designlang** (design-extract), **anthropics doc-skills** | 2026-06 | zurückgestellt | Sauber, aber ohne belegten Bedarf. Trigger für Reaktivierung in den beiden Memories oben |
@@ -96,3 +97,4 @@ steht nur, *dass* es sie gibt — nicht ihr Inhalt. Es gibt also nichts, was ver
 | Datum | Was |
 |---|---|
 | 2026-08-17 | Angelegt. Erstbefüllung aus der Ressourcen-Session vom 2026-08-16/17 (8 vorgelegte Ressourcen + Codex- und Fable-Review) sowie aus den Tooling-Gate-Verdikten 2026-05/06. Plan: `docs/plans/2026-08-17-ressourcen-zufluss.md` |
+| 2026-08-17 | `stop-slop` als `klartext` portiert · impeccable-Duplikate archiviert · automatische Kandidaten-Suche über die skills.sh-API im Cockpit (monatlich, read-only) |
