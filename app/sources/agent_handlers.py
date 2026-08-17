@@ -2,8 +2,9 @@
 Gegenstück zu app.agent_cascade_detect (reine Erkennung) und
 app.agent_field_extract (reine Feldextraktion): hier laufen beide zusammen,
 gegen echtes Netzwerk. Jeder Handler erfüllt die ExtractionMethod-Signatur aus
-app.sources.agents_adapter (Callable[[Agent, httpx.AsyncClient],
-AsyncIterator[RawListing]]) und wird dort in EXTRACTION_METHODS registriert.
+app.sources.agents_adapter (Callable[[Agent, httpx.AsyncClient,
+dict[str, datetime] | None], AsyncIterator[RawListing]]) und wird dort in
+EXTRACTION_METHODS registriert.
 
 Crawl-Budget (Spec §8): pro Agent maximal MAX_DETAIL_PAGES_PER_AGENT
 Detailseiten, mit DETAIL_FETCH_DELAY_SECONDS Pause dazwischen — bewusst
@@ -44,6 +45,16 @@ DETAIL_FETCH_DELAY_SECONDS = 0.5
 # Preis-/Status-Änderungen (ListingHistory in app.pipeline._upsert()) nicht
 # einfrieren, aber der tägliche Crawl nicht jedes Mal alle Objekte neu holt.
 REFRESH_WINDOW = timedelta(days=7)
+
+# Canary-Stichprobengröße (Auflage 1, finale Whole-Branch-Review Phase 2c):
+# eine einzelne erzwungene Canary-URL kann bei wiederholtem
+# Selbsttest-Fehlschlag DERSELBEN "schlechten" Seite (z.B. eine Detailseite
+# ohne Preis UND ohne Fläche) systematisch zurückgestuft werden, weil ihr
+# last_seen_at auf dem Fehlerpfad nie vorrückt, während gesunde Objekte ans
+# neuere Ende rotieren -- deterministisch reproduziert: Downgrade auf
+# needs-manual-watch nach zwei Läufen, terminal (AgentSiteSource.fetch()
+# selektiert nur auto-harvested-Agents). 3 URLs streuen dieses Risiko.
+CANARY_SAMPLE = 3
 
 _CONTACT_MARKER_RE = re.compile(r"contact|kontakt", re.I)
 
@@ -119,25 +130,32 @@ def _urls_to_fetch(all_urls: list[str], known_urls: dict[str, datetime], now: da
     """Change-Gate-Fingerprint (Vollabdeckung-Spec Phase 2c §3): liefert nur
     URLs, die noch nie gesehen wurden ODER deren letzte Bestätigung länger
     als REFRESH_WINDOW zurückliegt. Canary-Regel: wären es 0 (weil alle
-    bekannten URLs frisch sind), wird stattdessen die am längsten nicht
-    bestätigte bekannte URL erzwungen -- sonst liefert der Handler in einem
-    "alles frisch"-Lauf 0 Objekte, und der Selbsttest in
-    app.sources.agents_adapter._passes_self_test() würde fälschlich einen
-    Rezept-Bruch auslösen, obwohl nur das Change-Gate gegriffen hat. Das gilt
-    AUCH bei nur einer einzigen bekannten URL: app.sources.agents_adapter
-    Task 5 (Zwei-Läufe-Zähler) erhöht consecutive_empty_runs bei JEDEM leeren
-    Lauf unabhängig von der Ursache und stuft nach zwei Läufen zurück --
-    ein Single-Listing-Agent ohne Canary-Erzwingung würde dadurch nach dem
+    bekannten URLs frisch sind), werden stattdessen die bis zu CANARY_SAMPLE
+    (3) am längsten nicht bestätigten bekannten URLs erzwungen -- sonst
+    liefert der Handler in einem "alles frisch"-Lauf 0 Objekte, und der
+    Selbsttest in app.sources.agents_adapter._passes_self_test() würde
+    fälschlich einen Rezept-Bruch auslösen, obwohl nur das Change-Gate
+    gegriffen hat. Das gilt AUCH bei weniger als CANARY_SAMPLE bekannten URLs
+    (dann werden alle erzwungen): app.sources.agents_adapter Task 5
+    (Zwei-Läufe-Zähler) erhöht consecutive_empty_runs bei JEDEM leeren Lauf
+    unabhängig von der Ursache und stuft nach zwei Läufen zurück -- ein
+    Single-Listing-Agent ohne Canary-Erzwingung würde dadurch nach dem
     zweiten "alles frisch"-Lauf fälschlich auf needs-manual-watch
-    zurückgestuft, obwohl sein einziges Objekt weiterhin online ist."""
+    zurückgestuft, obwohl sein einziges Objekt weiterhin online ist. Die
+    Stichprobe ist bewusst > 1 (Auflage 1, finale Whole-Branch-Review
+    Phase 2c): eine einzelne erzwungene Canary-URL kann bei wiederholtem
+    Selbsttest-Fehlschlag DERSELBEN "schlechten" Seite (z.B. eine
+    Detailseite ohne Preis UND ohne Fläche) systematisch zurückgestuft
+    werden, weil ihr last_seen_at auf dem Fehlerpfad nie vorrückt, während
+    gesunde Objekte ans neuere Ende rotieren -- 3 URLs streuen dieses
+    Risiko."""
     due = [url for url in all_urls if url not in known_urls or (now - known_urls[url]) >= REFRESH_WINDOW]
     if due:
         return due
     known_among_all = [url for url in all_urls if url in known_urls]
     if not known_among_all:
         return []
-    oldest = min(known_among_all, key=lambda u: known_urls[u])
-    return [oldest]
+    return sorted(known_among_all, key=lambda u: known_urls[u])[:CANARY_SAMPLE]
 
 
 async def crawl_and_extract(
@@ -376,7 +394,16 @@ async def feed_adapter_handler(
     der Feed selbst trägt bereits genug Text für die generische
     Feld-Extraktion (identisch zur Prüfung in app.agent_probe.validate_feed,
     hier für den tatsächlichen Ertrag statt nur für die Ja/Nein-Prüfung).
-    Braucht bewusst KEINE agent.listing_url — nur extraction['feed_url']."""
+    Braucht bewusst KEINE agent.listing_url — nur extraction['feed_url'].
+
+    `known_urls` bleibt in der Signatur (Konsistenz mit der
+    ExtractionMethod-Signatur), wird hier aber bewusst NICHT zum Filtern
+    benutzt (Auflage 4, finale Whole-Branch-Review Phase 2c): der Feed wird
+    ohnehin komplett geholt, alle Item-Felder liegen bereits kostenlos im
+    Speicher vor — das Change-Gate spart hier also KEINE Netzwerk-Requests,
+    sondern würde nur die Selbsttest-Stichprobe auf potenziell 1 Item
+    schrumpfen und damit unnötig das Canary-Klebrigkeits-Risiko aus Auflage 1
+    füttern, ohne dafür irgendeinen Nutzen zu haben."""
     feed_url = (agent.extraction or {}).get("feed_url")
     if not feed_url:
         log.warning("agent_handlers.feed_no_url", agent_id=agent.id)
@@ -405,13 +432,7 @@ async def feed_adapter_handler(
             continue
         resolved.append((item, link))
 
-    # Change-Gate via _urls_to_fetch() (siehe structured_data_handler-Kommentar
-    # oben — dieselbe Begründung gilt hier analog).
-    due_urls = set(_urls_to_fetch([link for _, link in resolved], known_urls or {}, datetime.utcnow()))
-
     for item, link in resolved:
-        if link not in due_urls:
-            continue
         blob = f"{item['title']} {item['description']}"
         fields = extract_fields("", blob)
         yield RawListing(

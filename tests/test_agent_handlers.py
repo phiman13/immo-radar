@@ -602,14 +602,36 @@ def test_urls_to_fetch_mixes_new_and_stale_but_omits_fresh():
     assert result == ["https://x.de/stale", "https://x.de/new"]
 
 
-def test_urls_to_fetch_canary_forces_oldest_known_url_when_all_fresh():
+def test_urls_to_fetch_canary_forces_all_known_urls_when_fewer_than_sample_size_and_all_fresh():
+    """Weniger als CANARY_SAMPLE (3) bekannte URLs insgesamt -- alle werden
+    erzwungen, nicht nur eine einzelne (Auflage 1: Canary-Stichprobe auf 3
+    verbreitert, aber "weniger als 3 bekannt" bedeutet weiterhin "alle
+    erzwingen")."""
     now = datetime(2026, 8, 16, 12, 0, 0)
     known = {
         "https://x.de/a": now - timedelta(days=1),
         "https://x.de/b": now - timedelta(hours=2),
     }
     result = _urls_to_fetch(["https://x.de/a", "https://x.de/b"], known, now)
-    assert result == ["https://x.de/a"]
+    assert result == ["https://x.de/a", "https://x.de/b"]
+
+
+def test_urls_to_fetch_canary_forces_three_oldest_known_urls_when_all_fresh():
+    """Auflage 1 (finale Review): eine einzelne erzwungene Canary-URL kann bei
+    wiederholtem Selbsttest-Fehlschlag derselben "schlechten" Seite
+    systematisch zurückgestuft werden -- deshalb bei >= 3 bekannten+frischen
+    URLs (kein neues/überfälliges Objekt) genau die 3 ältesten zurückgeben,
+    nicht mehr und nicht weniger."""
+    now = datetime(2026, 8, 16, 12, 0, 0)
+    known = {
+        "https://x.de/a": now - timedelta(days=4),
+        "https://x.de/b": now - timedelta(days=3),
+        "https://x.de/c": now - timedelta(days=2),
+        "https://x.de/d": now - timedelta(days=1),
+    }
+    all_urls = ["https://x.de/a", "https://x.de/b", "https://x.de/c", "https://x.de/d"]
+    result = _urls_to_fetch(all_urls, known, now)
+    assert result == ["https://x.de/a", "https://x.de/b", "https://x.de/c"]
 
 
 def test_urls_to_fetch_returns_empty_when_no_urls_discovered_at_all():
@@ -787,12 +809,13 @@ async def test_structured_data_handler_canary_forces_sole_fresh_known_url():
 
 
 @pytest.mark.asyncio
-async def test_structured_data_handler_canary_forces_oldest_known_url_when_all_fresh():
-    """Ergänzender Test (Concern aus dem Selbst-Review): MEHRERE bekannte+
-    frische URLs, KEINE neue/überfällige -- die Canary-Regel darf hier nicht
-    alle 0 unterdrücken und auch nicht alle durchlassen, sondern muss genau
-    die älteste bekannte URL erzwingen (identisch zu
-    test_urls_to_fetch_canary_forces_oldest_known_url_when_all_fresh)."""
+async def test_structured_data_handler_canary_forces_all_known_urls_when_fewer_than_sample_size():
+    """Angepasst nach Auflage 1 (finale Whole-Branch-Review Phase 2c,
+    Canary-Stichprobe auf CANARY_SAMPLE=3 verbreitert): MEHRERE (aber < 3)
+    bekannte+frische URLs, KEINE neue/überfällige -- die Canary-Regel darf
+    hier nicht alle 0 unterdrücken, muss aber bei weniger als 3 bekannten
+    URLs insgesamt ALLE erzwingen (identisch zu
+    test_urls_to_fetch_canary_forces_all_known_urls_when_fewer_than_sample_size_and_all_fresh)."""
     listing_html = """
     <html><body>
     <script type="application/ld+json">
@@ -809,9 +832,14 @@ async def test_structured_data_handler_canary_forces_oldest_known_url_when_all_f
         "<html><body><h1>Altbauwohnung</h1>"
         "<p>Kaufpreis: 399.000 € 95 m² 3 Zimmer 82327 Tutzing</p></body></html>"
     )
+    detail_html_2 = (
+        "<html><body><h1>Neubauwohnung</h1>"
+        "<p>Kaufpreis: 450.000 € 110 m² 4 Zimmer 82327 Tutzing</p></body></html>"
+    )
     routes = {
         "https://x.de/immobilien/": _resp(text=listing_html),
         "https://x.de/objekt/1": _resp(text=detail_html_1),
+        "https://x.de/objekt/2": _resp(text=detail_html_2),
     }
     client = _routed_client(routes)
     agent = _agent(listing_url="https://x.de/immobilien/", extraction={"method": "structured_data"})
@@ -823,17 +851,17 @@ async def test_structured_data_handler_canary_forces_oldest_known_url_when_all_f
 
     results = [r async for r in structured_data_handler(agent, client, known_urls)]
 
-    assert len(results) == 1
-    assert results[0].url == "https://x.de/objekt/1"
+    assert {r.url for r in results} == {"https://x.de/objekt/1", "https://x.de/objekt/2"}
 
 
 @pytest.mark.asyncio
-async def test_feed_adapter_handler_canary_forces_sole_fresh_known_url():
-    """Angepasst nach Selbst-Review Task 3: feed_adapter_handler nutzt jetzt
-    denselben _urls_to_fetch()-Helfer -- bei GENAU einem bekannten+frischen
-    Item und keinem weiteren fälligen Item erzwingt die Canary-Regel den
-    Abruf trotzdem (siehe structured_data_handler-Pendant oben für die volle
-    Begründung)."""
+async def test_feed_adapter_handler_yields_known_fresh_item_regardless_of_change_gate():
+    """Auflage 4 (finale Whole-Branch-Review Phase 2c): feed_adapter_handler
+    spart durch das Change-Gate KEINE Netzwerk-Requests (der Feed wird
+    ohnehin komplett geholt) -- es schrumpfte nur die Selbsttest-Stichprobe
+    und fütterte damit das Canary-Klebrigkeits-Problem aus Auflage 1 ohne
+    jeden Nutzen. Der Handler ignoriert known_urls jetzt bewusst und liefert
+    IMMER alle aufgelösten Items -- auch ein bekanntes+frisches."""
     feed_xml = """<?xml version="1.0"?>
     <rss><channel>
       <item>
@@ -855,10 +883,12 @@ async def test_feed_adapter_handler_canary_forces_sole_fresh_known_url():
 
 
 @pytest.mark.asyncio
-async def test_feed_adapter_handler_canary_forces_oldest_known_url_when_all_fresh():
-    """Ergänzender Test (Concern aus dem Selbst-Review): MEHRERE bekannte+
-    frische Feed-Items, KEIN neues/überfälliges -- die Canary-Regel muss
-    genau das älteste bekannte Item erzwingen, nicht 0 und nicht alle."""
+async def test_feed_adapter_handler_yields_all_known_fresh_items_when_none_due():
+    """Auflage 4: MEHRERE bekannte+frische Feed-Items, KEIN neues/überfälliges
+    -- vor Auflage 4 unterdrückte die Change-Gate-Filterung hier auf ein
+    einzelnes Canary-Item; jetzt werden beide immer geliefert, weil der
+    Handler known_urls nicht mehr zum Filtern nutzt (ersetzt die alte
+    Canary-Erwartung von genau 1 Ergebnis)."""
     feed_xml = """<?xml version="1.0"?>
     <rss><channel>
       <item>
@@ -883,18 +913,16 @@ async def test_feed_adapter_handler_canary_forces_oldest_known_url_when_all_fres
 
     results = [r async for r in feed_adapter_handler(agent, client, known_urls)]
 
-    assert len(results) == 1
-    assert results[0].url == "https://x.de/feed-item/1"
+    assert {r.url for r in results} == {"https://x.de/feed-item/1", "https://x.de/feed-item/2"}
 
 
 @pytest.mark.asyncio
-async def test_feed_adapter_handler_still_yields_other_fresh_feed_item_when_one_is_skipped():
-    """Diskriminierender Test (Ergänzung zum Brief): der Brief-Test oben hat
-    nur ein einziges Feed-Item -- results == [] wäre auch dann wahr, wenn der
-    Handler aus einem völlig anderen Grund (z.B. kaputtem XML-Parsing) nichts
-    liefert, unabhängig vom Change-Gate. Hier gibt es zwei Items, ein
-    bekanntes/frisches und ein neues -- nur das Change-Gate kann erklären,
-    dass GENAU das bekannte Item fehlt, während das neue durchkommt."""
+async def test_feed_adapter_handler_yields_both_known_and_new_feed_items():
+    """Auflage 4 (ersetzt den alten Change-Gate-Test
+    test_feed_adapter_handler_still_yields_other_fresh_feed_item_when_one_is_skipped,
+    der ein Skip-Verhalten erwartete, das es jetzt bewusst nicht mehr gibt):
+    ein bekanntes/frisches UND ein neues Item -- beide werden geliefert,
+    known_urls hat auf diesen Handler keinen Filter-Einfluss mehr."""
     feed_xml = """<?xml version="1.0"?>
     <rss><channel>
       <item>
@@ -916,7 +944,7 @@ async def test_feed_adapter_handler_still_yields_other_fresh_feed_item_when_one_
 
     results = [r async for r in feed_adapter_handler(agent, client, known_urls)]
 
-    assert {r.url for r in results} == {"https://x.de/feed-item/2"}
+    assert {r.url for r in results} == {"https://x.de/feed-item/1", "https://x.de/feed-item/2"}
 
 
 @pytest.mark.asyncio
