@@ -1,6 +1,6 @@
 <!-- Ledger: personal-stack/docs/INPUTS.md — nicht hier editieren.
      Neue Verdikte dort eintragen, dann propagate-canon.sh.
-     Kanon-Hash: 866fa0ed8fe6 · propagiert: 2026-08-17 -->
+     Kanon-Hash: e01c79cb4ae2 · propagiert: 2026-08-17 -->
 
 # INPUTS — bewertete externe Ressourcen
 
@@ -45,6 +45,27 @@ laufen* — die gehen durch `/tooling-gate`.
 
 **Zur Aktualität:** Diese Kataloge liegen bei ihren Anbietern und werden dort gepflegt. Hier
 steht nur, *dass* es sie gibt — nicht ihr Inhalt. Es gibt also nichts, was veralten kann.
+
+### React Native — Komponenten-Bibliotheken
+
+> Geprüft 2026-08-17 (Registry-Endpunkte live getestet, npm-peerDeps und echter
+> Komponenten-Code gelesen). **Maßstab ist `recipe-app`s tatsächlicher Stack:** StyleSheet +
+> eigenes 10-Datei-Token-System (`colors`, `spacing`, `radii`, `shadows`, `typography` …),
+> NativeWind installiert aber faktisch ungenutzt (1 von 85 Komponenten), plus `.web`-Varianten
+> für react-native-web.
+
+| Bibliothek | Styling | Für `recipe-app` heute | Für ein NEUES RN-Projekt |
+|---|---|---|---|
+| [react-native-reusables](https://reactnativereusables.com) | NativeWind **oder** Uniwind, `cva`-Varianten | **Nein** — Paradigmenwechsel für 85 Komponenten. Registry live (`/r/nativewind/<x>.json`, shadcn-Format) | ⭐ **Erste Wahl**, wenn Tailwind-Klassen gewünscht sind. 8.607★, MIT |
+| [react-native-paper](https://reactnativepaper.com) | StyleSheet + MD3-Theme, **kein** NativeWind | Technisch kompatibel, **designseitig nicht**: bringt Material Design mit; der Kanon fordert „charakterstarke, unerwartete" Gestaltung, recipe-app hat einen eigenen Look | Gut, wenn Material Design *gewollt* ist. 14.443★, MIT, von callstack |
+| [Tamagui](https://tamagui.dev) | Eigenes System + optimierender Compiler | **Nein** — größter Umbau von allen. Löst aber als einziges die Web/Native-Doppelpflege im Kern | Stark, wenn Web **und** Native von Anfang an ein Ziel sind. 14.135★, MIT, sehr aktiv |
+| [gluestack-ui](https://gluestack.io) | v2/v3 NativeWind, v1 Styled-System | **Nein** — dieselbe NativeWind-Hürde. ⚠️ **Repo ohne Lizenz-Angabe** (npm-Paket ISC) — vor Einsatz klären | Nachrangig gegenüber RNR. 5.250★ |
+
+**Die übertragbare Erkenntnis — wichtiger als jede der vier Bibliotheken:** Der RNR-Button
+löst Plattform-Unterschiede mit **`Platform.select({ web: … })` in *einer* Datei**.
+`recipe-app` pflegt dafür heute doppelte `.web`-Varianten (z. B. `BottomSheet.tsx` +
+`BottomSheet.web.tsx`, zusammen 508 LOC). **Dieses Muster lässt sich übernehmen, ohne die
+Bibliothek zu übernehmen** — „Port, don't vendor" auf Pattern-Ebene.
 
 ### Geprüft und abgelehnt
 
