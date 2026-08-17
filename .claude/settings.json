@@ -88,6 +88,16 @@
             "command": "cmd=$(jq -r '.tool_input.command // empty'); case \"$cmd\" in *\"git commit\"*) if [ -f tsconfig.json ] && ! npx tsc --noEmit; then echo \"DoD: tsc --noEmit rot - Commit blockiert. Erst TypeCheck gruen machen.\" >&2; exit 2; fi ;; esac"
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/philippherrlich/Code/personal-stack/scripts/catalog-first-hook.sh 2>/dev/null || true",
+            "statusMessage": "katalog-check..."
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -125,5 +135,5 @@
       }
     ]
   },
-  "_canonHash": "2d9bbab2d3bd"
+  "_canonHash": "fa3b7fb1d66a"
 }

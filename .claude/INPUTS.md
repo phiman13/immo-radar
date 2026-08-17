@@ -1,6 +1,6 @@
 <!-- Ledger: personal-stack/docs/INPUTS.md — nicht hier editieren.
      Neue Verdikte dort eintragen, dann propagate-canon.sh.
-     Kanon-Hash: 2d9bbab2d3bd · propagiert: 2026-08-17 -->
+     Kanon-Hash: fa3b7fb1d66a · propagiert: 2026-08-17 -->
 
 # INPUTS — bewertete externe Ressourcen
 
@@ -68,6 +68,7 @@ steht nur, *dass* es sie gibt — nicht ihr Inhalt. Es gibt also nichts, was ver
 | **`find-skills`** (vercel-labs, MIT) | **Der Discovery-Kanal für Skills.** `npx skills find <query>` durchsucht [skills.sh](https://skills.sh) live mit Install-Zahlen | Liegt in `~/.claude/skills/`. ⚠️ **`npx skills check` ist ein Alias für `update`** — es prüft nicht, es aktualisiert (verifiziert 2026-08-17). Nie in einem automatischen Job verwenden |
 | **`impeccable`** (pbakaus, Plugin) | UI-Design-Suite | Aktiv, v4.1.1. **Aufruf seit 2026-08-17: `/impeccable <subcommand>`** — z. B. `/impeccable critique`, `/impeccable polish`, `/impeccable audit`. Das Plugin bündelt alle früheren Einzel-Skills in einen Dach-Skill (`user-invocable`, siehe `argument-hint`). Die 16 losen Einzelkopien vom 20.05. waren veraltete Duplikate und liegen jetzt unter `~/.claude/.skills-archive-2026-08-17/` — verschoben, nicht gelöscht |
 | **`klartext`** (Eigenbau) | Entfernt KI-Sprachmuster aus deutschen und englischen Texten | Deutscher Port von `stop-slop` (MIT). Struktur-Regeln übernommen, Phrasenlisten neu für das Deutsche erhoben. Quelle: `personal-stack/skills/klartext/` |
+| **`ui-skills-root`** (ibelick, MIT, 7.263★) | **Der Discovery-Kanal für UI-Skills.** Router über ~150 kuratierte Skills in 26 Kategorien via `npx ui-skills categories` / `list --category <x>` / `get <skill>` | Installiert 2026-08-17. Indexiert auch bereits installierten Bestand (`pbakaus/*` = impeccable, `emilkowalski/*`, `callstackincubator/react-native-best-practices`). CLI ist read-only. **Verteilung ist web-lastig:** frontend 136 · visual 72 · systems 57 · motion 47 — aber **`react-native` nur 1** (das bereits installierte callstack-Plugin), für `recipe-app` also kaum ergiebig |
 
 ### Geprüft und abgelehnt
 

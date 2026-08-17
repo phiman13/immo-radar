@@ -1,5 +1,5 @@
 <!-- Kanon: personal-stack/core/CONVENTIONS.md — nicht hier editieren.
-     Kanon-Hash: 2d9bbab2d3bd · propagiert: 2026-08-17 -->
+     Kanon-Hash: fa3b7fb1d66a · propagiert: 2026-08-17 -->
 
 # Konventionen — kanonischer Kern
 
@@ -69,7 +69,8 @@
 - **Asset-Reuse vor Asset-Nachbau:** Original-Assets, Tokens, Primitives, Mockups immer reusen statt nachbauen — auch UI-Mockups müssen echte Tokens nutzen, keine generischen Snippets. SVGs, Font-Offsets, Shadow-Stacks gehen beim Nachbau reproduzierbar schief.
 - **Erst nachschauen, dann bauen** *(Quellen: `.claude/INPUTS.md` im eigenen Repo — reist mit dem Kanon mit; Original: `personal-stack/docs/INPUTS.md`. Dort stehen die freigegebenen Sammlungen, das Abgelehnte mit Grund, und was in einem Projekt schon gescheitert ist)*:
   - **Generische UI-Komponente** (Button, Sheet, Chart, Skeleton …) → erst §1 prüfen, ob ein freigegebener Katalog sie liefert. **Domänenspezifische Komponenten sind ausgenommen** — die trägt kein Katalog.
-  - **Fähigkeits-/Workflow-Lücke** → erst `/find-skills` bzw. `npx skills find <query>` (durchsucht skills.sh live), bevor ein eigener Skill gebaut wird.
+  - **UI-Arbeit, vor dem ersten Edit** → `npx ui-skills categories` / `list --category <x>` (Skill `ui-skills-root`): kuratierter Router über ~150 UI-Skills in 26 Kategorien, lädt nur den kleinsten passenden Kontext. Dicht besetzt für Web; **`react-native` hat aktuell nur einen Eintrag**, für `recipe-app` also selten ergiebig.
+  - **Fähigkeits-/Workflow-Lücke (nicht-UI)** → erst `/find-skills` bzw. `npx skills find <query>` (durchsucht skills.sh live), bevor ein eigener Skill gebaut wird.
   - **Vor jeder Library-Empfehlung an ein Projekt:** §3 des Ledgers UND `git log` des Zielprojekts prüfen. Eine Empfehlung ohne Projekt-Historie führt im Kreis — belegter Fall: `@gorhom/bottom-sheet` wurde für `recipe-app` vorgeschlagen, obwohl es dort zweimal gescheitert war.
 - **Stack-weite Rollouts:** Allowlist-, Propagation-, Skill-Install- und
   Doku-Rollouts laufen default auf **alle** Repos aus `core/targets.txt`.
@@ -144,6 +145,14 @@ Format kurz, faktisch, mit Kontext (welches Projekt, was ist passiert).
   hart auf **Sonnet** (Batch-Jobs auf **Haiku**), Review-/Architektur-/Merge-Gate-Subagents
   auf **Opus** — explizit gesetzt. **Kritische Arbeit** (Auth, Datenmigration, RLS-Policies,
   Payment, irreversible Änderungen) **nicht ohne Opus-Plan/-Review finalisiert**.
+- **Werkzeuge prüft man durch Benutzen, nicht durch Lesen.** Vor jedem Urteil über ein
+  Tool/Skill/Plugin/MCP mit Laufzeit-Komponente (CLI, `npx`-Entry, Router, Dienst) die
+  read-only-Befehle **ausführen** (`--help`, `list`, `categories`, `status`). Repo-Struktur,
+  README, Sterne und Dateizahl sagen nichts über die tatsächliche Funktion. Gilt auch
+  außerhalb von `/tooling-gate` — der häufigste Fehlerfall ist die beiläufige Bewertung
+  „nebenbei", ohne Gate. *(Belegter Fall 2026-08-17: `ui-skills` wurde nach Repo-Struktur als
+  redundantes 7-Skill-Paket eingestuft und fast abgelehnt; ein `npx ui-skills categories`
+  zeigte einen Router über ~150 kuratierte Skills. Details: `docs/INPUTS.md` §2.)*
 - **User-Decision-Pattern:** Entscheidungen, deren Antwort den weiteren Weg
   ändert und die nicht aus dem Repo verifizierbar sind, dem User vorlegen — nicht
   raten. Sonst konventionelle Defaults wählen und weitermachen.
