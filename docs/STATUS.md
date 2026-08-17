@@ -82,11 +82,49 @@ bekannte Vorbedingung vor Phase 3/Discovery ist erfüllt — `app.agent_probe`
 validiert jede Domain (strikte Hostname-Whitelist, keine IP-Literale, keine
 reservierten/internen TLDs) vor jedem Netzwerk-Call.
 
-Nächster Schritt: Phase 2c (Change-Gate-Fingerprint für „nur neue Objekte",
-Zwei-Läufe-Zähler für echte Rezept-Bruch-Erkennung, Playwright-Rendering für
-JS-Shells/403-Sites — alle drei in Phase 2b bewusst zurückgestellt, siehe
-Self-Review-Notizen im Phase-2b-Plan) oder Phase 3 (Discovery), deren
-Vorbedingung jetzt erfüllt ist.
+**Phase 2c (Change-Gate, Zwei-Läufe-Zähler, Playwright) abgeschlossen
+(2026-08-17):** Change-Gate-Fingerprint (`_urls_to_fetch()` in
+`app/sources/agent_handlers.py`) überspringt bekannte, frische
+Detailseiten (7-Tage-Refresh-Fenster) in `crawl_and_extract`,
+`sitemap_objekte_handler` und `structured_data_handler` — mit
+Canary-Regel (3 älteste bekannte URLs statt aller, damit der Selbsttest
+nie fälschlich einen Rezept-Bruch erkennt, wenn nur das Gate gegriffen
+hat). `feed_adapter_handler` bekommt bewusst KEIN Change-Gate (spart dort
+keine Netzwerk-Requests, da der Feed ohnehin komplett geholt wird —
+würde nur die Selbsttest-Stichprobe verkleinern). Zwei-Läufe-Zähler
+(`Agent.consecutive_empty_runs`) ersetzt den bisherigen
+Ein-Lauf-Toleranz-Zweig: Downgrade auf `needs-manual-watch` erst nach
+zwei aufeinanderfolgenden Läufen ohne Selbsttest-Erfolg (Spec §7), mit
+Fall-Unterscheidung im Log (0 Objekte vs. Objekte ohne Sachattribut).
+`browser_session()` (`app/sources/browser.py`) erlaubt Playwright-Fetches
+mit einem wiederverwendeten Browser statt Neustart pro Seite; ein
+`render:"browser"`-Flag verzweigt `crawl_and_extract` entsprechend.
+
+**Go/No-Go-Probe der 4 ursprünglich anvisierten JS-Shell-/Bot-Sites
+(Aigner Immobilien, Dahler & Company, Locate Immobilien, Imothek) ergab
+0/4 Go** — aber keinen Fehlschlag ohne Erkenntnis: Aigner ist ein echter
+WAF-Block, der auch Headless-Chromium erkennt (`render:"browser"` hilft
+dort nicht). Dahler braucht nur eine korrigierte `listing_url` (die
+aktuelle zeigt auf eine Marketing-Seite ohne Objekte), kein Playwright.
+Locate und Imothek laden echten Content ohne Bot-Block, brauchen aber
+strukturell andere Extraktionsansätze (Modal-basierte UI bzw.
+JSON-Payload in einem Livewire-Attribut statt `<a href>`-Detail-Links) —
+Kandidaten für eine künftige, eigene Handler-Klasse, kein Dead End.
+`render:"browser"` bleibt als wiederverwendbare Infrastruktur für
+künftige, tatsächlich passende Sites bestehen.
+
+**Kritischer Fund im finalen Branch-Review, vor Merge gefixt:** eine
+einzelne Canary-URL (Größe 1) konnte bei einem Selbsttest-Fehlschlag
+genau dieser einen Seite zu einem TERMINALEN Downgrade führen (der
+Agent wird danach nie wieder automatisch gecrawlt, da `fetch()` nur
+`auto-harvested`-Agents selektiert) — end-to-end reproduziert, mit
+Canary-Stichprobe 3 statt 1 behoben. Zusätzlich: Reaktivierung über
+`scripts/onboard_agents.py` setzte den Zähler nicht zurück (der
+dokumentierte Reparaturweg war dadurch wirkungslos) — mitgefixt.
+
+Nächster Schritt: Phase 3 (Discovery), deren Vorbedingung (HER-725) erfüllt
+ist, oder eine dedizierte Untersuchung der Locate-/Imothek-Extraktionslücken
+(Modal-Scraping bzw. JSON-Payload-Parsing) als eigene Phase.
 
 ## Branch-Map
 
