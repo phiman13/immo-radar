@@ -1,6 +1,6 @@
 <!-- Ledger: personal-stack/docs/INPUTS.md — nicht hier editieren.
      Neue Verdikte dort eintragen, dann propagate-canon.sh.
-     Kanon-Hash: 0ed4b1a7de51 · propagiert: 2026-08-17 -->
+     Kanon-Hash: 41a6467c88e7 · propagiert: 2026-08-17 -->
 
 # INPUTS — bewertete externe Ressourcen
 
@@ -96,5 +96,5 @@ steht nur, *dass* es sie gibt — nicht ihr Inhalt. Es gibt also nichts, was ver
 
 | Datum | Was |
 |---|---|
-| 2026-08-17 | Angelegt. Erstbefüllung aus der Ressourcen-Session vom 2026-08-16/17 (8 vorgelegte Ressourcen + Codex- und Fable-Review) sowie aus den Tooling-Gate-Verdikten 2026-05/06. Plan: `docs/plans/2026-08-17-ressourcen-zufluss.md` |
+| 2026-08-17 | Angelegt. Erstbefüllung aus der Ressourcen-Session vom 2026-08-16/17 (8 vorgelegte Ressourcen + Codex- und Fable-Review) sowie aus den Tooling-Gate-Verdikten 2026-05/06. Herleitung: `docs/archive/2026-08-16-input-kuration-und-ressourcen-zugriff.md` + `docs/archive/2026-08-17-ressourcen-zufluss.md` |
 | 2026-08-17 | `stop-slop` als `klartext` portiert · impeccable-Duplikate archiviert · automatische Kandidaten-Suche über die skills.sh-API im Cockpit (monatlich, read-only) |
