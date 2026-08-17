@@ -1,6 +1,6 @@
 <!-- Ledger: personal-stack/docs/INPUTS.md — nicht hier editieren.
      Neue Verdikte dort eintragen, dann propagate-canon.sh.
-     Kanon-Hash: c81e530fb218 · propagiert: 2026-08-18 -->
+     Kanon-Hash: b05c1c9ebfb3 · propagiert: 2026-08-18 -->
 
 # INPUTS — bewertete externe Ressourcen
 
@@ -112,8 +112,20 @@ Bibliothek zu übernehmen** — „Port, don't vendor" auf Pattern-Ebene.
 | **`npx skills` als Installer** | 2026-08-16 | nein | Der Skill `find-skills` ist bereits installiert und wird genutzt (s. o.). Den *Installer* parallel zu Claude-Code-Plugins zu fahren erzeugt doppelte Installs mit unklarer Präzedenz — genau der Fall, der bei `impeccable` eingetreten ist |
 | **stop-slop** | 2026-08-16 → **portiert 2026-08-17** | nicht installiert, **Idee übernommen** | Die englischen Phrasenlisten greifen für deutsche Texte nicht, die Struktur-Regeln sehr wohl. Nach „Port, don't vendor" als eigener Skill `klartext` umgesetzt (s. o.) — deutsche Phrasenlisten neu erhoben, Struktur-Regeln übernommen, Herkunft und MIT-Lizenz im Skill genannt |
 | **@netlify/mcp** | 2026-05-31 | nein | Nur Dev-Komfort, kostet write-fähige Prod-Credential-Fläche + permanente Tools im Context. `netlify-cli` deckt ~95 % ab. Betriebsdetails: Memory `project_netlify_mcp_skip` |
-| **open-design**, **claude-mem**, **GSD**, **Everything-Claude-Code**, **Awesome-Subagents**, **codeburn** | 2026-06-01 / 2026-06-12 | quarantine / abgelehnt | Namespace-Bomben, `curl\|bash`, verdeckte Telemetrie, konzeptionelle Doppelstrukturen. Volle Begründungen: Memories `project_tooling_gate_2026_06_vetting`, `project_tooling_gate_2026_06_medium12` |
-| **designlang** (design-extract), **anthropics doc-skills** | 2026-06 | zurückgestellt | Sauber, aber ohne belegten Bedarf. Trigger für Reaktivierung in den beiden Memories oben |
+| **open-design**, **claude-mem**, **Everything-Claude-Code** | 2026-06-01 / 2026-06-12 | quarantine / abgelehnt | `curl\|bash`, verdeckte Telemetrie (PostHog + externe LLM-Calls), fehlende Lizenz. **Begründungen aus Code-Funden — bleiben gültig.** Details: Memories `project_tooling_gate_2026_06_vetting`, `project_tooling_gate_2026_06_medium12` |
+| **anthropics doc-skills** | 2026-06 | zurückgestellt | Sauber, aber proprietär lizenziert und ohne belegten Bedarf. Reaktivieren bei Projekt mit PDF-/Excel-/PPTX-Bedarf → Projekt-Ebene |
+
+### Nachgeprüft am 2026-08-18 (HER-834) — Verdikte vor der Betriebs-Probe-Regel
+
+> Anlass: der `ui-skills`-Fehlschlag. Nachgeprüft wurden nur Ablehnungen, die auf
+> **Struktur-/Mengenargumenten** beruhten. **Bilanz: 1 Fehlurteil, 1 bestätigt, 2 obsolet.**
+
+| Ressource | damals | heute | Befund |
+|---|---|---|---|
+| **VoltAgent / awesome-claude-code-subagents** | „wholesale = Namespace-Bombe" | **Verdikt korrigiert** | 24.413★, MIT, aktiv. **Kein Paket, sondern Katalog:** 168 Agents in 10 Kategorien, Installer ist interaktiv und lädt **kategorieweise** über die GitHub-API. **Null Namenskollisionen** mit dem Bestand. Dasselbe Muster, das bei `ui-skills` falsch gelesen wurde. → Nutzung als **Nachschlagequelle bei konkretem Subagent-Bedarf**, nicht wholesale installieren |
+| **GSD** | „zweites Spec→Plan→Build-Framework" | **Ablehnung bestätigt, jetzt belegt** | Umgezogen: `gsd-build/get-shit-done` ist archiviert → aktiv ist **`open-gsd/gsd-core`** (8.368★, MIT, v1.10.0). Der 5-Schritt-Loop (Discuss→Plan→Execute→Verify→Ship) deckt sich tatsächlich mit dem superpowers-Workflow; zwei Frameworks parallel wollen denselben Ablauf steuern. **Neu bewertet:** läuft cross-runtime (auch Codex) und bringt einen eigenen MCP-Server mit — ein *Wechsel* statt Parallelbetrieb wäre eine eigene Entscheidung, kein Nebenbei-Install |
+| **designlang / design-extract** | zurückgestellt mangels Bedarf | **obsolet** | `Manavarya09/design-extract` existiert nicht mehr. Der Bedarf (Design-System aus Live-URL) ist inzwischen abgedeckt — durch `ui-skills`' `create-design-md` und `arvindrk/extract-design-system` (182★). Kein offener Punkt mehr |
+| **codeburn** | vom User verworfen | **unverändert** | 9.475★, MIT, sehr aktiv — deutlich gewachsen. Die Entscheidung war eine User-Entscheidung („context-mode-Insight reicht"), keine Fehlbewertung. Bleibt |
 
 ---
 
