@@ -1,131 +1,41 @@
 # Status — immo-radar
 
-> Kuratierter Stand-Snapshot (Kanon: *single fact, single place*). Offene Items →
-> **Linear** (Team HER, Projekt `immo-radar`): `linear i list -P immo-radar`.
+> Kuratierter Stand-Snapshot (Kanon: *single fact, single place*). Detailhistorie →
+> `docs/STATUS-ARCHIVE.md`. Offene Items → **Linear** (Team HER, Projekt `immo-radar`).
 > Architektur-/Quellen-Detail: `CLAUDE.md`.
 
-## Status: Aktiv (reaktiviert 2026-08-06)
+## Status: Stillgelegt (2026-08-18)
 
-Immobilien-Aggregator für Tutzing (PLZ 82327 + 5 km): scrapt Portale, bewertet Objekte
-per Claude (Haiku), sendet Telegram-Alerts. Python/FastAPI + SQLite (Scraper +
-Scoring + APScheduler) · React 18 + Vite Dashboard.
+Immobilien-Aggregator für Tutzing (PLZ 82327 + 5 km). VPS-Deployment abgebaut
+(Container gestoppt und entfernt, Docker-Image gelöscht, Caddy-Vhost
+`immo.herrlich.dev` entfernt), Scheduler läuft nicht mehr. Repo bleibt auf
+GitHub bestehen, Code + lokale SQLite-DB liegen weiterhin unter
+`/opt/immo-radar` auf der VPS (kein nennenswerter Platzbedarf).
 
-**Wiederbelebt.** War 2026-06-29 archiviert, lokale Weiterarbeit lief seither durch
-(Probe/Scraper-Feature-Arbeit bis 2026-08-05). 2026-08-06 zurück in `targets.txt` +
-Linear-Projekt entarchiviert, HER-577/578 zurück auf Todo. **VPS-Deployment wieder live**
-(neu aufgesetzt und deployed 2026-08-12, Fix-Redeploys seither via `scripts/deploy.sh`):
-Container `web`/`worker` laufen, Caddy-Vhost `immo.herrlich.dev` aktiv. `poll_enabled`
-ist seit 2026-08-14 wieder **aktiv** (12-Std.-Intervall) — Scheduler crawlt automatisch,
-`enrich_enabled` lief bereits durchgehend.
+**Grund:** Root-Cause-Analyse nach einer irrelevanten Telegram-Benachrichtigung
+deckte zwei Bugs auf (Geocoding-Fail-Open lässt ungeprüfte Objekte durch;
+`Listing.lage_score` — die vom Notify-Schwellwert geprüfte Spalte — wurde nie
+geschrieben, seit dem ersten Commit). Die anschließende Inhaltsprüfung der
+Makler-Kaskade (dem eigentlichen Alleinstellungsmerkmal: Objekte exklusiv bei
+einzelnen Maklern, nie auf ImmoScout/Kleinanzeigen) zeigte: von 13 gefundenen
+Objekten 46 % bereits verkauft, 85 % ohne Preis, mehrere außerhalb des
+Suchgebiets, kein einziges brauchbar. Vier Tage Echtbetrieb ohne jede
+Nutzerinteraktion. Der Nutzer teilt die Einschätzung: das Kernversprechen
+trägt aktuell nicht, unabhängig von einzelnen Fixes. Details und vollständige
+Zahlen → `docs/STATUS-ARCHIVE.md#stilllegungs-analyse-2026-08-18`.
 
-## Offener Backlog
+## Reaktivierung
 
-Offene Items → **Linear** (HER-577/578). Feature-Backlog: `docs/backlog.md`
-(Stand 2026-05-11, ~17 Posten, noch nicht vollständig nach Linear triagiert).
-
-**Makler-Vollabdeckung** (`docs/superpowers/specs/2026-08-04-makler-vollabdeckung-design.md`):
-Phase 0 (Vermessung), Phase 1 (Fundament), Phase 2a (Site-Onboarding —
-Kaskaden-Klassifikation aus Phase 0 nach `app/agent_cascade_detect.py` +
-`app/agent_probe.py` promoted, `app/agent_onboarding.py` schreibt Ergebnis
-auf die `Agent`-Zeile, `scripts/onboard_agents.py` als manueller CLI-Trigger)
-und Phase 2b (geteilter Feld-Extraktor in `app/agent_field_extract.py` +
-Cascade-Handler in `app/sources/agent_handlers.py`, registriert in
-`EXTRACTION_METHODS` (`app/sources/agents_adapter.py`) — `AgentSiteSource.fetch()`
-liefert damit erstmals echte Listings statt einer leeren Registry; dazu
-zweistufiger Selbsttest (Spec §7) und struktureller Crawl-Frequenz-Guard
-`MIN_RECRAWL_INTERVAL`, der Makler-Sites unabhängig vom gewählten
-Poll-Intervall auf max. ~1×/Tag begrenzt) sind abgeschlossen. HER-726
-(feed_adapter-`listing_url`-Ausnahme im Coverage-Gate) ist mit Phase 2b
-gefixt. Phase 2 ist in vier Teilpläne aufgeteilt.
-
-**Produktiv end-to-end verifiziert (2026-08-12/14):** alle 19 vom Nutzer benannten
-Referenz-Makler onboarded (16 `auto-harvested`, 3 korrekt als nicht automatisierbar
-geflaggt), echte Listings landen nachweislich im Dashboard. Dabei gefundener und
-gefixter Produktionsbug: `pipeline.run_source()` hält für den gesamten Harvest-Lauf
-eine offene SQLite-Schreibtransaktion — `AgentSiteSource` schrieb Agent-Status
-(`last_checked` etc.) bisher über eine zweite, eigene Session und blockierte
-zuverlässig mit „database is locked". Fix: `AgentSiteSource` nutzt jetzt dieselbe,
-vom Aufrufer gereichte Session (`SourceAdapter.session`, Commit bleibt beim Aufrufer)
-statt einen zweiten Schreiber zu öffnen — exakt das Muster, das `geocode()` für den
-Geocoding-Cache bereits etabliert hatte. Regressionstest reproduziert den Lock
-deterministisch ohne den Fix.
-
-**Zwei weitere Produktionsbugs derselben Fehlerklasse gefunden und gefixt
-(2026-08-14):** `pipeline._matches_profile()` und `scoring/ai_match.py` lasen
-Preis-/Flächen-/Zimmer-/Baujahr-/Objektart-Filter aus der statischen
-`app.config.settings` (.env-Wert bei Prozessstart) statt aus den
-DB-persistenten Dashboard-Settings — eine Preisrahmen-Änderung im Dashboard
-hatte dadurch **keinen** Effekt auf die tatsächliche Filterung. Fix: beide
-nutzen jetzt `settings_service.get_setting()`/neuen Helper
-`get_property_type_list()`. Derselbe Bug fand sich auch in
-`scheduler.build_scheduler()` (Poll-/Enrich-Intervall aus `.env` statt DB) —
-zusätzlich behoben durch einen `reconcile_intervals()`-Watchdog-Job, der
-Intervalländerungen im Dashboard ohne Container-Neustart übernimmt (vorher
-entgegen der CLAUDE.md-Doku nötig gewesen). Alle drei Fixes durch
-Regressionstests abgesichert, die den Bug live am unveränderten Code
-reproduzieren.
-
-**UI-Funktionsprüfung abgeschlossen (2026-08-14/16, HER-804 + 15 Sub-Issues,
-alle Done):** vollständige funktionale Prüfung des Dashboards (Code-Lektüre
-aller Frontend-Dateien + Backend-Module, echter Klick-Durchlauf gegen
-Produktion) fand 4 Blocker (u.a. Quellen-„Aktiv"-Schalter ohne Wirkung,
-Objekttyp-Filter-Bug, hartkodierter Regionsfilter überstimmte die
-Suchgebiet-UI), 5 Major- und 6 Minor/Kosmetik-Befunde. Alle gefixt, per
-Regressionstest abgesichert und live auf Produktion verifiziert — Details
-und Belege je Ticket in Linear (HER-805 bis HER-818, HER-820). Dabei auch
-die in Phase 2b zurückgestellten Extraktions-Präzisionslücken (HTML-Entity-
-Decoding, gierige city-Erkennung, Makler-Büroadresse statt Objektadresse)
-mit erledigt.
-
-**HER-725 (SSRF-Guard auf `verified_domain`) gefixt (2026-08-16):** die
-bekannte Vorbedingung vor Phase 3/Discovery ist erfüllt — `app.agent_probe`
-validiert jede Domain (strikte Hostname-Whitelist, keine IP-Literale, keine
-reservierten/internen TLDs) vor jedem Netzwerk-Call.
-
-**Phase 2c (Change-Gate, Zwei-Läufe-Zähler, Playwright) abgeschlossen
-(2026-08-17):** Change-Gate-Fingerprint (`_urls_to_fetch()` in
-`app/sources/agent_handlers.py`) überspringt bekannte, frische
-Detailseiten (7-Tage-Refresh-Fenster) in `crawl_and_extract`,
-`sitemap_objekte_handler` und `structured_data_handler` — mit
-Canary-Regel (3 älteste bekannte URLs statt aller, damit der Selbsttest
-nie fälschlich einen Rezept-Bruch erkennt, wenn nur das Gate gegriffen
-hat). `feed_adapter_handler` bekommt bewusst KEIN Change-Gate (spart dort
-keine Netzwerk-Requests, da der Feed ohnehin komplett geholt wird —
-würde nur die Selbsttest-Stichprobe verkleinern). Zwei-Läufe-Zähler
-(`Agent.consecutive_empty_runs`) ersetzt den bisherigen
-Ein-Lauf-Toleranz-Zweig: Downgrade auf `needs-manual-watch` erst nach
-zwei aufeinanderfolgenden Läufen ohne Selbsttest-Erfolg (Spec §7), mit
-Fall-Unterscheidung im Log (0 Objekte vs. Objekte ohne Sachattribut).
-`browser_session()` (`app/sources/browser.py`) erlaubt Playwright-Fetches
-mit einem wiederverwendeten Browser statt Neustart pro Seite; ein
-`render:"browser"`-Flag verzweigt `crawl_and_extract` entsprechend.
-
-**Go/No-Go-Probe der 4 ursprünglich anvisierten JS-Shell-/Bot-Sites
-(Aigner Immobilien, Dahler & Company, Locate Immobilien, Imothek) ergab
-0/4 Go** — aber keinen Fehlschlag ohne Erkenntnis: Aigner ist ein echter
-WAF-Block, der auch Headless-Chromium erkennt (`render:"browser"` hilft
-dort nicht). Dahler braucht nur eine korrigierte `listing_url` (die
-aktuelle zeigt auf eine Marketing-Seite ohne Objekte), kein Playwright.
-Locate und Imothek laden echten Content ohne Bot-Block, brauchen aber
-strukturell andere Extraktionsansätze (Modal-basierte UI bzw.
-JSON-Payload in einem Livewire-Attribut statt `<a href>`-Detail-Links) —
-Kandidaten für eine künftige, eigene Handler-Klasse, kein Dead End.
-`render:"browser"` bleibt als wiederverwendbare Infrastruktur für
-künftige, tatsächlich passende Sites bestehen.
-
-**Kritischer Fund im finalen Branch-Review, vor Merge gefixt:** eine
-einzelne Canary-URL (Größe 1) konnte bei einem Selbsttest-Fehlschlag
-genau dieser einen Seite zu einem TERMINALEN Downgrade führen (der
-Agent wird danach nie wieder automatisch gecrawlt, da `fetch()` nur
-`auto-harvested`-Agents selektiert) — end-to-end reproduziert, mit
-Canary-Stichprobe 3 statt 1 behoben. Zusätzlich: Reaktivierung über
-`scripts/onboard_agents.py` setzte den Zähler nicht zurück (der
-dokumentierte Reparaturweg war dadurch wirkungslos) — mitgefixt.
-
-Nächster Schritt: Phase 3 (Discovery), deren Vorbedingung (HER-725) erfüllt
-ist, oder eine dedizierte Untersuchung der Locate-/Imothek-Extraktionslücken
-(Modal-Scraping bzw. JSON-Payload-Parsing) als eigene Phase.
+Reversibel, wie schon einmal (Archivierung 2026-06-29 → Reaktivierung
+2026-08-06). Sinnvoller Auslöser: ein konkreter, in der manuellen Suche
+aufgefallener Fall, den das Tool nachweislich verpasst hätte — nicht ein
+erneuter Breitbau-Versuch ohne validierten Bedarf. Bei Reaktivierung zuerst:
+`Listing.lage_score`-Dead-Code entfernen (Notify-Gate auf `ai_score`
+umstellen, siehe Session-Notizen), dann Kernquellen (Riedel, bs_immo, …)
+einzeln auf Datenqualität prüfen, bevor erneut Makler-Abdeckung ausgebaut
+wird.
 
 ## Branch-Map
 
-- `main` — Deploy via `scripts/deploy.sh` (rsync + docker compose).
+- `main` — letzter Deploy-Stand vor Stilllegung. Deploy weiterhin via
+  `scripts/deploy.sh` (rsync + docker compose), falls reaktiviert.
