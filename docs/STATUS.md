@@ -12,6 +12,15 @@ Immobilien-Aggregator für Tutzing (PLZ 82327 + 5 km). VPS-Deployment abgebaut
 GitHub bestehen, Code + lokale SQLite-DB liegen weiterhin unter
 `/opt/immo-radar` auf der VPS (kein nennenswerter Platzbedarf).
 
+**Falle beim Abbau selbst:** ein GitHub-Webhook (`repos/phiman13/immo-radar/hooks`,
+Ziel `https://herrlich.dev/webhook/github`, stack-weiter Auto-Deploy-Listener)
+löste beim Push des ersten Stilllegungs-Commits sofort einen Redeploy aus —
+Container und Image waren nach dem manuellen Abbau binnen Minuten wieder da.
+Fix: Webhook für dieses Repo explizit auf `active:false` gesetzt
+(`gh api -X PATCH repos/phiman13/immo-radar/hooks/621091139 -F active=false`),
+danach Abbau wiederholt. **Bei Reaktivierung zuerst den Webhook wieder
+aktivieren** — sonst deployt kein Push automatisch.
+
 **Grund:** Root-Cause-Analyse nach einer irrelevanten Telegram-Benachrichtigung
 deckte zwei Bugs auf (Geocoding-Fail-Open lässt ungeprüfte Objekte durch;
 `Listing.lage_score` — die vom Notify-Schwellwert geprüfte Spalte — wurde nie
